@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { onNavigate } from '$app/navigation';
 	import { ToastContainer } from '$lib/components/ui';
+	import { env } from '$env/dynamic/public';
 	import type { Snippet } from 'svelte';
 
 	// Preload das duas fontes mais críticas (500 sans + 500 mono).
@@ -10,6 +11,10 @@
 	import monoUrl from '@fontsource/geist-mono/files/geist-mono-latin-500-normal.woff2?url';
 
 	let { children }: { children: Snippet } = $props();
+
+	// Plausible Analytics — privacy-first, sem cookies, agregado.
+	// Só ativa se PUBLIC_PLAUSIBLE_DOMAIN tiver setada.
+	const plausibleDomain = env.PUBLIC_PLAUSIBLE_DOMAIN;
 
 	// View Transitions: cross-fade suave entre rotas. Só age no conteúdo
 	// marcado com `view-transition-name: page-content` (sidebar fica estável).
@@ -30,6 +35,13 @@
 <svelte:head>
 	<link rel="preload" href={sansUrl} as="font" type="font/woff2" crossorigin="anonymous" />
 	<link rel="preload" href={monoUrl} as="font" type="font/woff2" crossorigin="anonymous" />
+	{#if plausibleDomain}
+		<script
+			defer
+			data-domain={plausibleDomain}
+			src="https://plausible.io/js/script.outbound-links.js"
+		></script>
+	{/if}
 </svelte:head>
 
 {@render children()}

@@ -68,3 +68,71 @@ test.describe('Smoke — PWA', () => {
 		expect(html).toContain("serviceWorker.register('/sw.js')");
 	});
 });
+
+test.describe('Smoke — landing page', () => {
+	test('landing renderiza hero + CTAs + sections', async ({ page, context }) => {
+		await context.clearCookies();
+		await page.goto('/');
+		await page.waitForLoadState('domcontentloaded');
+		// Headline principal
+		await expect(page.getByRole('heading', { name: /prescreva treinos/i })).toBeVisible();
+		// CTAs principais
+		await expect(page.getByRole('link', { name: /começar agora/i }).first()).toBeVisible();
+		// Sections
+		await expect(page.getByText(/plataforma/i).first()).toBeVisible();
+	});
+
+	test('landing tem meta tags Open Graph', async ({ page }) => {
+		const r = await page.request.get('/');
+		const html = await r.text();
+		expect(html).toContain('property="og:type"');
+		expect(html).toContain('property="og:image"');
+		expect(html).toContain('name="twitter:card"');
+	});
+});
+
+test.describe('Smoke — SEO', () => {
+	test('sitemap.xml é servido com URLs válidas', async ({ page }) => {
+		const r = await page.request.get('/sitemap.xml');
+		expect(r.ok()).toBe(true);
+		expect(r.headers()['content-type']).toContain('xml');
+		const xml = await r.text();
+		expect(xml).toContain('<urlset');
+		expect(xml).toContain('<loc>');
+		expect(xml).toContain('/legal/termos');
+	});
+
+	test('robots.txt aponta pro sitemap', async ({ page }) => {
+		const r = await page.request.get('/robots.txt');
+		expect(r.ok()).toBe(true);
+		const text = await r.text();
+		expect(text).toContain('Sitemap:');
+		expect(text).toContain('Disallow: /api/');
+	});
+});
+
+test.describe('Smoke — legal pages', () => {
+	test('termos de uso renderiza', async ({ page, context }) => {
+		await context.clearCookies();
+		await page.goto('/legal/termos');
+		await expect(page.getByRole('heading', { name: /termos de uso/i })).toBeVisible();
+		await expect(page.getByText(/CREF\/CREFITO\/CRM/i)).toBeVisible();
+	});
+
+	test('privacidade renderiza com referências LGPD', async ({ page, context }) => {
+		await context.clearCookies();
+		await page.goto('/legal/privacidade');
+		await expect(page.getByRole('heading', { name: /privacidade/i })).toBeVisible();
+		await expect(page.getByText(/LGPD/i).first()).toBeVisible();
+		await expect(page.getByText(/13\.709/)).toBeVisible();
+	});
+});
+
+test.describe('Smoke — recuperar senha', () => {
+	test('rota /recuperar carrega com form', async ({ page, context }) => {
+		await context.clearCookies();
+		await page.goto('/recuperar');
+		await expect(page.getByRole('heading', { name: /esqueceu/i })).toBeVisible();
+		await expect(page.getByPlaceholder(/seu@email/i)).toBeVisible();
+	});
+});

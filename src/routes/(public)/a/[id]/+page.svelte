@@ -17,12 +17,57 @@
 	const tokenParam = $derived(page.url.searchParams.get('t'));
 	const tq = $derived(tokenParam ? `?t=${tokenParam}` : '');
 
+	// Onboarding overlay — só na primeira visita do aluno
+	let showOnboarding = $state(false);
+	let onboardingStep = $state(0);
+	const ONBOARDING_KEY = $derived(`pf_aluno_onb_${student.id}`);
+
+	const onboardingSteps = [
+		{
+			title: `Olá, ${student.name.split(' ')[0]}`,
+			body: `${pro.name} cadastrou você no Preceptor Fisic. Esse é seu app pessoal pra acompanhar treinos prescritos por ele.`,
+			icon: '◆'
+		},
+		{
+			title: 'Aqui é seu treino do dia',
+			body: 'Toque no card "Treino de hoje" pra ver os exercícios. Ao terminar cada série, marca o peso usado e como foi a percepção (RPE).',
+			icon: '◐'
+		},
+		{
+			title: 'Sua aderência aparece em tempo real',
+			body: 'Streak (dias consecutivos) e histórico ficam salvos. Seu treinador vê o progresso e ajusta o plano com base nisso.',
+			icon: '⊕'
+		}
+	];
+
+	function nextOnboarding() {
+		if (onboardingStep < onboardingSteps.length - 1) {
+			onboardingStep++;
+		} else {
+			dismissOnboarding();
+		}
+	}
+	function dismissOnboarding() {
+		try {
+			localStorage.setItem(ONBOARDING_KEY, '1');
+		} catch {
+			/* localStorage pode estar desabilitado, sem stress */
+		}
+		showOnboarding = false;
+	}
+
 	onMount(() => {
 		if (page.url.searchParams.get('just_completed') === '1') {
 			toast.success('Treino registrado · 🔥 streak +1');
 			const u = new URL(page.url);
 			u.searchParams.delete('just_completed');
 			history.replaceState(null, '', u.toString());
+		}
+		// Primeira visita? Mostra onboarding
+		try {
+			if (!localStorage.getItem(ONBOARDING_KEY)) showOnboarding = true;
+		} catch {
+			/* localStorage desabilitado: não mostra */
 		}
 	});
 
@@ -176,6 +221,36 @@
 			</a>
 		{/each}
 	</nav>
+
+	<!-- Onboarding overlay (primeira visita do aluno) -->
+	{#if showOnboarding}
+		<div
+			class="onb-backdrop"
+			onclick={dismissOnboarding}
+			onkeydown={(e) => e.key === 'Escape' && dismissOnboarding()}
+			role="presentation"
+			tabindex="-1"
+		></div>
+		<div class="onb-card" role="dialog" aria-modal="true" aria-label="Bem-vindo ao app">
+			<div class="onb-progress">
+				{#each onboardingSteps as _, i (i)}
+					<div class="onb-dot" class:on={i === onboardingStep}></div>
+				{/each}
+			</div>
+			{@const step = onboardingSteps[onboardingStep]}
+			{#if step}
+				<div class="onb-icon">{step.icon}</div>
+				<h2 class="onb-title">{step.title}</h2>
+				<p class="onb-body">{step.body}</p>
+			{/if}
+			<div class="onb-actions">
+				<button type="button" class="onb-skip" onclick={dismissOnboarding}>Pular</button>
+				<button type="button" class="onb-next" onclick={nextOnboarding}>
+					{onboardingStep < onboardingSteps.length - 1 ? 'Continuar' : 'Começar →'}
+				</button>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -309,5 +384,123 @@
 	}
 	.tab-link.on {
 		color: var(--accent);
+	}
+
+	/* Onboarding overlay */
+	.onb-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.7);
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+		z-index: 90;
+		animation: onb-fade 200ms var(--ease);
+	}
+	.onb-card {
+		position: fixed;
+		left: 50%;
+		bottom: 24px;
+		transform: translateX(-50%);
+		z-index: 100;
+		width: calc(100% - 32px);
+		max-width: 380px;
+		background: var(--bg-1);
+		border: 1px solid var(--ink-line);
+		border-radius: var(--r-3);
+		padding: 28px 24px;
+		box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+		animation: onb-slide 280ms var(--ease);
+		text-align: center;
+	}
+	@keyframes onb-fade {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+	@keyframes onb-slide {
+		from {
+			transform: translate(-50%, 24px);
+			opacity: 0;
+		}
+		to {
+			transform: translate(-50%, 0);
+			opacity: 1;
+		}
+	}
+	.onb-progress {
+		display: flex;
+		gap: 6px;
+		justify-content: center;
+		margin-bottom: 20px;
+	}
+	.onb-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--ink-line-2);
+		transition: all 200ms var(--ease);
+	}
+	.onb-dot.on {
+		background: var(--accent);
+		box-shadow: 0 0 8px var(--accent);
+		width: 18px;
+		border-radius: 3px;
+	}
+	.onb-icon {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		background: var(--accent-wash);
+		border: 1px solid var(--accent);
+		color: var(--accent);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font: 600 22px var(--font-sans);
+		margin: 0 auto 16px;
+		box-shadow: var(--glow-accent);
+	}
+	.onb-title {
+		font: 500 22px var(--font-sans);
+		letter-spacing: -0.018em;
+		margin: 0 0 10px;
+		color: var(--ink-0);
+	}
+	.onb-body {
+		font: 400 14px/1.55 var(--font-sans);
+		color: var(--ink-2);
+		margin: 0 0 24px;
+	}
+	.onb-actions {
+		display: flex;
+		gap: 10px;
+		justify-content: center;
+	}
+	.onb-skip {
+		all: unset;
+		cursor: pointer;
+		padding: 10px 18px;
+		font: 500 13px var(--font-sans);
+		color: var(--ink-2);
+	}
+	.onb-skip:hover {
+		color: var(--ink-0);
+	}
+	.onb-next {
+		all: unset;
+		cursor: pointer;
+		padding: 12px 24px;
+		background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+		color: #0a0a0a;
+		font: 600 14px var(--font-sans);
+		border-radius: var(--r-pill);
+		box-shadow: var(--glow-accent);
+		transition: transform 140ms var(--ease);
+	}
+	.onb-next:hover {
+		transform: translateY(-1px);
 	}
 </style>
