@@ -95,11 +95,11 @@
 				</div>
 				<div style="display:flex;justify-content:space-between;margin-top:8px;font:var(--label-mono);color:var(--ink-3)">
 					<span>{liveProgress}%</span>
-					<span>Gemini 2.5 Pro · ACSM ★</span>
+					<span>Gemini 2.5 Flash · ACSM ★</span>
 				</div>
 			</div>
 			<div style="font:var(--label-mono);color:var(--ink-3);margin-top:8px">
-				Pode levar 30-60s. A página atualiza automaticamente.
+				Pode levar 15-30s. A página atualiza automaticamente.
 			</div>
 		</div>
 	</div>

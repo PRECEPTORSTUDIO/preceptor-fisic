@@ -11,6 +11,7 @@
 import { eq } from 'drizzle-orm';
 import { generateObject } from 'ai';
 import { randomUUID } from 'node:crypto';
+import { waitUntil } from '@vercel/functions';
 import { google } from './provider';
 import { db } from '$lib/server/db';
 import {
@@ -32,8 +33,10 @@ import { retrieveRelevantChunks, formatContextForPrompt } from './rag';
 import { SYSTEM_PROMPT_PT_BR, SYSTEM_PROMPT_VERSION } from './system-prompt';
 import { validatePlan, violationToRestriction, deriveStudentCtxFromHealth } from '$lib/server/clinical/validator';
 
-const PRIMARY_MODEL = env.AI_MODEL_PRIMARY ?? 'gemini-2.5-pro';
-const FALLBACK_MODEL = env.AI_MODEL_FAST ?? 'gemini-2.5-flash';
+// Flash primário: 3x mais rápido que Pro, qualidade suficiente pro nosso schema.
+// Pro só é tentado se Flash falhar (pouco comum).
+const PRIMARY_MODEL = env.AI_MODEL_FAST ?? 'gemini-2.5-flash';
+const FALLBACK_MODEL = env.AI_MODEL_PRIMARY ?? 'gemini-2.5-pro';
 
 function isQuotaError(err: unknown): boolean {
 	const msg = err instanceof Error ? err.message : String(err);
@@ -266,7 +269,10 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 
 		await db
 			.update(trainingPlans)
-			.set({ progressPct: 60, progressPhase: 'gerando plano com Gemini 2.5 Pro' })
+			.set({
+				progressPct: 60,
+				progressPhase: `gerando plano com ${PRIMARY_MODEL.replace(/^gemini-/, 'Gemini ')}`
+			})
 			.where(eq(trainingPlans.id, planId));
 
 		const userPrompt = buildUserPrompt(ctx, ragContext, opts.notes);
@@ -287,10 +293,15 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 			});
 		} catch (primaryErr) {
 			if (!isQuotaError(primaryErr)) throw primaryErr;
-			log.warn({ err: String(primaryErr).slice(0, 200) }, 'plan.generate.pro_quota_fallback_to_flash');
+			log.warn(
+				{ err: String(primaryErr).slice(0, 200) },
+				'plan.generate.primary_quota_fallback'
+			);
 			await db
 				.update(trainingPlans)
-				.set({ progressPhase: 'Pro com quota cheia → tentando Flash' })
+				.set({
+					progressPhase: `${PRIMARY_MODEL.replace(/^gemini-/, '')} com quota cheia → tentando ${FALLBACK_MODEL.replace(/^gemini-/, '')}`
+				})
 				.where(eq(trainingPlans.id, planId));
 			generation = await generateObject({
 				model: google(FALLBACK_MODEL),
@@ -467,16 +478,27 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 }
 
 /**
- * Fire-and-forget — usado pela action /alunos/[id]/gerar pra retornar
- * imediatamente enquanto a IA trabalha em background.
+ * "Background" no Vercel = waitUntil() do @vercel/functions.
+ * Sem isso, a serverless function morre assim que a action retorna o redirect,
+ * matando a Promise órfã e deixando o plano em status 'pending' pra sempre.
+ *
+ * waitUntil estende o lifetime da invocação até a Promise resolver,
+ * limitado pelo maxDuration do route (60s no Hobby, 300s no Pro).
+ *
+ * Em local dev (não-Vercel), waitUntil é no-op e o microtask roda normal —
+ * Node fica vivo segurando a Promise.
  */
 export function generateTrainingPlanInBackground(opts: GenerateOptions): void {
-	queueMicrotask(() => {
-		generateTrainingPlan(opts).catch((err) => {
-			logger.error(
-				{ err, planId: opts.planId, studentId: opts.studentId },
-				'plan.generate.background.failed'
-			);
-		});
+	const promise = generateTrainingPlan(opts).catch((err) => {
+		logger.error(
+			{ err, planId: opts.planId, studentId: opts.studentId },
+			'plan.generate.background.failed'
+		);
 	});
+	try {
+		waitUntil(promise);
+	} catch {
+		// Fora do contexto Vercel (ex: dev local): waitUntil lança.
+		// Promise continua rodando normalmente porque Node não termina.
+	}
 }

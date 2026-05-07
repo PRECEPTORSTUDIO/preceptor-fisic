@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Dashboard — PreceptorMED CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* page-specific */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+  }
+  .hero-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-4);
+  }
+  .period-bar {
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    overflow: hidden;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .period-bar button {
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--line);
+    padding: 6px 11px;
+    color: var(--ink-3);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .period-bar button:last-child { border-right: none; }
+  .period-bar button.active { background: var(--green-deep); color: #fff; }
+
+  /* funnel */
+  .funnel { display: flex; flex-direction: column; gap: 0; padding: 8px 4px 0; }
+  .funnel-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 80px 60px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+  .funnel-row:last-child { border-bottom: none; }
+  .funnel-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .funnel-name .sub { display: block; font-size: 11px; color: var(--ink-4); font-weight: 500; margin-top: 1px; }
+  .funnel-bar {
+    height: 22px;
+    background: var(--surface-3);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .funnel-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--green-deep), var(--green));
+    border-radius: 4px;
+  }
+  .funnel-fill.churn { background: linear-gradient(90deg, var(--neg), #C76A52); }
+  .funnel-num { font-family: var(--mono); font-feature-settings: "tnum"; font-size: 13px; font-weight: 600; color: var(--ink); text-align: right; }
+  .funnel-pct { font-family: var(--mono); font-size: 11.5px; color: var(--gold-deep); text-align: right; font-weight: 600; }
+
+  /* health heatmap */
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    gap: 3px;
+    margin-top: 4px;
+  }
+  .health-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+  .health-legend {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--ink-4);
+  }
+  .health-scale {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .health-scale .swatch {
+    width: 14px; height: 10px; border-radius: 2px;
+  }
+  .health-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 14px 0 4px;
+    border-top: 1px solid var(--line-soft);
+    margin-top: 14px;
+  }
+  .health-stat .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-4); font-weight: 600; }
+  .health-stat .val { font-family: var(--sans); font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+
+  /* automations log */
+  .automation-list { display: flex; flex-direction: column; padding: 0; }
+  .automation {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    align-items: flex-start;
+  }
+  .automation:last-child { border-bottom: none; }
+  .automation .ico {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: var(--green-soft);
+    color: var(--green-deep);
+    display: grid; place-items: center;
+  }
+  .automation.email .ico { background: var(--info-soft); color: var(--info); }
+  .automation.push .ico { background: #EFE6F4; color: #6B3FA0; }
+  .automation.wapp .ico { background: var(--green-soft); color: var(--green-deep); }
+  .automation.warn .ico { background: var(--warn-soft); color: var(--warn); }
+  .automation .title { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+  .automation .meta { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; }
+  .automation .when { font-family: var(--mono); font-size: 11px; color: var(--ink-4); white-space: nowrap; }
+
+  /* mini chart container */
+  .mini-line { height: 220px; width: 100%; }
+
+  /* stat insight */
+  .insight {
+    background: linear-gradient(180deg, var(--green-tint), var(--surface));
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--green-deep);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .insight .ico {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--green-deep); color: #fff;
+    display: grid; place-items: center;
+  }
+  .insight .head { font-family: var(--sans); font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; letter-spacing: -0.005em; }
+  .insight .body { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+  .insight .body strong { color: var(--ink); font-weight: 600; }
+
+  /* mode-specific kpi colour */
+  .kpi.k-mrr .kpi-value { color: var(--green-deep); }
+  .kpi.k-warn .kpi-value { color: var(--gold-deep); }
+  .kpi.k-neg .kpi-value { color: var(--neg); }
+
+  /* secondary kpi grid */
+  .kpi-secondary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .kpi-secondary .card-pad { padding: 14px 16px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ============== SIDEBAR ============== -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">P</div>
+    <div>
+      <div class="brand-name">PreceptorMED</div>
+      <div class="brand-sub">crm · v3</div>
+    </div>
+  </div>
+
+  <div class="mode-toggle">
+    <button class="active">Marketing</button>
+    <button>Admin</button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Visão geral</div>
+    <a class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+      Atividade ao vivo <span class="nav-dot"></span>
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Marketing</div>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads <span class="nav-count">2 481</span>
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Funil & UTM
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+      Saúde dos alunos
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Risco de churn <span class="nav-pill">17</span>
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Automações
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+      E-mail templates
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Suporte
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Produto</div>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+      Catálogo
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Engajamento
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Sistema</div>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configurações
+    </a>
+  </div>
+
+  <div class="sidebar-foot">
+    <div class="avatar">MC</div>
+    <div class="user-info">
+      <div class="user-name">Matheus Castro</div>
+      <div class="user-email">matheus@preceptor.med.br</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ============== MAIN ============== -->
+<div class="main">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="crumbs">
+    <span>CRM</span>
+    <span class="sep">/</span>
+    <span>Marketing</span>
+    <span class="sep">/</span>
+    <span class="now">Dashboard</span>
+  </div>
+  <div class="topbar-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+    <input placeholder="Buscar leads, campanhas, automações…" />
+    <kbd>⌘K</kbd>
+  </div>
+  <div class="topbar-tools">
+    <span class="live">ao vivo</span>
+    <button class="btn-icon" title="Notificações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
+    <button class="btn-icon" title="Compartilhar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+    </button>
+    <button class="btn btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova campanha
+    </button>
+  </div>
+</header>
+
+<!-- PAGE -->
+<main class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <div class="page-eyebrow">Marketing · Tempo real · 17 abr 2026</div>
+      <h1 class="page-title">Dashboard <em>de aquisição</em></h1>
+      <p class="page-sub">Funil, leads e saúde dos alunos consolidados em uma vista. Receita, runway e people health vivem no modo Admin.</p>
+    </div>
+    <div class="hero-meta">
+      <div class="period-bar">
+        <button>Hoje</button>
+        <button>7d</button>
+        <button class="active">30d</button>
+        <button>Trimestre</button>
+        <button>Ano</button>
+        <button>Custom</button>
+      </div>
+      <div class="row" style="gap:6px;">
+        <span>Comparado a <strong class="strong">17 mar – 16 abr</strong></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPI ROW -->
+  <section class="kpi-row">
+    <div class="kpi k-mrr">
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+        MRR
+      </div>
+      <div class="kpi-value">R$ 38.412<span class="unit">/mês</span></div>
+      <div class="kpi-meta">
+        <span class="delta delta-pos">↑ 12,4%</span>
+        <span>vs período anterior</span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,22 L8,20 L16,21 L24,18 L32,16 L40,17 L48,14 L56,12 L64,11 L72,9 L80,8 L88,6 L100,5" stroke="#1B5E3B" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M0,22 L8,20 L16,21 L24,18 L32,16 L40,17 L48,14 L56,12 L64,11 L72,9 L80,8 L88,6 L100,5 L100,28 L0,28 Z" fill="#1B5E3B" fill-opacity="0.08"/>
+      </svg>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Assinantes
+      </div>
+      <div class="kpi-value">784<span class="unit">/ 1 000</span></div>
+      <div class="kpi-meta">
+        <span class="delta delta-pos">+ 38</span>
+        <span>meta · <strong class="strong">78%</strong></span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,24 L10,23 L22,21 L34,20 L46,17 L58,15 L72,12 L84,9 L100,7" stroke="#5A5247" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+        Churn rate
+      </div>
+      <div class="kpi-value">3,8<span class="unit">%</span></div>
+      <div class="kpi-meta">
+        <span class="delta delta-pos">↓ 0,9 p.p.</span>
+        <span>benchmark &lt; 5%</span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,8 L12,9 L24,11 L36,10 L48,13 L60,15 L72,17 L84,19 L100,22" stroke="#1B7A3F" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="kpi k-warn">
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Em risco
+      </div>
+      <div class="kpi-value">17<span class="unit">alunos</span></div>
+      <div class="kpi-meta">
+        <span class="delta delta-neg">↑ 4</span>
+        <span>≥ 40% de probabilidade</span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,18 L12,17 L24,15 L36,16 L48,12 L60,10 L72,8 L84,6 L100,4" stroke="#A88A33" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Automações hoje
+      </div>
+      <div class="kpi-value">312</div>
+      <div class="kpi-meta">
+        <span class="delta delta-pos">+ 28%</span>
+        <span>email · push · whatsapp</span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,20 L8,18 L16,22 L24,15 L32,17 L40,12 L48,16 L56,10 L64,13 L72,7 L80,11 L88,5 L100,9" stroke="#6B3FA0" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        LTV médio
+      </div>
+      <div class="kpi-value">R$ 612</div>
+      <div class="kpi-meta">
+        <span class="delta delta-pos">↑ R$ 41</span>
+        <span>life-time value</span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,22 L12,20 L24,21 L36,18 L48,16 L60,14 L72,11 L84,8 L100,5" stroke="#1B5E3B" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- INSIGHT BAR -->
+  <section class="insight">
+    <div class="ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M12 2v6"/><path d="M12 22v-2"/><path d="m17 5-4 4"/><path d="M9 16H4"/><path d="M20 12h-4"/></svg>
+    </div>
+    <div>
+      <div class="head">A campanha <strong>“Residência R+ · Cardio”</strong> já é responsável por 41% dos signups do mês.</div>
+      <div class="body">UTM <code>google_ads / cpc / residencia-cardio-mar26</code> trouxe <strong>312 leads</strong>, com score médio <strong>62</strong> — 11 pontos acima da média geral. Recomenda-se aumentar budget em 30% e duplicar criativo para R+ Pediatria.</div>
+    </div>
+  </section>
+
+  <!-- FUNNEL + HEALTH -->
+  <section class="g-23">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            Funil de conversão
+          </div>
+          <div class="card-sub">Visitantes → Assinantes · 30 dias · PreceptorMED</div>
+        </div>
+        <div class="card-side">
+          <div class="period-bar" style="font-size:11px;">
+            <button class="active">PreceptorMED</button>
+            <button>PreceptorIA</button>
+            <button>Rev</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-pad">
+        <div class="funnel">
+          <div class="funnel-row">
+            <div class="funnel-name">Visitantes <span class="sub">site + landing</span></div>
+            <div class="funnel-bar"><div class="funnel-fill" style="width:100%;"></div></div>
+            <div class="funnel-num">28 412</div>
+            <div class="funnel-pct">100%</div>
+          </div>
+          <div class="funnel-row">
+            <div class="funnel-name">Signups <span class="sub">conta criada</span></div>
+            <div class="funnel-bar"><div class="funnel-fill" style="width:34%;"></div></div>
+            <div class="funnel-num">9 661</div>
+            <div class="funnel-pct">34,0%</div>
+          </div>
+          <div class="funnel-row">
+            <div class="funnel-name">Trial ativo <span class="sub">acesso liberado</span></div>
+            <div class="funnel-bar"><div class="funnel-fill" style="width:18%;"></div></div>
+            <div class="funnel-num">5 116</div>
+            <div class="funnel-pct">53,0%</div>
+          </div>
+          <div class="funnel-row">
+            <div class="funnel-name">Engajados <span class="sub">≥ 3 sessões</span></div>
+            <div class="funnel-bar"><div class="funnel-fill" style="width:11%;"></div></div>
+            <div class="funnel-num">3 124</div>
+            <div class="funnel-pct">61,1%</div>
+          </div>
+          <div class="funnel-row">
+            <div class="funnel-name">Assinantes <span class="sub">plano pago ativo</span></div>
+            <div class="funnel-bar"><div class="funnel-fill" style="width:2.8%;"></div></div>
+            <div class="funnel-num">784</div>
+            <div class="funnel-pct">25,1%</div>
+          </div>
+          <div class="funnel-row">
+            <div class="funnel-name">Churn <span class="sub">cancelados nos 30d</span></div>
+            <div class="funnel-bar"><div class="funnel-fill churn" style="width:0.11%;min-width:6px;"></div></div>
+            <div class="funnel-num">31</div>
+            <div class="funnel-pct" style="color:var(--neg);">3,8%</div>
+          </div>
+        </div>
+        <hr class="rule" style="margin:14px 0 12px;"/>
+        <p class="foot"><strong>Gargalo do mês:</strong> trial → engajado caiu 7 p.p. desde fevereiro. Hipótese: onboarding muito longo. Teste A/B em curso (variant <code>fast-onboard-2</code>).</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01"/></svg>
+            Saúde dos alunos
+          </div>
+          <div class="card-sub">Score 0–100 por engajamento · 784 assinantes</div>
+        </div>
+        <div class="card-side"><a class="btn btn-link">Ver mapa →</a></div>
+      </div>
+      <div class="card-pad">
+        <div class="health-grid" id="hg"></div>
+        <div class="health-stats">
+          <div class="health-stat"><div class="lbl">Saudável</div><div class="val" style="color:var(--pos);">521</div></div>
+          <div class="health-stat"><div class="lbl">Atento</div><div class="val" style="color:var(--gold-deep);">189</div></div>
+          <div class="health-stat"><div class="lbl">Em risco</div><div class="val" style="color:var(--neg);">57</div></div>
+          <div class="health-stat"><div class="lbl">Inativo</div><div class="val" style="color:var(--ink-4);">17</div></div>
+        </div>
+        <div class="health-legend">
+          <span>Cada quadrado = 1 aluno · ordenado por score ascendente</span>
+          <div class="health-scale">
+            <span>0</span>
+            <div class="swatch" style="background:#E8E2D4"></div>
+            <div class="swatch" style="background:#D9CFA6"></div>
+            <div class="swatch" style="background:#B5C9A1"></div>
+            <div class="swatch" style="background:#7AAB7A"></div>
+            <div class="swatch" style="background:#1B5E3B"></div>
+            <span>100</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHURN RISK + AUTOMATIONS -->
+  <section class="g-23">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+            Maiores riscos de churn
+          </div>
+          <div class="card-sub">17 usuários acima de 40% de probabilidade · próximos 14 dias</div>
+        </div>
+        <div class="card-side"><a class="btn btn-link">Ver todos →</a></div>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Plano</th>
+            <th style="text-align:right;">Probabilidade</th>
+            <th>Sinal principal</th>
+            <th>Última sessão</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="lead-name">Bruna Cosendey</div><div class="lead-email">bruna.cosendey@gmail.com</div></td>
+            <td><span class="tag tag-green"><span class="tag-dot"></span>Anual</span></td>
+            <td class="num"><span style="color:var(--neg);font-weight:700;">81%</span></td>
+            <td class="muted">Acessos ↓ 86% · 0 questões</td>
+            <td class="muted">há 19 dias</td>
+            <td><button class="btn btn-ghost">Acionar</button></td>
+          </tr>
+          <tr>
+            <td><div class="lead-name">Pedro Henrique Lacerda</div><div class="lead-email">pedrolacerda@hotmail.com</div></td>
+            <td><span class="tag tag-gray"><span class="tag-dot"></span>Mensal</span></td>
+            <td class="num"><span style="color:var(--neg);font-weight:700;">74%</span></td>
+            <td class="muted">Cartão recusado · 2x</td>
+            <td class="muted">há 8 dias</td>
+            <td><button class="btn btn-ghost">Acionar</button></td>
+          </tr>
+          <tr>
+            <td><div class="lead-name">Thiago Carvalho Sá</div><div class="lead-email">thiago.csa@medusp.br</div></td>
+            <td><span class="tag tag-gold"><span class="tag-dot"></span>Bianual</span></td>
+            <td class="num"><span style="color:var(--gold-deep);font-weight:700;">68%</span></td>
+            <td class="muted">Suporte aberto há 5d</td>
+            <td class="muted">há 11 dias</td>
+            <td><button class="btn btn-ghost">Acionar</button></td>
+          </tr>
+          <tr>
+            <td><div class="lead-name">Marcela Tinoco Nunes</div><div class="lead-email">marcela.tinoco@unifesp.edu.br</div></td>
+            <td><span class="tag tag-green"><span class="tag-dot"></span>Anual</span></td>
+            <td class="num"><span style="color:var(--gold-deep);font-weight:700;">61%</span></td>
+            <td class="muted">NPS 4 · feedback negativo</td>
+            <td class="muted">há 6 dias</td>
+            <td><button class="btn btn-ghost">Acionar</button></td>
+          </tr>
+          <tr>
+            <td><div class="lead-name">Felipe Brandão R.</div><div class="lead-email">felipe.brandao@residencia.org</div></td>
+            <td><span class="tag tag-gray"><span class="tag-dot"></span>Mensal</span></td>
+            <td class="num"><span style="color:var(--gold-deep);font-weight:700;">52%</span></td>
+            <td class="muted">Engajamento ↓ 4 sem.</td>
+            <td class="muted">há 13 dias</td>
+            <td><button class="btn btn-ghost">Acionar</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Automações recentes
+          </div>
+          <div class="card-sub">312 disparos hoje · 99,2% delivery</div>
+        </div>
+        <div class="card-side"><a class="btn btn-link">Logs →</a></div>
+      </div>
+      <div class="automation-list">
+        <div class="automation email">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+          <div>
+            <div class="title">Trial expirando em 3 dias</div>
+            <div class="meta">87 e-mails · template <code>trial-3d</code> · open 41%</div>
+          </div>
+          <div class="when">14:22</div>
+        </div>
+        <div class="automation wapp">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div>
+            <div class="title">WhatsApp · resgate de leads quentes</div>
+            <div class="meta">42 envios · score ≥ 70 · resposta 23%</div>
+          </div>
+          <div class="when">13:48</div>
+        </div>
+        <div class="automation push">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg></div>
+          <div>
+            <div class="title">Push · novas videoaulas Cardio</div>
+            <div class="meta">523 dispositivos · CTR 8,1%</div>
+          </div>
+          <div class="when">12:00</div>
+        </div>
+        <div class="automation warn">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+          <div>
+            <div class="title">Alerta de churn (≥ 70%)</div>
+            <div class="meta">3 alunos · acionou playbook <code>winback-A</code></div>
+          </div>
+          <div class="when">11:30</div>
+        </div>
+        <div class="automation email">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+          <div>
+            <div class="title">Boas-vindas · novos signups</div>
+            <div class="meta">128 e-mails · open 62%</div>
+          </div>
+          <div class="when">10:00</div>
+        </div>
+        <div class="automation wapp">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div>
+            <div class="title">WhatsApp · cobrança amistosa</div>
+            <div class="meta">11 envios · cartão recusado · resp. 64%</div>
+          </div>
+          <div class="when">09:15</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div><!-- /.main -->
+</div><!-- /.app -->
+
+<script>
+  // Health heatmap — 200 cells with health score gradient
+  (function() {
+    const grid = document.getElementById('hg');
+    if (!grid) return;
+    // Distribution roughly matches: 521 healthy, 189 attention, 57 risk, 17 inactive => 784 / 4 = 200 cells
+    // Order ascending by score
+    const total = 200;
+    const inactive = 4, risk = 15, attention = 48, healthy = 133;
+    const colors = ['#EFE8D8', '#E0D5A8', '#C8C896', '#94B387', '#5C9067', '#1B5E3B'];
+    const cells = [];
+    for (let i = 0; i < inactive; i++) cells.push(colors[0]);
+    for (let i = 0; i < risk; i++) cells.push(colors[1 + (i%2)]);
+    for (let i = 0; i < attention; i++) cells.push(colors[2 + (i%2)]);
+    for (let i = 0; i < healthy; i++) cells.push(colors[4 + (i%2)]);
+    // pad to total if needed
+    while (cells.length < total) cells.push(colors[5]);
+    cells.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'health-cell';
+      el.style.background = c;
+      grid.appendChild(el);
+    });
+  })();
+
+  // Mode toggle (Marketing/Admin) — toggles a class so kpi/labels can adapt later
+  document.querySelectorAll('.mode-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.period-bar button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bar = btn.closest('.period-bar');
+      bar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

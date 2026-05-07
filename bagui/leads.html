@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Leads — PreceptorMED CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .filter-bar .search { flex: 1; position: relative; max-width: 320px; }
+  .filter-bar input, .filter-bar select {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px 6px 28px;
+    font-family: var(--text);
+    font-size: 12.5px;
+    color: var(--ink);
+    width: 100%;
+  }
+  .filter-bar select { padding-left: 10px; min-width: 130px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-4) 50%), linear-gradient(135deg, var(--ink-4) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 26px; }
+  .filter-bar .search svg { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--ink-4); }
+  .filter-bar .group { margin-left: auto; display: flex; gap: 6px; }
+
+  .channel-row { padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+  .channel-row:last-child { border-bottom: none; }
+  .channel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .channel-name { font-size: 13px; font-weight: 600; color: var(--ink); text-transform: capitalize; }
+  .channel-stats { display: flex; gap: 12px; font-size: 11.5px; color: var(--ink-4); }
+  .channel-stats strong { color: var(--green-deep); font-weight: 700; }
+  .channel-bar { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+  .channel-bar-fill { height: 100%; background: var(--green-deep); border-radius: 3px; }
+
+  .stage-pills { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
+  .stage-pills .pill {
+    padding: 12px 14px;
+    border-right: 1px solid var(--line-soft);
+    background: var(--surface);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .stage-pills .pill:hover { background: var(--surface-2); }
+  .stage-pills .pill.active { background: var(--green-tint); }
+  .stage-pills .pill:last-child { border-right: none; }
+  .stage-pills .pill .lbl { font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-4); }
+  .stage-pills .pill .val { font-family: var(--sans); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.025em; margin-top: 2px; }
+  .stage-pills .pill .pct { font-family: var(--mono); font-size: 11px; color: var(--ink-4); margin-top: 2px; }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-size: 12px; color: var(--ink-4); border-top: 1px solid var(--line); }
+  .pagination .pages { display: inline-flex; gap: 4px; }
+  .pagination .pages button { background: var(--surface); border: 1px solid var(--line); color: var(--ink-3); border-radius: 5px; width: 26px; height: 26px; font-family: var(--mono); font-size: 11.5px; cursor: pointer; }
+  .pagination .pages button.current { background: var(--green-deep); color: #fff; border-color: var(--green-deep); }
+
+  .saved-views { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .saved-view {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+  .saved-view.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .saved-view .ct { font-family: var(--mono); font-size: 10.5px; opacity: 0.7; }
+
+  /* lead detail drawer (right side preview) */
+  .with-drawer { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: flex-start; }
+  .drawer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); position: sticky; top: 76px; }
+  .drawer-head { padding: 16px 16px 14px; border-bottom: 1px solid var(--line-soft); }
+  .drawer .lead-id { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); letter-spacing: 0.04em; }
+  .drawer .lead-name-big { font-family: var(--sans); font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.015em; margin-top: 4px; line-height: 1.15; }
+  .drawer .lead-mail { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .drawer .score-big { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); }
+  .score-ring { position: relative; width: 56px; height: 56px; }
+  .score-ring svg { width: 56px; height: 56px; transform: rotate(-90deg); }
+  .score-ring .ring-bg { stroke: var(--surface-3); }
+  .score-ring .ring-fg { stroke: var(--green-deep); stroke-linecap: round; }
+  .score-ring .num { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--sans); font-weight: 700; font-size: 16px; color: var(--ink); }
+
+  .drawer-section { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+  .drawer-section:last-child { border-bottom: none; }
+  .drawer-section h4 { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 8px; }
+  .kv { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; font-size: 12px; }
+  .kv dt { color: var(--ink-4); }
+  .kv dd { margin: 0; color: var(--ink); font-weight: 500; }
+  .kv dd .mono { font-size: 11.5px; }
+
+  .timeline { display: flex; flex-direction: column; gap: 10px; }
+  .timeline-item { display: grid; grid-template-columns: 12px 1fr; gap: 10px; position: relative; }
+  .timeline-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-top: 5px; }
+  .timeline-item:not(:last-child)::before {
+    content: ""; position: absolute;
+    left: 3px; top: 14px; bottom: -10px;
+    width: 1px; background: var(--line);
+  }
+  .timeline-event { font-size: 12px; color: var(--ink); font-weight: 500; }
+  .timeline-meta { font-size: 11px; color: var(--ink-4); margin-top: 1px; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">P</div>
+    <div>
+      <div class="brand-name">PreceptorMED</div>
+      <div class="brand-sub">crm · v3</div>
+    </div>
+  </div>
+  <div class="mode-toggle"><button class="active">Marketing</button><button>Admin</button></div>
+  <div class="nav-section">
+    <div class="nav-label">Visão geral</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Dashboard</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg> Atividade ao vivo <span class="nav-dot"></span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Marketing</div>
+    <a class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Leads <span class="nav-count">2 481</span></a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Funil & UTM</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg> Saúde dos alunos</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg> Risco de churn <span class="nav-pill">17</span></a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Automações</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> E-mail templates</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Suporte</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Sistema</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Configurações</a>
+  </div>
+  <div class="sidebar-foot">
+    <div class="avatar">MC</div>
+    <div class="user-info"><div class="user-name">Matheus Castro</div><div class="user-email">matheus@preceptor.med.br</div></div>
+  </div>
+</aside>
+
+<div class="main">
+<header class="topbar">
+  <div class="crumbs"><span>CRM</span><span class="sep">/</span><span>Marketing</span><span class="sep">/</span><span class="now">Leads</span></div>
+  <div class="topbar-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+    <input placeholder="Buscar leads, campanhas, automações…" /><kbd>⌘K</kbd>
+  </div>
+  <div class="topbar-tools">
+    <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar</button>
+    <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo lead</button>
+  </div>
+</header>
+
+<main class="page">
+  <div>
+    <div class="page-eyebrow">Marketing · Lead Intelligence</div>
+    <h1 class="page-title">2 481 leads <em>vivos no banco</em></h1>
+    <p class="page-sub">Score automático de 0–100 baseado em engajamento, fase médica e canal de origem. Ranking atualizado a cada 4h pelo motor de ML.</p>
+  </div>
+
+  <!-- stage pills -->
+  <div class="card" style="overflow:hidden;">
+    <div class="stage-pills">
+      <div class="pill"><div class="lbl">Visitor</div><div class="val">28 412</div><div class="pct">+ 2 814 (30d)</div></div>
+      <div class="pill"><div class="lbl">Signup</div><div class="val">1 242</div><div class="pct">34,0% conv.</div></div>
+      <div class="pill active"><div class="lbl">Trial ativo</div><div class="val" style="color:var(--green-deep);">658</div><div class="pct">53,0% conv.</div></div>
+      <div class="pill"><div class="lbl">Engajado</div><div class="val">389</div><div class="pct">61,1% conv.</div></div>
+      <div class="pill"><div class="lbl">Assinante</div><div class="val">784</div><div class="pct">25,1% conv.</div></div>
+      <div class="pill"><div class="lbl">Churn</div><div class="val" style="color:var(--neg);">31</div><div class="pct">3,8% / mês</div></div>
+      <div class="pill"><div class="lbl">Win-back</div><div class="val">9</div><div class="pct">29% recovery</div></div>
+    </div>
+  </div>
+
+  <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div class="saved-views">
+      <span class="muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Visões</span>
+      <button class="saved-view active">Trial ativo · score ≥ 50 <span class="ct">658</span></button>
+      <button class="saved-view">Hot leads (R+ Cardio) <span class="ct">142</span></button>
+      <button class="saved-view">Sem atividade 7d <span class="ct">87</span></button>
+      <button class="saved-view">Bianual · não convertidos <span class="ct">31</span></button>
+      <button class="saved-view"><svg class="ic-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Salvar visão</button>
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filtros</button>
+      <button class="btn btn-ghost"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg> Colunas</button>
+    </div>
+  </div>
+
+  <div class="with-drawer">
+    <div>
+      <div class="card" style="overflow:hidden;">
+        <div class="filter-bar">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            <input placeholder="Buscar por email ou nome…" />
+          </div>
+          <select><option>Status</option><option>Trial ativo</option><option>Assinante</option></select>
+          <select><option>Score ≥</option><option>70</option><option>50</option><option>30</option></select>
+          <select><option>Produto</option><option>PreceptorMED</option><option>PreceptorIA</option></select>
+          <select><option>UTM source</option><option>google_ads</option><option>instagram</option></select>
+          <div class="group">
+            <button class="btn btn-ghost">Limpar</button>
+            <button class="btn btn-primary">Filtrar</button>
+          </div>
+        </div>
+
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:24px;"><input type="checkbox" /></th>
+              <th>Lead</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th>Fase</th>
+              <th>Produto</th>
+              <th>Origem</th>
+              <th>Última atividade</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:var(--green-tint);">
+              <td><input type="checkbox" checked /></td>
+              <td><div class="lead-name">Bruna Cosendey Albuquerque</div><div class="lead-email">bruna.cosendey@unifesp.edu.br</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:91%;"></div><span class="score-num">91</span></div></td>
+              <td><span class="tag tag-green"><span class="tag-dot"></span>Trial ativo</span></td>
+              <td class="muted">R+ Cardio</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">google_ads</div><div class="muted" style="font-size:11px;">cpc · residencia-cardio-mar26</div></td>
+              <td class="muted mono">há 14 min</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Pedro Henrique Lacerda</div><div class="lead-email">pedrolacerda@hotmail.com</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:88%;"></div><span class="score-num">88</span></div></td>
+              <td><span class="tag tag-green"><span class="tag-dot"></span>Engajado</span></td>
+              <td class="muted">R+ Clínica</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">instagram</div><div class="muted" style="font-size:11px;">organic · @preceptormed</div></td>
+              <td class="muted mono">há 1 h</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Marcela Tinoco Nunes</div><div class="lead-email">marcela.tinoco@medusp.br</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:82%;"></div><span class="score-num">82</span></div></td>
+              <td><span class="tag tag-green"><span class="tag-dot"></span>Engajado</span></td>
+              <td class="muted">Internato</td>
+              <td><span class="tag tag-outline-green">PreceptorIA</span></td>
+              <td><div class="muted mono">direct</div><div class="muted" style="font-size:11px;">—</div></td>
+              <td class="muted mono">há 3 h</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Thiago Carvalho Sá</div><div class="lead-email">thiago.csa@medusp.br</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:74%;"></div><span class="score-num">74</span></div></td>
+              <td><span class="tag tag-blue"><span class="tag-dot"></span>Trial ativo</span></td>
+              <td class="muted">R+ Cardio</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">google_ads</div><div class="muted" style="font-size:11px;">cpc · residencia-cardio-mar26</div></td>
+              <td class="muted mono">há 5 h</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Felipe Brandão Rios</div><div class="lead-email">felipe.brandao@residencia.org</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:67%;"></div><span class="score-num">67</span></div></td>
+              <td><span class="tag tag-warn"><span class="tag-dot"></span>Trial ativo</span></td>
+              <td class="muted">R+ Pediatria</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">facebook</div><div class="muted" style="font-size:11px;">cpc · pediatria-abr</div></td>
+              <td class="muted mono">há 1 dia</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Camila Reis Andrade</div><div class="lead-email">camilarandrade@gmail.com</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:62%;"></div><span class="score-num">62</span></div></td>
+              <td><span class="tag tag-blue"><span class="tag-dot"></span>Signup</span></td>
+              <td class="muted">Pré-prova</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">tiktok</div><div class="muted" style="font-size:11px;">organic · @preceptor</div></td>
+              <td class="muted mono">há 1 dia</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Rafael Oliveira Mendes</div><div class="lead-email">rafa.mendes@hotmail.com</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:58%;"></div><span class="score-num">58</span></div></td>
+              <td><span class="tag tag-warn"><span class="tag-dot"></span>Trial ativo</span></td>
+              <td class="muted">R+ Cirurgia</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">instagram</div><div class="muted" style="font-size:11px;">cpc · cirurgia-mar26</div></td>
+              <td class="muted mono">há 2 dias</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Juliana Pacheco Lima</div><div class="lead-email">juliana.lima@unb.br</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:51%;"></div><span class="score-num">51</span></div></td>
+              <td><span class="tag tag-warn"><span class="tag-dot"></span>Engajado</span></td>
+              <td class="muted">Internato</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">direct</div><div class="muted" style="font-size:11px;">indicação</div></td>
+              <td class="muted mono">há 2 dias</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Diego Torres Almeida</div><div class="lead-email">d.torres@medusp.br</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:44%;"></div><span class="score-num">44</span></div></td>
+              <td><span class="tag tag-gray"><span class="tag-dot"></span>Signup</span></td>
+              <td class="muted">R+ Cardio</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">google_ads</div><div class="muted" style="font-size:11px;">cpc · residencia-cardio-mar26</div></td>
+              <td class="muted mono">há 4 dias</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Ana Carolina Furtado</div><div class="lead-email">anac.furtado@gmail.com</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:38%;"></div><span class="score-num">38</span></div></td>
+              <td><span class="tag tag-gray"><span class="tag-dot"></span>Signup</span></td>
+              <td class="muted">Pré-prova</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">organic_search</div><div class="muted" style="font-size:11px;">google · "como passar residência"</div></td>
+              <td class="muted mono">há 5 dias</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Vinícius Souza Cardoso</div><div class="lead-email">vinicius.cardoso@residencia.org</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:31%;"></div><span class="score-num">31</span></div></td>
+              <td><span class="tag tag-gray"><span class="tag-dot"></span>Visitor</span></td>
+              <td class="muted">—</td>
+              <td><span class="tag tag-outline-green">PreceptorMED</span></td>
+              <td><div class="muted mono">tiktok</div><div class="muted" style="font-size:11px;">cpc · revalida-abr26</div></td>
+              <td class="muted mono">há 6 dias</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" /></td>
+              <td><div class="lead-name">Larissa Ferreira Mota</div><div class="lead-email">larissa.fmota@gmail.com</div></td>
+              <td><div class="score"><div class="score-bar" style="--score:24%;"></div><span class="score-num">24</span></div></td>
+              <td><span class="tag tag-gray"><span class="tag-dot"></span>Visitor</span></td>
+              <td class="muted">—</td>
+              <td><span class="tag tag-outline-green">PreceptorRev</span></td>
+              <td><div class="muted mono">facebook</div><div class="muted" style="font-size:11px;">cpc · revalida-abr26</div></td>
+              <td class="muted mono">há 7 dias</td>
+              <td><button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination">
+          <span>Mostrando <strong class="strong">1–12</strong> de <strong class="strong">658</strong> leads na visão atual</span>
+          <div class="pages">
+            <button>‹</button>
+            <button class="current">1</button>
+            <button>2</button>
+            <button>3</button>
+            <button>4</button>
+            <button>…</button>
+            <button>55</button>
+            <button>›</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Channel performance card below table -->
+      <div class="card" style="margin-top:18px;">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Performance por canal</div>
+            <div class="card-sub">Distribuição de leads e conversão UTM source · 30 dias</div>
+          </div>
+          <div class="card-side"><a class="btn btn-link">Detalhar canais →</a></div>
+        </div>
+        <div class="card-pad" style="padding-top:6px;">
+          <div class="channel-row">
+            <div class="channel-head">
+              <span class="channel-name">google_ads</span>
+              <div class="channel-stats"><span>1 240 leads</span><span>score médio <strong>62</strong></span><span>conv. <strong>4,1%</strong></span><span>312 assinantes</span></div>
+            </div>
+            <div class="channel-bar"><div class="channel-bar-fill" style="width:100%;"></div></div>
+          </div>
+          <div class="channel-row">
+            <div class="channel-head">
+              <span class="channel-name">instagram</span>
+              <div class="channel-stats"><span>684 leads</span><span>score médio <strong>54</strong></span><span>conv. <strong>3,4%</strong></span><span>178 assinantes</span></div>
+            </div>
+            <div class="channel-bar"><div class="channel-bar-fill" style="width:55%;background:#C9A84C;"></div></div>
+          </div>
+          <div class="channel-row">
+            <div class="channel-head">
+              <span class="channel-name">tiktok</span>
+              <div class="channel-stats"><span>312 leads</span><span>score médio <strong>41</strong></span><span>conv. <strong>1,9%</strong></span><span>62 assinantes</span></div>
+            </div>
+            <div class="channel-bar"><div class="channel-bar-fill" style="width:25%;background:#6B3FA0;"></div></div>
+          </div>
+          <div class="channel-row">
+            <div class="channel-head">
+              <span class="channel-name">organic_search</span>
+              <div class="channel-stats"><span>198 leads</span><span>score médio <strong>71</strong></span><span>conv. <strong>5,8%</strong></span><span>134 assinantes</span></div>
+            </div>
+            <div class="channel-bar"><div class="channel-bar-fill" style="width:16%;background:#1B7A3F;"></div></div>
+          </div>
+          <div class="channel-row">
+            <div class="channel-head">
+              <span class="channel-name">direct</span>
+              <div class="channel-stats"><span>147 leads</span><span>score médio <strong>69</strong></span><span>conv. <strong>6,2%</strong></span><span>98 assinantes</span></div>
+            </div>
+            <div class="channel-bar"><div class="channel-bar-fill" style="width:12%;background:#5A5247;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== DRAWER ============== -->
+    <aside class="drawer">
+      <div class="drawer-head">
+        <div class="lead-id">LEAD #PMD-3812</div>
+        <div class="lead-name-big">Bruna Cosendey<br/>Albuquerque</div>
+        <div class="lead-mail">bruna.cosendey@unifesp.edu.br</div>
+        <div class="row" style="margin-top:8px;gap:6px;">
+          <span class="tag tag-green"><span class="tag-dot"></span>Trial ativo</span>
+          <span class="tag tag-outline-green">PreceptorMED</span>
+        </div>
+      </div>
+      <div class="score-big">
+        <div class="score-ring">
+          <svg viewBox="0 0 56 56">
+            <circle class="ring-bg" cx="28" cy="28" r="24" stroke-width="6" fill="none"/>
+            <circle class="ring-fg" cx="28" cy="28" r="24" stroke-width="6" fill="none" stroke-dasharray="151 151" stroke-dashoffset="14"/>
+          </svg>
+          <div class="num">91</div>
+        </div>
+        <div>
+          <div class="strong" style="font-family:var(--sans);font-size:13px;">Hot lead</div>
+          <div class="muted" style="font-size:11.5px;line-height:1.4;">Probabilidade de conversão estimada em <strong class="strong">87%</strong> nos próximos 7 dias.</div>
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <h4>Identidade</h4>
+        <dl class="kv">
+          <dt>Fase</dt><dd>R+ Cardio</dd>
+          <dt>Universidade</dt><dd>UNIFESP</dd>
+          <dt>Ano formação</dt><dd>2025</dd>
+          <dt>UF</dt><dd>SP</dd>
+        </dl>
+      </div>
+      <div class="drawer-section">
+        <h4>Origem</h4>
+        <dl class="kv">
+          <dt>Source</dt><dd class="mono">google_ads</dd>
+          <dt>Medium</dt><dd class="mono">cpc</dd>
+          <dt>Campanha</dt><dd class="mono" style="font-size:11px;line-height:1.4;">residencia-cardio-mar26</dd>
+          <dt>Cadastro</dt><dd>03 abr 2026</dd>
+        </dl>
+      </div>
+      <div class="drawer-section">
+        <h4>Atividade recente</h4>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div>
+              <div class="timeline-event">Resolveu 24 questões em <em>Cardio · IAM</em></div>
+              <div class="timeline-meta">há 14 min · sessão 47 min</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--gold-deep);"></div>
+            <div>
+              <div class="timeline-event">Abriu plano de carreira da residência</div>
+              <div class="timeline-meta">há 2 h</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--info);"></div>
+            <div>
+              <div class="timeline-event">Reagiu a push <em>“Novas videoaulas Cardio”</em></div>
+              <div class="timeline-meta">ontem · 12:08</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--ink-4);"></div>
+            <div>
+              <div class="timeline-event">Cadastrou-se no trial</div>
+              <div class="timeline-meta">03 abr · 14:22</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="drawer-section row" style="gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-primary"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Mensagem</button>
+        <button class="btn btn-ghost">Acionar playbook</button>
+      </div>
+    </aside>
+  </div>
+</main>
+</div>
+</div>
+
+<script>
+  document.querySelectorAll('.mode-toggle button, .saved-view, .stage-pills .pill').forEach(el => {
+    el.addEventListener('click', () => {
+      const sib = el.parentElement;
+      sib.querySelectorAll('button, .saved-view, .pill').forEach(s => s.classList && s.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

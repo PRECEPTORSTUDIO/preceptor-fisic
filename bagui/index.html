@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>CRM PreceptorMED — Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  body { background: var(--bg); }
+  .hub {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 56px 48px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+  .hub-head {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 48px;
+    align-items: end;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 36px;
+  }
+  .hub-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-4);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .hub-eyebrow .mark {
+    width: 24px; height: 24px; border-radius: 5px;
+    background: var(--green-deep);
+    color: #fff;
+    display: grid; place-items: center;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .hub-title {
+    font-family: var(--sans);
+    font-size: 60px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--ink);
+    margin: 14px 0 0;
+  }
+  .hub-title em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+    color: var(--green-deep);
+  }
+  .hub-lede {
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    margin-top: 14px;
+    max-width: 60ch;
+  }
+  .hub-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .hub-meta .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+  .hub-meta .row strong { color: var(--ink); font-weight: 600; }
+
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 18px;
+  }
+  .section-head h2 {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .section-head h2 em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+    color: var(--ink-3);
+  }
+  .section-head .sub {
+    font-size: 13px;
+    color: var(--ink-4);
+    max-width: 50ch;
+    text-align: right;
+  }
+
+  /* Pages grid */
+  .pages-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+  .page-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    position: relative;
+  }
+  .page-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15,30,25,0.08);
+    border-color: var(--green-deep);
+  }
+  .page-card .preview {
+    aspect-ratio: 16 / 9;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+    position: relative;
+    overflow: hidden;
+  }
+  .page-card .preview svg { width: 100%; height: 100%; display: block; }
+  .page-card .body {
+    padding: 18px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .page-card .row1 { display: flex; justify-content: space-between; align-items: center; }
+  .page-card .nm { font-family: var(--sans); font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.015em; }
+  .page-card .desc { font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+  .page-card .feats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .page-card .feat { font-family: var(--mono); font-size: 10.5px; padding: 3px 8px; border-radius: 3px; background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+
+  .mode-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    color: #fff;
+    font-weight: 700;
+  }
+  .mode-pill.mkt { background: var(--green-deep); }
+  .mode-pill.adm { background: var(--ink); }
+  .mode-pill.both { background: linear-gradient(90deg, var(--green-deep) 50%, var(--ink) 50%); }
+
+  /* System table */
+  .system-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-family: var(--text);
+  }
+  .system-table th, .system-table td {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  .system-table thead th {
+    background: var(--surface-2);
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .system-table tr:last-child td { border-bottom: none; }
+  .system-table .num { font-family: var(--mono); font-feature-settings: "tnum"; color: var(--ink-3); }
+  .system-table code { font-family: var(--mono); background: var(--surface-2); padding: 2px 6px; border-radius: 3px; font-size: 11.5px; color: var(--green-deep); }
+
+  /* Architecture diagram */
+  .arch {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    gap: 30px;
+  }
+  .arch-divider {
+    background: linear-gradient(180deg, transparent, var(--line), transparent);
+  }
+  .arch h3 {
+    margin: 0 0 6px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .arch h3 .pill {
+    margin-left: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #fff;
+    background: var(--green-deep);
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+  }
+  .arch h3.adm .pill { background: var(--ink); }
+  .arch p.lead { margin: 0 0 14px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+  .arch ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .arch li {
+    display: grid;
+    grid-template-columns: 16px 1fr;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.45;
+  }
+  .arch li::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green-deep);
+    margin-top: 6px;
+  }
+  .arch h3.adm + p + ul li::before { background: var(--ink); }
+  .arch li strong { font-family: var(--sans); color: var(--ink); font-weight: 700; }
+
+  /* footer principles */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .principle {
+    padding: 22px 22px 24px;
+    border-right: 1px solid var(--line);
+  }
+  .principle:last-child { border-right: none; }
+  .principle .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold-deep);
+    letter-spacing: 0.06em;
+  }
+  .principle h4 {
+    margin: 6px 0 8px;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+  .principle p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+
+  .footer-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 30px;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-4);
+  }
+  .footer-bar a { color: var(--ink-3); text-decoration: none; }
+  .footer-bar a:hover { color: var(--green-deep); }
+</style>
+</head>
+<body>
+<div class="hub">
+
+  <!-- Header -->
+  <header class="hub-head">
+    <div>
+      <div class="hub-eyebrow"><span class="mark">P</span> CRM Interno · PreceptorMED · v3.0 · abr 2026</div>
+      <h1 class="hub-title">Um CRM <em>para tocar a empresa.</em></h1>
+      <p class="hub-lede">Um único produto interno cobrindo marketing (leads, funil, automações) e administração (DRE, fluxo de caixa, time, contratações). Mesma identidade do app aluno: serif itálico para alma editorial, Manrope para clareza, verde profundo PreceptorMED para hierarquia.</p>
+    </div>
+    <div class="hub-meta">
+      <div class="row"><span>Escopo</span><strong>Marketing + Admin</strong></div>
+      <div class="row"><span>Páginas</span><strong>5 + dashboard unificado</strong></div>
+      <div class="row"><span>Densidade</span><strong>Alta · 12-13px base</strong></div>
+      <div class="row"><span>Grid</span><strong>1440 desktop · sidebar 264px</strong></div>
+      <div class="row"><span>Heritage</span><strong>app aluno PreceptorMED</strong></div>
+    </div>
+  </header>
+
+  <!-- Pages -->
+  <section>
+    <div class="section-head">
+      <h2>Páginas <em>do CRM</em></h2>
+      <div class="sub">Toggle Marketing/Admin no topo da sidebar reescreve o menu. Páginas Marketing têm sotaque verde-tint; Admin usa neutros mais frios.</div>
+    </div>
+
+    <div class="pages-grid">
+      <a class="page-card" href="dashboard.html">
+        <div class="preview">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none">
+            <rect width="320" height="180" fill="#FBF8F2"/>
+            <rect x="0" y="0" width="60" height="180" fill="#0F4128"/>
+            <rect x="8" y="14" width="44" height="6" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="8" y="34" width="32" height="3" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="8" y="44" width="44" height="3" rx="1" fill="#FBF8F2" opacity="0.6"/>
+            <rect x="8" y="52" width="40" height="3" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="8" y="60" width="44" height="3" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="8" y="76" width="32" height="3" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="8" y="86" width="40" height="3" rx="1" fill="#FBF8F2" opacity="0.6"/>
+            <rect x="60" y="0" width="260" height="22" fill="#fff"/>
+            <line x1="60" y1="22" x2="320" y2="22" stroke="#E5E0D5"/>
+            <text x="74" y="44" font-family="Manrope" font-size="9" fill="#5A5247">Dashboard</text>
+            <text x="74" y="60" font-family="Manrope" font-size="14" font-weight="700" fill="#0F4128">Visão geral</text>
+            <rect x="74" y="74" width="46" height="32" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <rect x="74" y="78" width="20" height="3" fill="#3F8B5C"/>
+            <text x="78" y="100" font-family="Manrope" font-size="11" font-weight="700" fill="#0F4128">38,4k</text>
+            <rect x="124" y="74" width="46" height="32" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <text x="128" y="100" font-family="Manrope" font-size="11" font-weight="700" fill="#0F4128">784</text>
+            <rect x="174" y="74" width="46" height="32" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <text x="178" y="100" font-family="Manrope" font-size="11" font-weight="700" fill="#0F4128">3,8×</text>
+            <rect x="224" y="74" width="46" height="32" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <text x="228" y="100" font-family="Manrope" font-size="11" font-weight="700" fill="#A88A33">7,4m</text>
+            <!-- chart -->
+            <rect x="74" y="114" width="146" height="60" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <path d="M82,162 L102,158 L122,150 L142,140 L162,128 L182,118 L202,108 L218,98" stroke="#1B5E3B" stroke-width="1.5" fill="none"/>
+            <path d="M82,162 L102,158 L122,150 L142,140 L162,128 L182,118 L202,108 L218,98 L218,170 L82,170 Z" fill="#1B5E3B" opacity="0.1"/>
+            <rect x="226" y="114" width="74" height="60" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <rect x="232" y="120" width="62" height="3" fill="#0F4128"/>
+            <rect x="232" y="128" width="44" height="3" fill="#3F8B5C"/>
+            <rect x="232" y="136" width="22" height="3" fill="#C9A84C"/>
+            <rect x="232" y="144" width="50" height="3" fill="#3F8B5C" opacity="0.5"/>
+            <rect x="232" y="152" width="36" height="3" fill="#3F8B5C" opacity="0.5"/>
+            <rect x="232" y="160" width="20" height="3" fill="#C9A84C" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="row1"><div class="nm">Dashboard</div><span class="mode-pill both">MKT · ADM</span></div>
+          <div class="desc">KPIs do dia, MRR + funil + atividade ao vivo. Toggle de modo reescreve quais blocos aparecem.</div>
+          <div class="feats"><span class="feat">5 KPIs</span><span class="feat">spark + área</span><span class="feat">activity feed</span><span class="feat">priority list</span></div>
+        </div>
+      </a>
+
+      <a class="page-card" href="leads.html">
+        <div class="preview">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none">
+            <rect width="320" height="180" fill="#FBF8F2"/>
+            <rect x="0" y="0" width="60" height="180" fill="#0F4128"/>
+            <rect x="8" y="14" width="44" height="6" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="8" y="44" width="44" height="3" rx="1" fill="#3F8B5C"/>
+            <rect x="8" y="52" width="32" height="3" rx="1" fill="#FBF8F2" opacity="0.4"/>
+            <rect x="60" y="0" width="260" height="22" fill="#fff"/>
+            <text x="74" y="44" font-family="Manrope" font-size="14" font-weight="700" fill="#0F4128">2 481 leads</text>
+            <!-- stage pills -->
+            <rect x="74" y="56" width="180" height="28" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <line x1="105" y1="56" x2="105" y2="84" stroke="#E5E0D5"/><line x1="135" y1="56" x2="135" y2="84" stroke="#E5E0D5"/><line x1="165" y1="56" x2="165" y2="84" stroke="#E5E0D5"/>
+            <rect x="135" y="56" width="30" height="28" fill="#E8F1EC"/>
+            <text x="80" y="74" font-family="Manrope" font-size="8" font-weight="700" fill="#0F4128">28k</text>
+            <text x="110" y="74" font-family="Manrope" font-size="8" font-weight="700" fill="#0F4128">9,6k</text>
+            <text x="140" y="74" font-family="Manrope" font-size="8" font-weight="700" fill="#0F4128">658</text>
+            <text x="170" y="74" font-family="Manrope" font-size="8" font-weight="700" fill="#0F4128">784</text>
+            <!-- table -->
+            <rect x="74" y="92" width="160" height="78" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <rect x="74" y="92" width="160" height="14" fill="#F4F0E6"/>
+            <line x1="74" y1="106" x2="234" y2="106" stroke="#E5E0D5"/>
+            <line x1="74" y1="120" x2="234" y2="120" stroke="#E5E0D5"/>
+            <line x1="74" y1="134" x2="234" y2="134" stroke="#E5E0D5"/>
+            <line x1="74" y1="148" x2="234" y2="148" stroke="#E5E0D5"/>
+            <line x1="74" y1="162" x2="234" y2="162" stroke="#E5E0D5"/>
+            <rect x="74" y="106" width="160" height="14" fill="#E8F1EC"/>
+            <rect x="78" y="111" width="34" height="3" fill="#0F4128"/>
+            <rect x="118" y="111" width="14" height="3" fill="#3F8B5C"/>
+            <rect x="138" y="111" width="20" height="3" fill="#C9A84C"/>
+            <rect x="78" y="125" width="34" height="3" fill="#5A5247"/>
+            <rect x="78" y="139" width="34" height="3" fill="#5A5247"/>
+            <rect x="78" y="153" width="34" height="3" fill="#5A5247"/>
+            <!-- drawer -->
+            <rect x="244" y="92" width="64" height="78" rx="3" fill="#fff" stroke="#0F4128"/>
+            <circle cx="258" cy="106" r="6" stroke="#0F4128" stroke-width="2" fill="none"/>
+            <text x="252" y="110" font-family="Manrope" font-size="6" font-weight="700" fill="#0F4128">91</text>
+            <rect x="270" y="100" width="32" height="3" fill="#0F4128"/>
+            <rect x="270" y="108" width="22" height="3" fill="#5A5247" opacity="0.5"/>
+            <rect x="248" y="120" width="54" height="3" fill="#5A5247" opacity="0.4"/>
+            <rect x="248" y="128" width="54" height="3" fill="#5A5247" opacity="0.4"/>
+            <rect x="248" y="136" width="54" height="3" fill="#5A5247" opacity="0.4"/>
+            <rect x="248" y="148" width="54" height="14" rx="2" fill="#0F4128"/>
+            <text x="262" y="158" font-family="Manrope" font-size="6" font-weight="700" fill="#fff">Mensagem</text>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="row1"><div class="nm">Leads</div><span class="mode-pill mkt">Marketing</span></div>
+          <div class="desc">Tabela densa com score 0-100, drawer detalhe à direita, distribuição por canal e visões salvas.</div>
+          <div class="feats"><span class="feat">2 481 leads</span><span class="feat">score ML</span><span class="feat">drawer detalhe</span><span class="feat">UTM</span></div>
+        </div>
+      </a>
+
+      <a class="page-card" href="funil.html">
+        <div class="preview">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none">
+            <rect width="320" height="180" fill="#FBF8F2"/>
+            <rect x="0" y="0" width="60" height="180" fill="#0F4128"/>
+            <rect x="60" y="0" width="260" height="22" fill="#fff"/>
+            <text x="74" y="44" font-family="Manrope" font-size="14" font-weight="700" fill="#0F4128">Funil de aquisição</text>
+            <!-- horizontal funnel bars -->
+            <rect x="74" y="58" width="226" height="14" fill="#0F4128"/>
+            <text x="80" y="68" font-family="Manrope" font-size="8" font-weight="700" fill="#fff">28 412 · 100%</text>
+            <rect x="74" y="78" width="115" height="14" fill="#1B5E3B"/>
+            <text x="80" y="88" font-family="Manrope" font-size="8" font-weight="700" fill="#fff">9 654 · 34%</text>
+            <rect x="74" y="98" width="62" height="14" fill="#3F8B5C"/>
+            <text x="80" y="108" font-family="Manrope" font-size="8" font-weight="700" fill="#fff">5 117 · 53%</text>
+            <rect x="74" y="118" width="38" height="14" fill="#5BA374"/>
+            <text x="80" y="128" font-family="Manrope" font-size="8" font-weight="700" fill="#fff">3 126 · 61%</text>
+            <rect x="74" y="138" width="14" height="14" fill="#C9A84C"/>
+            <text x="92" y="148" font-family="Manrope" font-size="8" font-weight="700" fill="#0F4128">784 · 25%</text>
+            <!-- cohort -->
+            <rect x="218" y="56" width="84" height="80" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <g>
+              <rect x="222" y="60" width="14" height="8" fill="#0F4128"/><rect x="238" y="60" width="14" height="8" fill="#1B5E3B"/><rect x="254" y="60" width="14" height="8" fill="#2A7A4D"/><rect x="270" y="60" width="14" height="8" fill="#3F8B5C"/><rect x="286" y="60" width="14" height="8" fill="#5BA374"/>
+              <rect x="222" y="70" width="14" height="8" fill="#0F4128"/><rect x="238" y="70" width="14" height="8" fill="#1B5E3B"/><rect x="254" y="70" width="14" height="8" fill="#2A7A4D"/><rect x="270" y="70" width="14" height="8" fill="#3F8B5C"/>
+              <rect x="222" y="80" width="14" height="8" fill="#0F4128"/><rect x="238" y="80" width="14" height="8" fill="#1B5E3B"/><rect x="254" y="80" width="14" height="8" fill="#2A7A4D"/>
+              <rect x="222" y="90" width="14" height="8" fill="#0F4128"/><rect x="238" y="90" width="14" height="8" fill="#1B5E3B"/>
+              <rect x="222" y="100" width="14" height="8" fill="#0F4128"/>
+            </g>
+            <!-- ab test -->
+            <rect x="74" y="156" width="226" height="16" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <text x="80" y="167" font-family="Manrope" font-size="7" fill="#5A5247">A/B test: B vence +5,6pp</text>
+            <rect x="240" y="159" width="56" height="10" rx="2" fill="#1B5E3B"/>
+            <text x="246" y="167" font-family="Manrope" font-size="6" font-weight="700" fill="#fff">Promover B</text>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="row1"><div class="nm">Funil & UTM</div><span class="mode-pill mkt">Marketing</span></div>
+          <div class="desc">Funil 6 etapas, coortes de retenção M0-M6, campanhas UTM com CAC, A/B test estatístico.</div>
+          <div class="feats"><span class="feat">funil horizontal</span><span class="feat">cohort 7×7</span><span class="feat">12 campanhas</span><span class="feat">A/B test</span></div>
+        </div>
+      </a>
+
+      <a class="page-card" href="financeiro.html">
+        <div class="preview">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none">
+            <rect width="320" height="180" fill="#FBF8F2"/>
+            <rect x="0" y="0" width="60" height="180" fill="#1A1611"/>
+            <rect x="60" y="0" width="260" height="22" fill="#fff"/>
+            <text x="74" y="44" font-family="Manrope" font-size="14" font-weight="700" fill="#0F4128">DRE & Receita</text>
+            <!-- mrr chart -->
+            <rect x="74" y="56" width="146" height="62" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <line x1="80" y1="68" x2="214" y2="68" stroke="#E5E0D5" stroke-dasharray="2 2"/>
+            <line x1="80" y1="84" x2="214" y2="84" stroke="#E5E0D5" stroke-dasharray="2 2"/>
+            <line x1="80" y1="100" x2="214" y2="100" stroke="#E5E0D5" stroke-dasharray="2 2"/>
+            <path d="M82,108 L96,104 L110,98 L124,90 L138,82 L152,74 L166,68 L180,62 L194,58 L208,53" stroke="#1B5E3B" stroke-width="1.6" fill="none"/>
+            <path d="M82,108 L96,104 L110,98 L124,90 L138,82 L152,74 L166,68 L180,62 L194,58 L208,53 L208,114 L82,114 Z" fill="#1B5E3B" opacity="0.15"/>
+            <!-- runway gauge -->
+            <rect x="226" y="56" width="74" height="62" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <circle cx="244" cy="86" r="14" stroke="#E5E0D5" stroke-width="3" fill="none"/>
+            <circle cx="244" cy="86" r="14" stroke="#1B5E3B" stroke-width="3" fill="none" stroke-dasharray="60 88" transform="rotate(-90 244 86)"/>
+            <text x="244" y="89" font-family="Manrope" font-size="8" font-weight="700" text-anchor="middle" fill="#0F4128">7,4m</text>
+            <rect x="262" y="68" width="32" height="3" fill="#5A5247"/>
+            <rect x="262" y="76" width="32" height="3" fill="#5A5247" opacity="0.6"/>
+            <rect x="262" y="84" width="24" height="3" fill="#5A5247" opacity="0.6"/>
+            <rect x="262" y="92" width="32" height="3" fill="#5A5247" opacity="0.6"/>
+            <rect x="262" y="100" width="20" height="3" fill="#1B5E3B"/>
+            <!-- DRE -->
+            <rect x="74" y="124" width="146" height="46" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <rect x="74" y="124" width="146" height="9" fill="#F4F0E6"/>
+            <text x="78" y="131" font-family="Manrope" font-size="6" font-weight="700" fill="#5A5247">DRE</text>
+            <line x1="74" y1="142" x2="220" y2="142" stroke="#E5E0D5"/><line x1="74" y1="151" x2="220" y2="151" stroke="#E5E0D5"/><line x1="74" y1="160" x2="220" y2="160" stroke="#E5E0D5"/>
+            <rect x="78" y="146" width="60" height="2" fill="#5A5247"/><rect x="170" y="146" width="40" height="2" fill="#5A5247"/>
+            <rect x="78" y="155" width="60" height="2" fill="#5A5247"/><rect x="170" y="155" width="36" height="2" fill="#5A5247"/>
+            <rect x="74" y="162" width="146" height="8" fill="#E8F1EC"/>
+            <text x="78" y="168" font-family="Manrope" font-size="6" font-weight="700" fill="#0F4128">EBITDA −R$769</text>
+            <!-- expense bars -->
+            <rect x="226" y="124" width="74" height="46" rx="3" fill="#fff" stroke="#E5E0D5"/>
+            <rect x="230" y="130" width="66" height="3" fill="#B6452C"/>
+            <rect x="230" y="138" width="22" height="3" fill="#A88A33"/>
+            <rect x="230" y="146" width="14" height="3" fill="#6B3FA0"/>
+            <rect x="230" y="154" width="6" height="3" fill="#2A6FDB"/>
+            <rect x="230" y="162" width="3" height="3" fill="#5A5247"/>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="row1"><div class="nm">Financeiro · DRE</div><span class="mode-pill adm">Admin</span></div>
+          <div class="desc">MRR 12m com projeção, runway 7,4m, DRE realizado vs orçado, despesas por categoria, inadimplência.</div>
+          <div class="feats"><span class="feat">MRR · ARR · runway</span><span class="feat">DRE editorial</span><span class="feat">BP 2026</span></div>
+        </div>
+      </a>
+
+      <a class="page-card" href="time.html" style="grid-column: span 2;">
+        <div class="preview" style="aspect-ratio: 32/9;">
+          <svg viewBox="0 0 640 180" preserveAspectRatio="none">
+            <rect width="640" height="180" fill="#FBF8F2"/>
+            <rect x="0" y="0" width="60" height="180" fill="#1A1611"/>
+            <rect x="60" y="0" width="580" height="22" fill="#fff"/>
+            <text x="74" y="44" font-family="Manrope" font-size="14" font-weight="700" fill="#0F4128">Time & people</text>
+            <!-- people grid 3x2 -->
+            <g>
+              <rect x="74" y="56" width="78" height="42" rx="3" fill="#fff" stroke="#E5E0D5"/>
+              <circle cx="86" cy="68" r="6" fill="#A88A33"/>
+              <text x="84" y="71" font-family="Manrope" font-size="5" font-weight="700" fill="#fff">MC</text>
+              <rect x="98" y="62" width="40" height="3" fill="#0F4128"/>
+              <rect x="98" y="68" width="32" height="2" fill="#5A5247"/>
+              <rect x="78" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="90" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="102" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="114" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="126" y="86" width="10" height="2" fill="#A88A33"/>
+            </g>
+            <g transform="translate(82,0)">
+              <rect x="74" y="56" width="78" height="42" rx="3" fill="#fff" stroke="#E5E0D5"/>
+              <circle cx="86" cy="68" r="6" fill="#A88A33"/><text x="84" y="71" font-family="Manrope" font-size="5" font-weight="700" fill="#fff">FA</text>
+              <rect x="98" y="62" width="40" height="3" fill="#0F4128"/><rect x="98" y="68" width="36" height="2" fill="#5A5247"/>
+              <rect x="78" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="90" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="102" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="114" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="126" y="86" width="10" height="2" fill="#1B5E3B"/>
+            </g>
+            <g transform="translate(164,0)">
+              <rect x="74" y="56" width="78" height="42" rx="3" fill="#fff" stroke="#E5E0D5"/>
+              <circle cx="86" cy="68" r="6" fill="#A88A33"/><text x="84" y="71" font-family="Manrope" font-size="5" font-weight="700" fill="#fff">RP</text>
+              <rect x="98" y="62" width="40" height="3" fill="#0F4128"/><rect x="98" y="68" width="34" height="2" fill="#5A5247"/>
+              <rect x="78" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="90" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="102" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="114" y="86" width="10" height="2" fill="#A88A33"/><rect x="126" y="86" width="10" height="2" fill="#E5E0D5"/>
+            </g>
+            <g transform="translate(0,46)">
+              <rect x="74" y="56" width="78" height="42" rx="3" fill="#fff" stroke="#E5E0D5"/>
+              <circle cx="86" cy="68" r="6" fill="#0F4128"/><text x="84" y="71" font-family="Manrope" font-size="5" font-weight="700" fill="#fff">JP</text>
+              <rect x="98" y="62" width="40" height="3" fill="#0F4128"/><rect x="98" y="68" width="36" height="2" fill="#5A5247"/>
+              <rect x="78" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="90" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="102" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="114" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="126" y="86" width="10" height="2" fill="#1B5E3B"/>
+            </g>
+            <g transform="translate(82,46)">
+              <rect x="74" y="56" width="78" height="42" rx="3" fill="#fff" stroke="#E5E0D5"/>
+              <circle cx="86" cy="68" r="6" fill="#0F4128"/><text x="84" y="71" font-family="Manrope" font-size="5" font-weight="700" fill="#fff">DM</text>
+              <rect x="98" y="62" width="40" height="3" fill="#0F4128"/><rect x="98" y="68" width="34" height="2" fill="#5A5247"/>
+              <rect x="78" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="90" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="102" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="114" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="126" y="86" width="10" height="2" fill="#A88A33"/>
+            </g>
+            <g transform="translate(164,46)">
+              <rect x="74" y="56" width="78" height="42" rx="3" fill="#fff" stroke="#E5E0D5"/>
+              <circle cx="86" cy="68" r="6" fill="#0F4128"/><text x="84" y="71" font-family="Manrope" font-size="5" font-weight="700" fill="#fff">CN</text>
+              <rect x="98" y="62" width="40" height="3" fill="#0F4128"/><rect x="98" y="68" width="36" height="2" fill="#5A5247"/>
+              <rect x="78" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="90" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="102" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="114" y="86" width="10" height="2" fill="#1B5E3B"/><rect x="126" y="86" width="10" height="2" fill="#1B5E3B"/>
+            </g>
+            <!-- pipeline -->
+            <text x="332" y="50" font-family="Manrope" font-size="9" font-weight="700" fill="#5A5247">Pipeline contratação · 89 candidatos</text>
+            <g>
+              <rect x="332" y="56" width="56" height="110" rx="3" fill="#F4F0E6" stroke="#E5E0D5"/>
+              <text x="338" y="68" font-family="Manrope" font-size="6" font-weight="700" fill="#5A5247">SOURCING</text>
+              <rect x="336" y="74" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+              <rect x="336" y="92" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+              <rect x="336" y="110" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+              <rect x="336" y="128" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+
+              <rect x="392" y="56" width="56" height="110" rx="3" fill="#F4F0E6" stroke="#E5E0D5"/>
+              <text x="398" y="68" font-family="Manrope" font-size="6" font-weight="700" fill="#5A5247">TRIAGEM</text>
+              <rect x="396" y="74" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+              <rect x="396" y="92" width="48" height="14" rx="2" fill="#fff" stroke="#0F4128"/>
+              <rect x="396" y="110" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+
+              <rect x="452" y="56" width="56" height="110" rx="3" fill="#F4F0E6" stroke="#E5E0D5"/>
+              <text x="458" y="68" font-family="Manrope" font-size="6" font-weight="700" fill="#5A5247">CASE</text>
+              <rect x="456" y="74" width="48" height="14" rx="2" fill="#fff" stroke="#0F4128"/>
+              <rect x="456" y="92" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+
+              <rect x="512" y="56" width="56" height="110" rx="3" fill="#F4F0E6" stroke="#E5E0D5"/>
+              <text x="518" y="68" font-family="Manrope" font-size="6" font-weight="700" fill="#5A5247">CULT.</text>
+              <rect x="516" y="74" width="48" height="14" rx="2" fill="#fff" stroke="#0F4128"/>
+              <rect x="516" y="92" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+
+              <rect x="572" y="56" width="56" height="110" rx="3" fill="#F4F0E6" stroke="#E5E0D5"/>
+              <text x="578" y="68" font-family="Manrope" font-size="6" font-weight="700" fill="#5A5247">OFERTA</text>
+              <rect x="576" y="74" width="48" height="14" rx="2" fill="#E8F1EC" stroke="#0F4128"/>
+              <rect x="576" y="92" width="48" height="14" rx="2" fill="#fff" stroke="#E5E0D5"/>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="row1"><div class="nm">Time & People · 9 pessoas + pipeline</div><span class="mode-pill adm">Admin</span></div>
+          <div class="desc">Cards de cada membro com health bar, foco da quinzena e custo. 1:1 agendados, PDIs em curso e kanban de contratação com 89 candidatos em 5 estágios.</div>
+          <div class="feats"><span class="feat">9 pessoas</span><span class="feat">eNPS · saúde</span><span class="feat">PDIs Q2</span><span class="feat">5 estágios hiring</span><span class="feat">CLT/PJ/founders</span></div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Architecture / mode toggle -->
+  <section>
+    <div class="section-head">
+      <h2>Arquitetura <em>de informação</em></h2>
+      <div class="sub">Toggle Marketing / Admin no topo da sidebar é o eixo organizacional. Mesma página de dashboard mostra blocos diferentes em cada modo.</div>
+    </div>
+    <div class="arch">
+      <div>
+        <h3>Marketing <span class="pill">MKT</span></h3>
+        <p class="lead">Foco em aquisição, ativação e expansão. Quem usa: Ricardo (founder), futuro growth marketer.</p>
+        <ul>
+          <li><div><strong>Dashboard MKT</strong> — leads do dia, MRR, conversão funil, atividade ao vivo dos alunos.</div></li>
+          <li><div><strong>Leads</strong> — 2 481 leads com score 0-100 e drawer de detalhe.</div></li>
+          <li><div><strong>Funil & UTM</strong> — funil 6 etapas, coortes M0-M6, campanhas, A/B test.</div></li>
+          <li><div><strong>Saúde dos alunos</strong> — engajamento por fase e produto · 17 em risco de churn.</div></li>
+          <li><div><strong>Automações & e-mail</strong> — playbooks, templates e sequências.</div></li>
+        </ul>
+      </div>
+      <div class="arch-divider"></div>
+      <div>
+        <h3 class="adm">Admin <span class="pill">ADM</span></h3>
+        <p class="lead">Foco em finanças, time e governança. Quem usa: Matheus (CEO), Fernanda, contador externo.</p>
+        <ul>
+          <li><div><strong>Dashboard ADM</strong> — MRR, runway, burn rate, EBITDA do mês.</div></li>
+          <li><div><strong>DRE & Receita</strong> — competência, plano de contas, comparação realizado vs orçado.</div></li>
+          <li><div><strong>Fluxo de caixa</strong> — projeção 12m, conciliação bancária, inadimplência.</div></li>
+          <li><div><strong>Business plan 2026</strong> — projeções por mês, sensibilidade, OKRs financeiros.</div></li>
+          <li><div><strong>Time, 1:1, PDIs, contratações</strong> — health bar, custo / FTE, kanban hiring.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tokens system table -->
+  <section>
+    <div class="section-head">
+      <h2>Sistema <em>técnico</em></h2>
+      <div class="sub">Tokens herdados do design system aluno. Mesmas variáveis CSS, mesmas fontes, paleta complementar para semáforo e categorias.</div>
+    </div>
+    <table class="system-table">
+      <thead>
+        <tr>
+          <th style="width:25%;">Token</th>
+          <th style="width:25%;">Valor</th>
+          <th>Uso no CRM</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--green-deep</code></td>
+          <td class="num">#0F4128 · #1B5E3B</td>
+          <td>KPI MRR · linha primária de gráficos · sidebar · botão primário · stage ativo</td>
+        </tr>
+        <tr>
+          <td><code>--gold-deep</code></td>
+          <td class="num">#A88A33 · #C9A84C</td>
+          <td>Estado warn · plano bianual · runway gauge · highlight de meta</td>
+        </tr>
+        <tr>
+          <td><code>--ink</code> · <code>--ink-3</code></td>
+          <td class="num">#1A1611 · #5A5247</td>
+          <td>Body, números, sidebar Admin (gradiente para warm-charcoal)</td>
+        </tr>
+        <tr>
+          <td><code>--neg</code></td>
+          <td class="num">#B6452C</td>
+          <td>Burn, churn, atrasos, EBITDA negativo · usar com moderação</td>
+        </tr>
+        <tr>
+          <td><code>Manrope</code> 600/700/800</td>
+          <td class="num">--sans</td>
+          <td>Page titles · KPIs grandes · números (com font-feature-settings tnum)</td>
+        </tr>
+        <tr>
+          <td><code>Source Serif 4</code> italic</td>
+          <td class="num">--serif</td>
+          <td>Inflexão editorial em sub-headers · pautas de 1:1 · A/B test copy</td>
+        </tr>
+        <tr>
+          <td><code>JetBrains Mono</code></td>
+          <td class="num">--mono</td>
+          <td>UTMs, datas relativas, IDs, métricas auxiliares, tabular numbers</td>
+        </tr>
+        <tr>
+          <td><code>--radius</code> / <code>--radius-sm</code></td>
+          <td class="num">10px / 6px</td>
+          <td>Cards principais (10) · pills, mini-tags, inputs (6)</td>
+        </tr>
+        <tr>
+          <td><code>density</code></td>
+          <td class="num">12.5–13px base · row 36-44px</td>
+          <td>Tabelas densas tipo Linear / Plaid · altura mínima de toque 36px</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Principles -->
+  <section>
+    <div class="section-head">
+      <h2>Princípios <em>de design</em></h2>
+      <div class="sub">Tudo flui dessas quatro premissas. Quando há conflito, ganha quem está antes.</div>
+    </div>
+    <div class="principles">
+      <div class="principle">
+        <div class="num">01</div>
+        <h4>Densidade que respira</h4>
+        <p>Tabelas e cards densos servem ao operador interno. Mas cada bloco abre com headline editorial em itálico — a empresa tem alma, não é planilha.</p>
+      </div>
+      <div class="principle">
+        <div class="num">02</div>
+        <h4>Mesmo DNA do app aluno</h4>
+        <p>Verde-profundo PreceptorMED, ouro warm, Manrope + Source Serif. Quem entra no CRM reconhece a marca em 1 segundo.</p>
+      </div>
+      <div class="principle">
+        <div class="num">03</div>
+        <h4>Números sempre tnum</h4>
+        <p>JetBrains Mono ou Manrope com font-feature-settings "tnum" para tabular. Colunas alinham, comparação vira instinto.</p>
+      </div>
+      <div class="principle">
+        <div class="num">04</div>
+        <h4>Marketing ≠ Admin</h4>
+        <p>Toggle no topo da sidebar muda o menu inteiro. Sem misturar dashboards de growth com DRE — cada mente tem seu modo.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer-bar">
+    <div>PreceptorMED · CRM v3.0 · abr 2026</div>
+    <div><a href="../index.html">← voltar ao design system</a></div>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Funil & Conversão — PreceptorMED CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* Horizontal funnel */
+  .funnel { padding: 8px 4px 4px; }
+  .funnel-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 220px;
+    gap: 18px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .funnel-row:last-child { border-bottom: none; }
+  .funnel-stage {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .funnel-stage .nm { display: block; color: var(--ink); font-size: 13px; letter-spacing: -0.005em; text-transform: none; font-weight: 700; margin-bottom: 1px; }
+  .funnel-bar { position: relative; height: 36px; }
+  .funnel-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0F4128 0%, #1B5E3B 100%);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding-left: 14px;
+    color: #fff;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    font-size: 14px;
+  }
+  .funnel-bar-fill .pct { font-family: var(--mono); font-weight: 600; font-size: 11px; opacity: 0.85; margin-left: 10px; }
+  .funnel-meta { font-size: 11.5px; color: var(--ink-4); display: flex; gap: 14px; justify-content: flex-end; font-family: var(--mono); }
+  .funnel-meta strong { color: var(--ink); font-weight: 700; }
+  .funnel-meta .conv { color: var(--green-deep); }
+  .funnel-meta .drop { color: var(--neg); }
+
+  /* Cohort grid */
+  .cohort {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .cohort .head, .cohort .label {
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10.5px;
+    padding: 6px 8px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .cohort .label { text-align: left; color: var(--ink-3); font-family: var(--sans); }
+  .cohort .cell {
+    padding: 8px 6px;
+    text-align: center;
+    border-radius: 4px;
+    color: var(--ink);
+    font-feature-settings: "tnum";
+    font-weight: 600;
+  }
+  .cohort .empty { color: var(--ink-5); background: transparent; }
+
+  /* Campaign cards */
+  .campaign {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 100px 110px 90px;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .campaign:last-child { border-bottom: none; }
+  .campaign .nm { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .campaign .nm .meta { font-size: 11px; color: var(--ink-4); font-weight: 400; margin-top: 2px; font-family: var(--mono); }
+  .campaign .num { font-family: var(--mono); font-feature-settings: "tnum"; text-align: right; font-size: 12.5px; color: var(--ink); font-weight: 600; }
+  .campaign .num small { display:block; color: var(--ink-4); font-weight: 400; font-size: 10.5px; font-family: var(--text); margin-top: 2px; }
+  .campaign-head {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 100px 110px 90px;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+  .campaign-head div:not(:first-child) { text-align: right; }
+
+  /* AB test */
+  .ab-card { padding: 18px 20px; }
+  .ab-head { display: flex; justify-content: space-between; margin-bottom: 14px; }
+  .ab-name { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); }
+  .ab-status { font-family: var(--mono); font-size: 11px; color: var(--ink-4); }
+  .ab-grid { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 12px; align-items: center; }
+  .ab-variant {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .ab-variant.winner { border-color: var(--green-deep); background: var(--green-tint); position: relative; }
+  .ab-variant.winner::before {
+    content: "VENCEDORA";
+    position: absolute;
+    top: -8px;
+    left: 12px;
+    background: var(--green-deep);
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .ab-variant .lbl { font-family: var(--mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.03em; }
+  .ab-variant .copy { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--ink-2); margin-top: 4px; line-height: 1.4; }
+  .ab-variant .num { font-family: var(--sans); font-size: 22px; font-weight: 700; color: var(--ink); margin-top: 8px; letter-spacing: -0.02em; }
+  .ab-variant .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-4); margin-top: 2px; }
+  .ab-variant.winner .num { color: var(--green-deep); }
+  .ab-vs { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink-4); text-align: center; }
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">P</div>
+    <div>
+      <div class="brand-name">PreceptorMED</div>
+      <div class="brand-sub">crm · v3</div>
+    </div>
+  </div>
+  <div class="mode-toggle"><button class="active">Marketing</button><button>Admin</button></div>
+  <div class="nav-section">
+    <div class="nav-label">Visão geral</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Dashboard</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg> Atividade ao vivo <span class="nav-dot"></span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Marketing</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Leads <span class="nav-count">2 481</span></a>
+    <a class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Funil & UTM</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg> Saúde dos alunos</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> Risco de churn <span class="nav-pill">17</span></a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Automações</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> E-mail templates</a>
+  </div>
+  <div class="sidebar-foot">
+    <div class="avatar">MC</div>
+    <div class="user-info"><div class="user-name">Matheus Castro</div><div class="user-email">matheus@preceptor.med.br</div></div>
+  </div>
+</aside>
+
+<div class="main">
+<header class="topbar">
+  <div class="crumbs"><span>CRM</span><span class="sep">/</span><span>Marketing</span><span class="sep">/</span><span class="now">Funil & UTM</span></div>
+  <div class="topbar-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+    <input placeholder="Buscar campanha, source, medium…" /><kbd>⌘K</kbd>
+  </div>
+  <div class="topbar-tools">
+    <button class="btn btn-ghost">Exportar</button>
+    <button class="btn btn-primary">Nova campanha</button>
+  </div>
+</header>
+
+<main class="page">
+  <section class="hero" style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;">
+    <div>
+      <div class="page-eyebrow">Marketing · Conversion analytics · 30 dias</div>
+      <h1 class="page-title">Funil <em>de aquisição</em></h1>
+      <p class="page-sub">Do anúncio ao plano pago — onde ganhamos receita e onde perdemos atenção. Cada etapa traz a taxa de conversão, número absoluto e queda relativa do funil.</p>
+    </div>
+    <div class="row" style="gap:8px;">
+      <div class="period-bar">
+        <button>7d</button>
+        <button class="active">30d</button>
+        <button>90d</button>
+        <button>YTD</button>
+      </div>
+      <button class="btn btn-ghost">Comparar mês anterior</button>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="kpi-row">
+    <div class="kpi k-mrr">
+      <div class="kpi-label">Conversão funil cheio</div>
+      <div class="kpi-value">2,76<span class="unit">%</span></div>
+      <div class="kpi-meta">
+        <span class="delta delta-pos">↑ 0,4 pp</span>
+        <span>visitor → assinante</span>
+      </div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,22 L12,20 L24,18 L36,16 L48,17 L60,12 L72,10 L84,9 L100,7" stroke="#1B5E3B" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">CAC blended</div>
+      <div class="kpi-value">R$ 158</div>
+      <div class="kpi-meta"><span class="delta delta-pos">↓ R$ 14</span><span>marketing / novos pagantes</span></div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,8 L12,11 L24,10 L36,14 L48,12 L60,15 L72,17 L84,18 L100,20" stroke="#5A5247" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">LTV / CAC</div>
+      <div class="kpi-value">3,9<span class="unit">×</span></div>
+      <div class="kpi-meta"><span class="delta delta-pos">↑ 0,3</span><span>healthy &gt; 3,0</span></div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,18 L12,17 L24,15 L36,13 L48,12 L60,11 L72,8 L84,7 L100,5" stroke="#3F8B5C" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="kpi k-warn">
+      <div class="kpi-label">Drop crítico</div>
+      <div class="kpi-value">73%</div>
+      <div class="kpi-meta"><span class="delta delta-neg">trial → assinante</span><span>oportunidade prioritária</span></div>
+      <svg class="kpi-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="M0,5 L12,7 L24,9 L36,8 L48,11 L60,10 L72,12 L84,11 L100,12" stroke="#A88A33" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Funnel + Cohort side-by-side -->
+  <section style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Funil completo · 30 dias</div>
+          <div class="card-sub">28 412 visitantes únicos → 784 assinantes pagantes</div>
+        </div>
+        <div class="card-side"><div class="period-bar" style="font-size:11px;"><button class="active">Todos</button><button>R+ Cardio</button><button>R+ Clínica</button></div></div>
+      </div>
+      <div class="funnel card-pad">
+        <div class="funnel-row">
+          <div class="funnel-stage"><span class="nm">Visitor</span>visita anônima</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width:100%;">28 412 <span class="pct">100%</span></div></div>
+          <div class="funnel-meta"><span><strong>R$ 0,00</strong> custo médio</span></div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-stage"><span class="nm">Signup</span>conta criada</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width:43.7%;">9 654 <span class="pct">34,0%</span></div></div>
+          <div class="funnel-meta"><span class="conv">conv. <strong>34,0%</strong></span><span class="drop">drop − 66%</span></div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-stage"><span class="nm">Trial ativo</span>≥ 1 questão respondida</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width:18%;">5 117 <span class="pct">53,0%</span></div></div>
+          <div class="funnel-meta"><span class="conv">conv. <strong>53,0%</strong></span><span class="drop">drop − 47%</span></div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-stage"><span class="nm">Engajado</span>≥ 30 questões / 7d</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width:11%;">3 126 <span class="pct">61,1%</span></div></div>
+          <div class="funnel-meta"><span class="conv">conv. <strong>61,1%</strong></span><span class="drop">drop − 39%</span></div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-stage"><span class="nm">Assinante</span>plano pago</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width:2.76%;background:linear-gradient(90deg,#5C3F00 0%,#A88A33 100%);">784 <span class="pct">25,1%</span></div></div>
+          <div class="funnel-meta"><span class="conv">conv. <strong>25,1%</strong></span><span class="drop">drop − 75%</span></div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-stage"><span class="nm">Retido 90d</span>com renovação</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width:2.4%;background:linear-gradient(90deg,#3a2d12 0%,#C9A84C 100%);">681 <span class="pct">86,9%</span></div></div>
+          <div class="funnel-meta"><span class="conv">retenção <strong>86,9%</strong></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Coorte de retenção</div>
+          <div class="card-sub">% de assinantes ativos por mês de cadastro · últimos 6 ciclos</div>
+        </div>
+      </div>
+      <div class="card-pad">
+        <div class="cohort">
+          <div class="head label">Coorte</div>
+          <div class="head">M0</div>
+          <div class="head">M1</div>
+          <div class="head">M2</div>
+          <div class="head">M3</div>
+          <div class="head">M4</div>
+          <div class="head">M5</div>
+          <div class="head">M6</div>
+
+          <div class="label">Out/25 · 92</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell" style="background:#1B5E3B;color:#fff;">94</div>
+          <div class="cell" style="background:#2A7A4D;color:#fff;">88</div>
+          <div class="cell" style="background:#3F8B5C;color:#fff;">82</div>
+          <div class="cell" style="background:#5BA374;color:#fff;">79</div>
+          <div class="cell" style="background:#86B996;color:#fff;">76</div>
+          <div class="cell" style="background:#B5D5C2;">74</div>
+
+          <div class="label">Nov/25 · 108</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell" style="background:#1B5E3B;color:#fff;">93</div>
+          <div class="cell" style="background:#2A7A4D;color:#fff;">87</div>
+          <div class="cell" style="background:#3F8B5C;color:#fff;">81</div>
+          <div class="cell" style="background:#5BA374;color:#fff;">77</div>
+          <div class="cell" style="background:#86B996;color:#fff;">73</div>
+          <div class="cell empty">—</div>
+
+          <div class="label">Dez/25 · 124</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell" style="background:#1B5E3B;color:#fff;">95</div>
+          <div class="cell" style="background:#2A7A4D;color:#fff;">90</div>
+          <div class="cell" style="background:#3F8B5C;color:#fff;">86</div>
+          <div class="cell" style="background:#5BA374;color:#fff;">82</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+
+          <div class="label">Jan/26 · 156</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell" style="background:#1B5E3B;color:#fff;">96</div>
+          <div class="cell" style="background:#2A7A4D;color:#fff;">91</div>
+          <div class="cell" style="background:#3F8B5C;color:#fff;">88</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+
+          <div class="label">Fev/26 · 178</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell" style="background:#1B5E3B;color:#fff;">95</div>
+          <div class="cell" style="background:#2A7A4D;color:#fff;">90</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+
+          <div class="label">Mar/26 · 192</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell" style="background:#1B5E3B;color:#fff;">97</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+
+          <div class="label">Abr/26 · 210</div>
+          <div class="cell" style="background:#0F4128;color:#fff;">100</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+          <div class="cell empty">—</div>
+        </div>
+        <div class="muted" style="font-size:11.5px;margin-top:14px;line-height:1.5;">
+          <strong class="strong">Leitura:</strong> coortes recentes (jan-mar/26) retêm <strong class="strong">88-91% no M3</strong>, alta vs 81% da coorte out/25. Onboarding novo está colando.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Campaigns table -->
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Campanhas ativas · UTM source / medium</div>
+        <div class="card-sub">12 campanhas ativas · investimento total R$ 8 460 · 312 novos pagantes</div>
+      </div>
+      <div class="card-side"><a class="btn btn-link">Auditar UTMs →</a></div>
+    </div>
+    <div class="campaign-head">
+      <div>Campanha</div>
+      <div>Investimento</div>
+      <div>Leads</div>
+      <div>Convertidos</div>
+      <div>CAC</div>
+      <div>Status</div>
+    </div>
+    <div>
+      <div class="campaign">
+        <div class="nm">residencia-cardio-mar26 <div class="meta">google_ads · cpc · landing /residencia-cardio</div></div>
+        <div class="num">R$ 3 240<small>− R$ 280 vs mar</small></div>
+        <div class="num">684<small>54% novos</small></div>
+        <div class="num" style="color:var(--green-deep);">158<small>23,1%</small></div>
+        <div class="num">R$ 142<small>− R$ 18</small></div>
+        <div><span class="tag tag-green"><span class="tag-dot"></span>Otimizada</span></div>
+      </div>
+      <div class="campaign">
+        <div class="nm">residencia-clinica-mar26 <div class="meta">google_ads · cpc · landing /residencia-clinica</div></div>
+        <div class="num">R$ 1 880</div>
+        <div class="num">412</div>
+        <div class="num" style="color:var(--green-deep);">82<small>19,9%</small></div>
+        <div class="num">R$ 165</div>
+        <div><span class="tag tag-green"><span class="tag-dot"></span>Otimizada</span></div>
+      </div>
+      <div class="campaign">
+        <div class="nm">pediatria-abr <div class="meta">facebook · cpc · landing /pediatria</div></div>
+        <div class="num">R$ 980<small>↑ 14% vs mar</small></div>
+        <div class="num">198</div>
+        <div class="num">28<small>14,1%</small></div>
+        <div class="num">R$ 235</div>
+        <div><span class="tag tag-warn"><span class="tag-dot"></span>Atenção</span></div>
+      </div>
+      <div class="campaign">
+        <div class="nm">cirurgia-mar26 <div class="meta">instagram · cpc · landing /cirurgia</div></div>
+        <div class="num">R$ 1 240</div>
+        <div class="num">266</div>
+        <div class="num">38<small>14,3%</small></div>
+        <div class="num">R$ 198</div>
+        <div><span class="tag tag-warn"><span class="tag-dot"></span>Atenção</span></div>
+      </div>
+      <div class="campaign">
+        <div class="nm">revalida-abr26 <div class="meta">tiktok · cpc · landing /revalida</div></div>
+        <div class="num">R$ 720<small>teste novo</small></div>
+        <div class="num">312</div>
+        <div class="num">11<small>3,5%</small></div>
+        <div class="num" style="color:var(--neg);">R$ 387</div>
+        <div><span class="tag tag-red"><span class="tag-dot"></span>Pausar?</span></div>
+      </div>
+      <div class="campaign">
+        <div class="nm">indicacao-bianual <div class="meta">programa de indicação · cupom −20%</div></div>
+        <div class="num">R$ 0<small>orgânico</small></div>
+        <div class="num">147</div>
+        <div class="num" style="color:var(--green-deep);">38<small>25,9%</small></div>
+        <div class="num">R$ 0</div>
+        <div><span class="tag tag-green"><span class="tag-dot"></span>Estrela</span></div>
+      </div>
+      <div class="campaign">
+        <div class="nm">organic_search · "como passar residência" <div class="meta">SEO · landing /guia-residencia</div></div>
+        <div class="num">R$ 400<small>conteúdo SEO</small></div>
+        <div class="num">198</div>
+        <div class="num" style="color:var(--green-deep);">31<small>15,7%</small></div>
+        <div class="num">R$ 13</div>
+        <div><span class="tag tag-green"><span class="tag-dot"></span>Estrela</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- A/B + landing page perf -->
+  <section style="display:grid;grid-template-columns:1.2fr 1fr;gap:18px;">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">A/B test · CTA da landing /residencia-cardio</div>
+          <div class="card-sub">14 412 sessões · ganho estatisticamente significativo p &lt; 0,01 · rodando há 14 dias</div>
+        </div>
+      </div>
+      <div class="ab-card">
+        <div class="ab-grid">
+          <div class="ab-variant">
+            <div class="lbl">VARIANTE A · controle</div>
+            <div class="copy">"Comece grátis e descubra o método PreceptorMED."</div>
+            <div class="num">14,2%</div>
+            <div class="meta">7 218 sessões · 1 025 signups</div>
+          </div>
+          <div class="ab-vs">vs</div>
+          <div class="ab-variant winner">
+            <div class="lbl">VARIANTE B · teste</div>
+            <div class="copy">"Resolva 30 questões em 30 minutos. Veja se é pra você."</div>
+            <div class="num">19,8%</div>
+            <div class="meta">7 194 sessões · 1 424 signups</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;margin-top:14px;display:flex;justify-content:space-between;border-top:1px solid var(--line-soft);padding-top:12px;">
+          <div>Diferença <strong class="strong" style="color:var(--green-deep);">+ 5,6 pp</strong> · lift relativo <strong class="strong">+ 39,4%</strong></div>
+          <div class="row" style="gap:8px;"><button class="btn btn-ghost">Ver histórico</button><button class="btn btn-primary">Promover B</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Top landing pages</div>
+          <div class="card-sub">conv. visitor → signup · 30 dias</div>
+        </div>
+      </div>
+      <div style="padding: 4px 0 12px;">
+        <div class="campaign" style="grid-template-columns:1fr 90px 100px;gap:14px;padding:11px 18px;">
+          <div class="nm">/residencia-cardio<div class="meta">7 412 visitantes</div></div>
+          <div class="num" style="color:var(--green-deep);">19,8%<small>1 467 signups</small></div>
+          <div class="num">R$ 142<small>CAC</small></div>
+        </div>
+        <div class="campaign" style="grid-template-columns:1fr 90px 100px;gap:14px;padding:11px 18px;">
+          <div class="nm">/guia-residencia<div class="meta">3 218 visitantes · SEO</div></div>
+          <div class="num" style="color:var(--green-deep);">22,4%<small>721 signups</small></div>
+          <div class="num">R$ 13<small>CAC</small></div>
+        </div>
+        <div class="campaign" style="grid-template-columns:1fr 90px 100px;gap:14px;padding:11px 18px;">
+          <div class="nm">/residencia-clinica<div class="meta">2 814 visitantes</div></div>
+          <div class="num">14,6%<small>411 signups</small></div>
+          <div class="num">R$ 165<small>CAC</small></div>
+        </div>
+        <div class="campaign" style="grid-template-columns:1fr 90px 100px;gap:14px;padding:11px 18px;">
+          <div class="nm">/pediatria<div class="meta">1 980 visitantes</div></div>
+          <div class="num">11,2%<small>222 signups</small></div>
+          <div class="num">R$ 235<small>CAC</small></div>
+        </div>
+        <div class="campaign" style="grid-template-columns:1fr 90px 100px;gap:14px;padding:11px 18px;">
+          <div class="nm">/<div class="meta">12 988 visitantes · home</div></div>
+          <div class="num">8,4%<small>1 091 signups</small></div>
+          <div class="num">R$ 87<small>CAC</small></div>
+        </div>
+        <div class="campaign" style="grid-template-columns:1fr 90px 100px;gap:14px;padding:11px 18px;">
+          <div class="nm">/revalida<div class="meta">680 visitantes</div></div>
+          <div class="num" style="color:var(--neg);">3,2%<small>22 signups</small></div>
+          <div class="num">R$ 387<small>CAC</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+</div>
+
+<script>
+  document.querySelectorAll('.mode-toggle button, .period-bar button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sib = btn.parentElement;
+      sib.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

@@ -3,6 +3,12 @@ import { getStudentDetail, getProfessionalByAuthId } from '$lib/server/queries';
 import { createPlanPlaceholder, generateTrainingPlanInBackground } from '$lib/server/ai/generator';
 import type { Actions, PageServerLoad } from './$types';
 
+// Vercel: estende o limite da função pra 60s (Hobby max). Plano com Flash leva
+// ~10-20s, com Pro ~30-50s. Sem isso, default é 10s e a IA morre antes de salvar.
+export const config = {
+	maxDuration: 60
+};
+
 export const load: PageServerLoad = async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
@@ -25,6 +31,8 @@ export const actions: Actions = {
 
 		const planId = await createPlanPlaceholder(params.id!, professional.id);
 
+		// Dispara em background com waitUntil — runtime fica vivo até a Promise
+		// resolver (ou até maxDuration acima). User vê redirect imediato.
 		generateTrainingPlanInBackground({
 			professionalId: professional.id,
 			studentId: params.id!,

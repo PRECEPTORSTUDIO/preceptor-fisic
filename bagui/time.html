@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Time & People — PreceptorMED CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* Org grid */
+  .people-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+  .person {
+    padding: 18px 20px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .person:nth-child(3n) { border-right: none; }
+  .person-head { display: flex; align-items: flex-start; gap: 12px; }
+  .person-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--green-deep);
+    color: #fff;
+    display: grid; place-items: center;
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+  }
+  .person-name { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .person-role { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .person-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-top: 4px; letter-spacing: 0.02em; }
+
+  .person-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; padding-top: 4px; border-top: 1px dashed var(--line); }
+  .person-stat .l { font-family: var(--mono); font-size: 10px; color: var(--ink-4); letter-spacing: 0.05em; text-transform: uppercase; }
+  .person-stat .v { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 1px; }
+
+  .health-bar { display: flex; gap: 3px; align-items: center; margin-top: 4px; }
+  .health-bar .seg { flex: 1; height: 5px; border-radius: 2px; background: var(--surface-3); }
+  .health-bar .seg.full { background: var(--green-deep); }
+  .health-bar .seg.warn { background: var(--gold-deep); }
+
+  /* Hiring pipeline */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .pipe-col {
+    background: var(--surface-2);
+    padding: 12px 12px 14px;
+    min-height: 320px;
+  }
+  .pipe-col h4 {
+    margin: 0 0 10px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pipe-col h4 .ct { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--surface); padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); }
+  .pipe-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .pipe-card .nm { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  .pipe-card .role { font-size: 11px; color: var(--ink-4); font-family: var(--mono); margin-top: 2px; }
+  .pipe-card .row-tags { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .pipe-card .mini-tag { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; background: var(--surface-2); color: var(--ink-3); }
+  .pipe-card.hot { border-color: var(--green-deep); box-shadow: 0 0 0 1px var(--green-deep) inset; }
+
+  /* 1:1 list */
+  .one-on-one {
+    display: grid;
+    grid-template-columns: 80px 1fr 110px;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    align-items: center;
+  }
+  .one-on-one:last-child { border-bottom: none; }
+  .ooo-date { font-family: var(--mono); font-size: 11px; color: var(--ink-4); }
+  .ooo-date strong { display: block; font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .ooo-with { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .ooo-topic { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+
+  /* PDI */
+  .pdi { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+  .pdi:last-child { border-bottom: none; }
+  .pdi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .pdi-name { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--ink); }
+  .pdi-name .role { font-weight: 400; color: var(--ink-4); font-size: 11.5px; margin-left: 6px; }
+  .pdi-pct { font-family: var(--mono); font-feature-settings: "tnum"; font-size: 11.5px; color: var(--ink-3); }
+  .pdi-pct strong { color: var(--green-deep); font-size: 13px; font-weight: 700; }
+  .pdi-bar { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+  .pdi-bar > div { height: 100%; background: linear-gradient(90deg, #1B5E3B, #C9A84C); border-radius: 3px; }
+  .pdi-goals { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .pdi-goal { font-family: var(--mono); font-size: 10.5px; padding: 3px 8px; border-radius: 3px; background: var(--green-tint); color: var(--green-deep); border: 1px solid #c2dccc; }
+  .pdi-goal.done { background: var(--surface-2); color: var(--ink-4); border-color: var(--line); text-decoration: line-through; }
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">P</div>
+    <div>
+      <div class="brand-name">PreceptorMED</div>
+      <div class="brand-sub">crm · v3</div>
+    </div>
+  </div>
+  <div class="mode-toggle"><button>Marketing</button><button class="active">Admin</button></div>
+  <div class="nav-section">
+    <div class="nav-label">Visão geral</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Dashboard</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Finanças</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg> DRE & Receita</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3zM3 11h18v4H3zM3 19h18"/></svg> Fluxo de caixa</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg> Business plan <span class="nav-count">2026</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">People</div>
+    <a class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Time <span class="nav-count">9</span></a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg> 1:1 & PDIs</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9"/></svg> Carreira & promoções</a>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> Contratações <span class="nav-count">3</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Sistema</div>
+    <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg> Configurações</a>
+  </div>
+  <div class="sidebar-foot">
+    <div class="avatar">MC</div>
+    <div class="user-info"><div class="user-name">Matheus Castro</div><div class="user-email">matheus@preceptor.med.br</div></div>
+  </div>
+</aside>
+
+<div class="main">
+<header class="topbar">
+  <div class="crumbs"><span>CRM</span><span class="sep">/</span><span>Admin</span><span class="sep">/</span><span class="now">Time & People</span></div>
+  <div class="topbar-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+    <input placeholder="Buscar membro, candidato, 1:1…" /><kbd>⌘K</kbd>
+  </div>
+  <div class="topbar-tools">
+    <button class="btn btn-ghost">Org chart</button>
+    <button class="btn btn-primary">+ Agendar 1:1</button>
+  </div>
+</header>
+
+<main class="page">
+  <section class="hero" style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;">
+    <div>
+      <div class="page-eyebrow">Admin · People · Q2/2026</div>
+      <h1 class="page-title">Time <em>& saúde organizacional</em></h1>
+      <p class="page-sub">9 pessoas · 3 founders · 3 vagas em pipeline. Cada card mostra contribuição mensal, foco da quinzena e próximo 1:1.</p>
+    </div>
+    <div class="row" style="gap:8px;">
+      <div class="period-bar">
+        <button>Q1</button>
+        <button class="active">Q2</button>
+        <button>YTD</button>
+      </div>
+      <button class="btn btn-ghost">Comparar Q1/26</button>
+    </div>
+  </section>
+
+  <section class="kpi-row">
+    <div class="kpi k-mrr">
+      <div class="kpi-label">Headcount</div>
+      <div class="kpi-value">9 <span class="unit">pessoas</span></div>
+      <div class="kpi-meta"><span class="delta delta-pos">+ 1</span><span>3 founders · 6 FTE</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Custo / FTE / mês</div>
+      <div class="kpi-value">R$ 8 271</div>
+      <div class="kpi-meta"><span class="delta delta-flat">flat</span><span>incluindo encargos</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">eNPS · Q2</div>
+      <div class="kpi-value">+62</div>
+      <div class="kpi-meta"><span class="delta delta-pos">↑ 8</span><span>9 respostas · 100%</span></div>
+    </div>
+    <div class="kpi k-warn">
+      <div class="kpi-label">Vagas abertas</div>
+      <div class="kpi-value">3</div>
+      <div class="kpi-meta"><span class="delta delta-neg">há 38 dias média</span><span>2 eng · 1 conteúdo</span></div>
+    </div>
+  </section>
+
+  <!-- People grid -->
+  <section class="card" style="overflow:hidden;">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Equipe ativa</div>
+        <div class="card-sub">Saúde, foco da quinzena e contribuição. Score = engajamento × output × OKRs do squad.</div>
+      </div>
+      <div class="card-side"><a class="btn btn-link">Histórico salarial →</a></div>
+    </div>
+    <div class="people-grid">
+      <!-- founders -->
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar" style="background:var(--gold-deep);">MC</div>
+          <div>
+            <div class="person-name">Matheus Castro</div>
+            <div class="person-role">Founder · CEO & Eng Lead</div>
+            <div class="person-meta">desde set/24 · São Paulo · pro-labore R$ 800</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr/q2:</strong> business plan 2026, fechamento DRE, contratação eng pleno.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg warn"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+8</div></div>
+          <div class="person-stat"><div class="l">próx 1:1</div><div class="v">22 abr · 16h</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar" style="background:var(--gold-deep);">FA</div>
+          <div>
+            <div class="person-name">Fernanda Albuquerque</div>
+            <div class="person-role">Founder · Head Conteúdo</div>
+            <div class="person-meta">desde set/24 · Rio de Janeiro · pro-labore R$ 800</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr/q2:</strong> reescrita banco Cardio (3 200 questões) + curadoria R+ Pediatria.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+10</div></div>
+          <div class="person-stat"><div class="l">próx 1:1</div><div class="v">19 abr · 11h</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar" style="background:var(--gold-deep);">RP</div>
+          <div>
+            <div class="person-name">Ricardo Paranhos</div>
+            <div class="person-role">Founder · Marketing & Ops</div>
+            <div class="person-meta">desde set/24 · São Paulo · pro-labore R$ 400</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr/q2:</strong> A/B testes landing, programa de indicação bianual, pausa de revalida-abr.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg warn"></div><div class="seg"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+6</div></div>
+          <div class="person-stat"><div class="l">próx 1:1</div><div class="v">21 abr · 09h</div></div>
+        </div>
+      </div>
+
+      <!-- FTEs -->
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar">JP</div>
+          <div>
+            <div class="person-name">Júlia Pacheco</div>
+            <div class="person-role">Eng Sênior · Frontend</div>
+            <div class="person-meta">desde fev/25 · CLT · R$ 14 200</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr:</strong> nova UI do simulado, refatoração do banco de questões.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+10</div></div>
+          <div class="person-stat"><div class="l">PRs / mês</div><div class="v">28</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar">DM</div>
+          <div>
+            <div class="person-name">Daniel Mendonça</div>
+            <div class="person-role">Eng Pleno · Backend</div>
+            <div class="person-meta">desde abr/25 · CLT · R$ 11 800</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr:</strong> motor de score de leads (ML) + integração Stripe.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg warn"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+7</div></div>
+          <div class="person-stat"><div class="l">PRs / mês</div><div class="v">22</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar">CN</div>
+          <div>
+            <div class="person-name">Camila Nóbrega</div>
+            <div class="person-role">Eng Pleno · Fullstack</div>
+            <div class="person-meta">desde jul/25 · CLT · R$ 11 200</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr:</strong> dashboard PreceptorIA + API pública de questões.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+9</div></div>
+          <div class="person-stat"><div class="l">PRs / mês</div><div class="v">19</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar">RT</div>
+          <div>
+            <div class="person-name">Rafael Teixeira</div>
+            <div class="person-role">Eng Júnior · Mobile</div>
+            <div class="person-meta">desde jan/26 · CLT · R$ 6 800</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr:</strong> primeira release do app iOS · review semanal com Júlia.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg warn"></div><div class="seg"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+5</div></div>
+          <div class="person-stat"><div class="l">PRs / mês</div><div class="v">11</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar">LO</div>
+          <div>
+            <div class="person-name">Letícia Oliveira</div>
+            <div class="person-role">Editora médica · Conteúdo</div>
+            <div class="person-meta">desde nov/24 · CLT · R$ 7 400</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr:</strong> revisão de 240 questões Pediatria + roteiros videoaulas.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg warn"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+8</div></div>
+          <div class="person-stat"><div class="l">questões / mês</div><div class="v">320</div></div>
+        </div>
+      </div>
+
+      <div class="person">
+        <div class="person-head">
+          <div class="person-avatar">GR</div>
+          <div>
+            <div class="person-name">Gabriel Ramalho</div>
+            <div class="person-role">Editor médico · Conteúdo</div>
+            <div class="person-meta">desde ago/25 · PJ · R$ 6 200</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px;line-height:1.45;">
+          <strong class="strong" style="color:var(--ink);">Foco abr:</strong> banco de simulados Cirurgia · auditoria de gabaritos.
+        </div>
+        <div class="health-bar">
+          <div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div><div class="seg full"></div>
+        </div>
+        <div class="person-stats">
+          <div class="person-stat"><div class="l">eNPS</div><div class="v">+9</div></div>
+          <div class="person-stat"><div class="l">questões / mês</div><div class="v">280</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1:1s + PDIs -->
+  <section style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Próximos 1:1</div>
+          <div class="card-sub">Próximas duas semanas · 9 pessoas · ciclo quinzenal</div>
+        </div>
+        <div class="card-side"><a class="btn btn-link">Calendário →</a></div>
+      </div>
+      <div>
+        <div class="one-on-one">
+          <div class="ooo-date"><strong>19</strong>abr · 11h</div>
+          <div>
+            <div class="ooo-with">Fernanda Albuquerque · Founder</div>
+            <div class="ooo-topic">"Definir cronograma de reescrita Cardio até jun. Validar contratação de mais um editor médico."</div>
+          </div>
+          <div><span class="tag tag-green"><span class="tag-dot"></span>Pauta pronta</span></div>
+        </div>
+        <div class="one-on-one">
+          <div class="ooo-date"><strong>21</strong>abr · 09h</div>
+          <div>
+            <div class="ooo-with">Ricardo Paranhos · Founder</div>
+            <div class="ooo-topic">"Decisão sobre pausar revalida-abr e realocar verba para indicação bianual."</div>
+          </div>
+          <div><span class="tag tag-warn"><span class="tag-dot"></span>Sem pauta</span></div>
+        </div>
+        <div class="one-on-one">
+          <div class="ooo-date"><strong>22</strong>abr · 14h</div>
+          <div>
+            <div class="ooo-with">Júlia Pacheco · Eng Sênior</div>
+            <div class="ooo-topic">"Carreira: caminho para tech lead até jul. Próximo passo do PDI."</div>
+          </div>
+          <div><span class="tag tag-green"><span class="tag-dot"></span>Pauta pronta</span></div>
+        </div>
+        <div class="one-on-one">
+          <div class="ooo-date"><strong>22</strong>abr · 16h</div>
+          <div>
+            <div class="ooo-with">Daniel Mendonça · Eng Pleno</div>
+            <div class="ooo-topic">"Fadiga aparente em PRs longos. Conversar sobre carga e split com Camila."</div>
+          </div>
+          <div><span class="tag tag-red"><span class="tag-dot"></span>Atenção</span></div>
+        </div>
+        <div class="one-on-one">
+          <div class="ooo-date"><strong>24</strong>abr · 10h</div>
+          <div>
+            <div class="ooo-with">Rafael Teixeira · Eng Júnior</div>
+            <div class="ooo-topic">"Onboarding 90 dias · review do escopo do app iOS · mentoria com Júlia."</div>
+          </div>
+          <div><span class="tag tag-green"><span class="tag-dot"></span>Pauta pronta</span></div>
+        </div>
+        <div class="one-on-one">
+          <div class="ooo-date"><strong>25</strong>abr · 15h</div>
+          <div>
+            <div class="ooo-with">Letícia Oliveira · Editora médica</div>
+            <div class="ooo-topic">"Pedido de bonificação por volume entregue em mar. Revisar plano salarial."</div>
+          </div>
+          <div><span class="tag tag-warn"><span class="tag-dot"></span>Sem pauta</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">PDIs em curso · Q2</div>
+          <div class="card-sub">Plano de desenvolvimento individual · objetivos por trimestre</div>
+        </div>
+        <div class="card-side"><a class="btn btn-link">Histórico →</a></div>
+      </div>
+      <div>
+        <div class="pdi">
+          <div class="pdi-head">
+            <div class="pdi-name">Júlia Pacheco<span class="role">→ Tech Lead</span></div>
+            <div class="pdi-pct"><strong>78%</strong> · 3 de 4 metas</div>
+          </div>
+          <div class="pdi-bar"><div style="width:78%;"></div></div>
+          <div class="pdi-goals">
+            <span class="pdi-goal done">✓ Liderar squad de 2</span>
+            <span class="pdi-goal done">✓ Mentorar Rafael</span>
+            <span class="pdi-goal done">✓ Apresentar arquitetura</span>
+            <span class="pdi-goal">Definir roadmap mobile</span>
+          </div>
+        </div>
+        <div class="pdi">
+          <div class="pdi-head">
+            <div class="pdi-name">Daniel Mendonça<span class="role">→ Eng Sênior</span></div>
+            <div class="pdi-pct"><strong>54%</strong> · 2 de 4 metas</div>
+          </div>
+          <div class="pdi-bar"><div style="width:54%;"></div></div>
+          <div class="pdi-goals">
+            <span class="pdi-goal done">✓ Owner do motor de score</span>
+            <span class="pdi-goal done">✓ Talk interno · Stripe</span>
+            <span class="pdi-goal">Refatorar pipeline ETL</span>
+            <span class="pdi-goal">Mentorar 1 júnior</span>
+          </div>
+        </div>
+        <div class="pdi">
+          <div class="pdi-head">
+            <div class="pdi-name">Camila Nóbrega<span class="role">→ Eng Sênior</span></div>
+            <div class="pdi-pct"><strong>67%</strong> · 2 de 3 metas</div>
+          </div>
+          <div class="pdi-bar"><div style="width:67%;"></div></div>
+          <div class="pdi-goals">
+            <span class="pdi-goal done">✓ Lançar API pública</span>
+            <span class="pdi-goal done">✓ Documentação de specs</span>
+            <span class="pdi-goal">Liderar squad PreceptorIA</span>
+          </div>
+        </div>
+        <div class="pdi">
+          <div class="pdi-head">
+            <div class="pdi-name">Rafael Teixeira<span class="role">→ Eng Pleno (Q4)</span></div>
+            <div class="pdi-pct"><strong>32%</strong> · 1 de 5 metas</div>
+          </div>
+          <div class="pdi-bar"><div style="width:32%;"></div></div>
+          <div class="pdi-goals">
+            <span class="pdi-goal done">✓ Onboarding completo</span>
+            <span class="pdi-goal">Primeira release iOS</span>
+            <span class="pdi-goal">2 PRs grandes / mês</span>
+            <span class="pdi-goal">Curso Swift avançado</span>
+            <span class="pdi-goal">Talk interno até jul</span>
+          </div>
+        </div>
+        <div class="pdi">
+          <div class="pdi-head">
+            <div class="pdi-name">Letícia Oliveira<span class="role">→ Lead Conteúdo</span></div>
+            <div class="pdi-pct"><strong>45%</strong> · 2 de 4 metas</div>
+          </div>
+          <div class="pdi-bar"><div style="width:45%;"></div></div>
+          <div class="pdi-goals">
+            <span class="pdi-goal done">✓ Curadoria 3 200 q. Cardio</span>
+            <span class="pdi-goal done">✓ Treinar Gabriel</span>
+            <span class="pdi-goal">Coordenar entradas Q3</span>
+            <span class="pdi-goal">Revisão editorial mensal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hiring pipeline -->
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Pipeline de contratação · 3 vagas abertas</div>
+        <div class="card-sub">38 dias média de fechamento · 89 candidatos no funil · meta: fechar 2 até jun</div>
+      </div>
+      <div class="card-side"><a class="btn btn-link">Job descriptions →</a></div>
+    </div>
+    <div class="pipeline" style="margin: 4px 18px 18px;">
+      <div class="pipe-col">
+        <h4>Sourcing <span class="ct">42</span></h4>
+        <div class="pipe-card"><div class="nm">Mariana Lopes</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">linkedin</span><span class="mini-tag">9y exp</span></div></div>
+        <div class="pipe-card"><div class="nm">Rafael Cunha</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">indicação</span><span class="mini-tag">go/ts</span></div></div>
+        <div class="pipe-card"><div class="nm">Bárbara Soares</div><div class="role">editor médico</div><div class="row-tags"><span class="mini-tag">médica</span><span class="mini-tag">unifesp</span></div></div>
+        <div class="pipe-card"><div class="nm">+ 39 candidatos</div><div class="role">aguardando triagem</div></div>
+      </div>
+      <div class="pipe-col">
+        <h4>Triagem <span class="ct">18</span></h4>
+        <div class="pipe-card"><div class="nm">Lucas Andrade</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">⌘ feedback ok</span></div></div>
+        <div class="pipe-card hot"><div class="nm">Patrícia Verçosa</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">★ alta prioridade</span><span class="mini-tag">ex-iFood</span></div></div>
+        <div class="pipe-card"><div class="nm">Tomás Rebelo</div><div class="role">eng júnior · mobile</div><div class="row-tags"><span class="mini-tag">2y exp</span></div></div>
+        <div class="pipe-card"><div class="nm">Ana Beatriz Sá</div><div class="role">editor médico</div><div class="row-tags"><span class="mini-tag">cardiologia</span></div></div>
+        <div class="pipe-card"><div class="nm">+ 14 candidatos</div></div>
+      </div>
+      <div class="pipe-col">
+        <h4>Tech / Case <span class="ct">17</span></h4>
+        <div class="pipe-card hot"><div class="nm">Patrícia Verçosa</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">case 21 abr</span><span class="mini-tag">★ favorita</span></div></div>
+        <div class="pipe-card"><div class="nm">Renan Tavares</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">case 23 abr</span></div></div>
+        <div class="pipe-card"><div class="nm">Sofia Carvalho</div><div class="role">eng júnior · mobile</div><div class="row-tags"><span class="mini-tag">case 24 abr</span></div></div>
+        <div class="pipe-card"><div class="nm">Henrique Vidal</div><div class="role">editor médico</div><div class="row-tags"><span class="mini-tag">prova de prova ok</span></div></div>
+      </div>
+      <div class="pipe-col">
+        <h4>Cultural <span class="ct">8</span></h4>
+        <div class="pipe-card hot"><div class="nm">Patrícia Verçosa</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">3 founders ok</span></div></div>
+        <div class="pipe-card"><div class="nm">Henrique Vidal</div><div class="role">editor médico</div><div class="row-tags"><span class="mini-tag">2/3 ok</span></div></div>
+        <div class="pipe-card"><div class="nm">Sofia Carvalho</div><div class="role">eng júnior · mobile</div><div class="row-tags"><span class="mini-tag">cultural 26 abr</span></div></div>
+      </div>
+      <div class="pipe-col">
+        <h4>Oferta <span class="ct">4</span></h4>
+        <div class="pipe-card hot"><div class="nm">Patrícia Verçosa</div><div class="role">eng pleno · backend</div><div class="row-tags"><span class="mini-tag">R$ 13,5k</span><span class="mini-tag">aceita 30 abr?</span></div></div>
+        <div class="pipe-card"><div class="nm">Bianca Marques</div><div class="role">editor médico</div><div class="row-tags"><span class="mini-tag">R$ 7,2k</span><span class="mini-tag">negociando</span></div></div>
+        <div class="pipe-card"><div class="nm">João Renato</div><div class="role">eng júnior · mobile</div><div class="row-tags"><span class="mini-tag">aceita 28 abr</span></div></div>
+        <div class="pipe-card"><div class="nm">+ 1 fechado</div><div class="role">→ start mai/26</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+</div>
+
+<script>
+  document.querySelectorAll('.mode-toggle button, .period-bar button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sib = btn.parentElement;
+      sib.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
