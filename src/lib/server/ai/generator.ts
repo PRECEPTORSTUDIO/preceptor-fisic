@@ -14,8 +14,10 @@ import { randomUUID } from 'node:crypto';
 import { waitUntil } from '@vercel/functions';
 import { google } from './provider';
 import { db } from '$lib/server/db';
+import { sendPlanReady } from '$lib/server/email';
 import {
 	students,
+	professionals,
 	healthProfiles,
 	trainingPreferences,
 	trainingPlans,
@@ -491,6 +493,28 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 			},
 			'plan.generate.success'
 		);
+
+		// Email pro profissional avisando que o plano tá pronto.
+		// Fire-and-forget — falha de email não impacta o flow.
+		try {
+			const [prof] = await db
+				.select({ name: professionals.name, email: professionals.email })
+				.from(professionals)
+				.where(eq(professionals.id, opts.professionalId))
+				.limit(1);
+			if (prof?.email) {
+				sendPlanReady({
+					to: prof.email,
+					professionalName: prof.name,
+					studentName: ctx.student.name,
+					planId
+				}).catch((err) =>
+					log.error({ err: String(err).slice(0, 200) }, 'plan.ready.email.failed')
+				);
+			}
+		} catch (err) {
+			log.error({ err: String(err).slice(0, 200) }, 'plan.ready.email.lookup_failed');
+		}
 
 		return { planId, aiRunId: aiRunRow.id, durationMs: totalElapsed, chunkIds };
 	} catch (err) {

@@ -1,9 +1,32 @@
 import { createServerClient } from '@supabase/ssr';
-import { type Handle, redirect } from '@sveltejs/kit';
+import { type Handle, type HandleServerError, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { env } from '$env/dynamic/public';
+import { env as privEnv } from '$env/dynamic/private';
+import * as Sentry from '@sentry/sveltekit';
+import { logger } from '$lib/server/logger';
 
 const SUPABASE_CONFIGURED = Boolean(env.PUBLIC_SUPABASE_URL && env.PUBLIC_SUPABASE_ANON_KEY);
+
+// Sentry: só inicializa se DSN setada. Sem isso, é no-op (não quebra dev).
+const SENTRY_DSN = privEnv.SENTRY_DSN ?? env.PUBLIC_SENTRY_DSN;
+if (SENTRY_DSN) {
+	Sentry.init({
+		dsn: SENTRY_DSN,
+		tracesSampleRate: privEnv.NODE_ENV === 'production' ? 0.1 : 1.0,
+		environment: privEnv.NODE_ENV ?? 'development',
+		// PII redaction — não enviar dados clínicos por engano
+		sendDefaultPii: false,
+		beforeSend(event) {
+			// Drop bodies pra evitar vazamento de dados sensíveis
+			if (event.request) {
+				delete event.request.data;
+				delete event.request.cookies;
+			}
+			return event;
+		}
+	});
+}
 
 const supabase: Handle = async ({ event, resolve }) => {
 	if (!SUPABASE_CONFIGURED) {
@@ -64,6 +87,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		event.url.pathname.startsWith('/a/') ||
 		event.url.pathname.startsWith('/onboarding') ||
 		event.url.pathname.startsWith('/recuperar') ||
+		event.url.pathname.startsWith('/legal') ||
 		event.url.pathname === '/';
 	if (!session && !isPublic) {
 		redirect(303, '/login');
@@ -74,4 +98,26 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle: Handle = sequence(supabase, authGuard);
+export const handle: Handle = SENTRY_DSN
+	? sequence(Sentry.sentryHandle(), supabase, authGuard)
+	: sequence(supabase, authGuard);
+
+export const handleError: HandleServerError = ({ error, event, status }) => {
+	// 4xx não vai pro Sentry (são erros esperados — auth, validation, etc)
+	if (status < 500) {
+		logger.warn(
+			{ status, path: event.url.pathname, err: String(error).slice(0, 200) },
+			'request.error.4xx'
+		);
+		return { message: typeof error === 'object' && error && 'message' in error ? String((error as { message: unknown }).message) : 'Erro' };
+	}
+	// 5xx → Sentry + log
+	if (SENTRY_DSN) {
+		Sentry.captureException(error, { extra: { path: event.url.pathname } });
+	}
+	logger.error(
+		{ status, path: event.url.pathname, err: String(error).slice(0, 500) },
+		'request.error.5xx'
+	);
+	return { message: 'Erro interno. Tente de novo em alguns segundos.' };
+};

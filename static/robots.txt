@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /legal/
+
+# Áreas privadas — não indexar
+Disallow: /dashboard
+Disallow: /alunos
+Disallow: /planos
+Disallow: /exercicios
+Disallow: /mensagens
+Disallow: /agenda
+Disallow: /configuracoes
+Disallow: /onboarding
+Disallow: /aluno-preview
+Disallow: /a/
+Disallow: /recuperar
+Disallow: /api/
+
+Sitemap: https://preceptor-fisic.vercel.app/sitemap.xml

@@ -2,6 +2,9 @@
 	import { Button, Chip, Avatar, Eyebrow } from '$lib/components/ui';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
+	import { onMount, onDestroy } from 'svelte';
+	import { createBrowserClient } from '@supabase/ssr';
+	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -11,6 +14,44 @@
 
 	let draft = $state('');
 	let activeFilter = $state('all');
+
+	// Realtime via Supabase channels — escuta INSERT em messages.
+	// Quando chega novo, invalida load function pra atualizar threads + msgs.
+	let realtimeUnsub: (() => void) | undefined;
+	onMount(() => {
+		const url = env.PUBLIC_SUPABASE_URL;
+		const anon = env.PUBLIC_SUPABASE_ANON_KEY;
+		if (!url || !anon) return;
+
+		const sb = createBrowserClient(url, anon, {
+			cookies: {
+				getAll: () => document.cookie.split(';').map((c) => {
+					const [name, ...rest] = c.trim().split('=');
+					return { name, value: rest.join('=') };
+				})
+			}
+		});
+		const channel = sb
+			.channel('messages-realtime')
+			.on(
+				'postgres_changes',
+				{ event: 'INSERT', schema: 'public', table: 'messages' },
+				() => {
+					invalidateAll().catch(() => {});
+				}
+			)
+			.subscribe();
+
+		realtimeUnsub = () => {
+			try {
+				channel.unsubscribe();
+				sb.removeAllChannels();
+			} catch {
+				/* noop */
+			}
+		};
+	});
+	onDestroy(() => realtimeUnsub?.());
 
 	const cur = $derived(threads.find((t) => t.id === activeId));
 	const totalUnread = $derived(threads.reduce((a, t) => a + t.unread, 0));

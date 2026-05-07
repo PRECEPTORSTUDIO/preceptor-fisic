@@ -141,6 +141,53 @@
 		name="description"
 		content="Plataforma para profissionais CREF/CREFITO que prescrevem exercícios para populações especiais. IA com diretrizes ACSM, validação clínica automática, app mobile do aluno."
 	/>
+	<meta name="keywords" content="prescrição exercício, populações especiais, hipertensão, diabetes, cardiopatia, ACSM, fisioterapia, personal trainer, CREF, CREFITO" />
+	<meta name="author" content="Preceptor Fisic" />
+	<link rel="canonical" href="https://preceptor-fisic.vercel.app/" />
+
+	<!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://preceptor-fisic.vercel.app/" />
+	<meta property="og:title" content="Preceptor Fisic — Prescrição clínica com IA validada" />
+	<meta
+		property="og:description"
+		content="IA com diretrizes ACSM · Validação clínica automática · App mobile do aluno. Plataforma para profissionais CREF/CREFITO."
+	/>
+	<meta property="og:image" content="https://preceptor-fisic.vercel.app/og-image.svg" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:site_name" content="Preceptor Fisic" />
+	<meta property="og:locale" content="pt_BR" />
+
+	<!-- Twitter Card -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Preceptor Fisic — Prescrição clínica com IA validada" />
+	<meta
+		name="twitter:description"
+		content="IA com diretrizes ACSM · Validação clínica automática · App mobile do aluno."
+	/>
+	<meta name="twitter:image" content="https://preceptor-fisic.vercel.app/og-image.svg" />
+
+	<!-- JSON-LD structured data (SoftwareApplication) -->
+	<script type="application/ld+json">
+	{
+		"@context": "https://schema.org",
+		"@type": "SoftwareApplication",
+		"name": "Preceptor Fisic",
+		"applicationCategory": "HealthApplication",
+		"operatingSystem": "Web, iOS, Android",
+		"description": "Plataforma de prescrição clínica de exercícios com IA fundamentada em diretrizes ACSM.",
+		"offers": {
+			"@type": "Offer",
+			"price": "0",
+			"priceCurrency": "BRL"
+		},
+		"audience": {
+			"@type": "Audience",
+			"audienceType": "Profissionais CREF, CREFITO e CRM"
+		}
+	}
+	</script>
 </svelte:head>
 
 <div class="lp">
@@ -438,9 +485,9 @@
 				</div>
 				<div>
 					<div class="footer-col-h">Conformidade</div>
-					<a href="#">LGPD</a>
-					<a href="#">Termos</a>
-					<a href="#">Privacidade</a>
+					<a href="/legal/privacidade">LGPD</a>
+					<a href="/legal/termos">Termos</a>
+					<a href="/legal/privacidade">Privacidade</a>
 				</div>
 			</div>
 		</div>

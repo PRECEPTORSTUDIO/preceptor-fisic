@@ -1,6 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getProfessionalByAuthId, createProfessional } from '$lib/server/queries';
+import { sendProfessionalWelcome } from '$lib/server/email';
+import { logger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -56,6 +58,14 @@ export const actions: Actions = {
 			});
 		} catch (e) {
 			return fail(500, { error: (e as Error).message });
+		}
+
+		// Welcome email — fire-and-forget. Falha não bloqueia o onboarding.
+		const userEmail = locals.user.email;
+		if (userEmail) {
+			sendProfessionalWelcome({ to: userEmail, name }).catch((err) =>
+				logger.error({ err: String(err).slice(0, 200) }, 'professional.welcome.send_failed')
+			);
 		}
 
 		// Não redireciona — devolve sucesso pra front mostrar step 3 (próximos passos).
