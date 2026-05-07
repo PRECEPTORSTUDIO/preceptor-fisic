@@ -1,4 +1,4 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getProfessionalByAuthId, createProfessional } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
@@ -9,7 +9,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (existing) redirect(303, '/dashboard');
 	return {
 		email: locals.user.email ?? '',
-		suggestedName: (locals.user as any).user_metadata?.name ?? ''
+		suggestedName:
+			(locals.user as { user_metadata?: { name?: string; full_name?: string } }).user_metadata
+				?.full_name ??
+			(locals.user as { user_metadata?: { name?: string; full_name?: string } }).user_metadata
+				?.name ??
+			''
 	};
 };
 
@@ -27,7 +32,10 @@ export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		if (!locals.user) return fail(401, { error: 'não autenticado' });
 		const existing = await getProfessionalByAuthId(locals.user.id);
-		if (existing) redirect(303, '/dashboard');
+		// Se já existe, considera sucesso silencioso pra UX (front mostra step 3).
+		if (existing) {
+			return { success: true, name: existing.name };
+		}
 
 		const fd = await request.formData();
 		const name = String(fd.get('name') ?? '').trim();
@@ -36,7 +44,7 @@ export const actions: Actions = {
 
 		if (name.length < 2) return fail(400, { error: 'nome obrigatório (mínimo 2 caracteres)' });
 		const specialty = SpecialtyEnum.safeParse(specialtyRaw);
-		if (!specialty.success) return fail(400, { error: 'especialidade inválida' });
+		if (!specialty.success) return fail(400, { error: 'selecione uma especialidade' });
 
 		try {
 			await createProfessional({
@@ -50,6 +58,7 @@ export const actions: Actions = {
 			return fail(500, { error: (e as Error).message });
 		}
 
-		redirect(303, '/dashboard');
+		// Não redireciona — devolve sucesso pra front mostrar step 3 (próximos passos).
+		return { success: true, name };
 	}
 };
