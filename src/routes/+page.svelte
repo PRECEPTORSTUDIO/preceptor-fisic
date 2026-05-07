@@ -5,12 +5,38 @@
 	let videoReady = $state(false);
 	let scrolled = $state(false);
 
+	const HLS_URL =
+		'https://stream.mux.com/tLkHO1qZoaaQOUeVWo8hEBeGQfySP02EPS02BmnNFyXys.m3u8';
+
 	onMount(() => {
 		const onScroll = () => {
 			scrolled = window.scrollY > 8;
 		};
 		window.addEventListener('scroll', onScroll, { passive: true });
-		return () => window.removeEventListener('scroll', onScroll);
+
+		// HLS attach: Safari/iOS já suporta nativo, outros browsers via hls.js
+		let cleanupHls: (() => void) | undefined;
+		const attach = async () => {
+			if (!videoEl) return;
+			if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+				videoEl.src = HLS_URL;
+			} else {
+				const HlsMod = await import('hls.js');
+				const Hls = HlsMod.default;
+				if (Hls.isSupported()) {
+					const hls = new Hls({ enableWorker: false });
+					hls.loadSource(HLS_URL);
+					hls.attachMedia(videoEl);
+					cleanupHls = () => hls.destroy();
+				}
+			}
+		};
+		attach();
+
+		return () => {
+			window.removeEventListener('scroll', onScroll);
+			cleanupHls?.();
+		};
 	});
 
 	const FEATURES = [
@@ -103,10 +129,7 @@
 
 	<!-- HERO -->
 	<section class="hero">
-		<!-- Video bg
-			Ordem dos sources: WebM VP9 1080p (Chrome/FF/Edge — 6.7MB)
-			MP4 H.264 1080p   (Safari/iOS — 11.8MB)
-			Browser pega o primeiro que entender. -->
+		<!-- Video bg via HLS (Mux). Safari nativo, demais via hls.js -->
 		<video
 			bind:this={videoEl}
 			class="hero-video"
@@ -118,10 +141,10 @@
 			preload="auto"
 			poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'%3E%3Crect width='16' height='9' fill='%23050505'/%3E%3C/svg%3E"
 			oncanplay={() => (videoReady = true)}
-		>
-			<source src="/hero.webm" type="video/webm" />
-			<source src="/hero-1080.mp4" type="video/mp4" />
-		</video>
+		></video>
+
+		<!-- Tint violeta da marca (#A78BFA) sobre o vídeo via mix-blend -->
+		<div class="hero-tint"></div>
 
 		<!-- Overlays pra contraste -->
 		<div class="hero-veil"></div>
@@ -519,48 +542,58 @@
 		justify-content: center;
 		padding: 120px 32px 80px;
 		overflow: hidden;
+		/* Stacking context isolado pra mix-blend-mode do tint
+		   só blendar com o video (não vazar pra body/sections) */
+		isolation: isolate;
 	}
 	.hero-video {
 		position: absolute;
-		/* sangra 2% além do container — blur(2px) cria borda translúcida nas
-		   margens, oversize esconde isso */
-		top: -2%;
-		left: -2%;
-		width: 104%;
-		height: 104%;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
 		object-fit: cover;
 		opacity: 0;
 		transition: opacity 800ms var(--ease);
 		z-index: 0;
-		/* Hardware accel — força decodificação na GPU */
 		will-change: transform, opacity;
 		transform: translateZ(0);
 		backface-visibility: hidden;
-		/* Blur leve disfarça artefatos de compressão e qualquer upscale residual.
-		   Look "depth of field" cinematográfico — Stripe/Linear/Vercel usam.
-		   + saturate pra avivar cores + brightness reduzida pra ficar mais cinematic. */
-		filter: blur(2px) saturate(1.22) contrast(1.04) brightness(0.85);
+		/* HLS Mux entrega 1080p direto, sem blur necessário. Mantém
+		   só leve saturate/contrast pra punch + brightness baixa pra
+		   o violeta dominar visualmente. */
+		filter: saturate(1.1) contrast(1.05) brightness(0.85);
 		image-rendering: high-quality;
 		-webkit-transform: translateZ(0);
 	}
 	.hero-video.on {
 		opacity: 1;
 	}
-	/* Overlay 1: véu escuro generoso — tipo gel ND no cinema.
-	   Centro escurece +30%, bordas +70%. Esconde imperfeições e
-	   garante hierarquia visual (texto > video). */
+	/* Tint violeta da marca — #A78BFA com blend mode multiply
+	   recolore o vídeo todo pra paleta lavanda, mantendo
+	   luminância (movimento continua visível) */
+	.hero-tint {
+		position: absolute;
+		inset: 0;
+		background: var(--accent);
+		mix-blend-mode: multiply;
+		opacity: 0.55;
+		z-index: 1;
+		pointer-events: none;
+	}
+	/* Overlay 1: véu escuro radial — sobre o tint pra escurecer o conjunto */
 	.hero-veil {
 		position: absolute;
 		inset: 0;
 		background:
 			radial-gradient(
 				ellipse 100% 85% at 50% 45%,
-				rgba(5, 5, 5, 0.28) 0%,
-				rgba(5, 5, 5, 0.55) 55%,
-				rgba(5, 5, 5, 0.78) 100%
+				rgba(5, 5, 5, 0.22) 0%,
+				rgba(5, 5, 5, 0.5) 55%,
+				rgba(5, 5, 5, 0.75) 100%
 			),
-			linear-gradient(180deg, rgba(5, 5, 5, 0.25) 0%, transparent 25%, transparent 65%, rgba(5, 5, 5, 0.35) 100%);
-		z-index: 1;
+			linear-gradient(180deg, rgba(5, 5, 5, 0.2) 0%, transparent 25%, transparent 65%, rgba(5, 5, 5, 0.3) 100%);
+		z-index: 2;
 		pointer-events: none;
 	}
 	/* Overlay 2: fade pra preto na base */
@@ -571,10 +604,10 @@
 		right: 0;
 		height: 220px;
 		background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 5, 0.5) 50%, var(--bg-0) 95%);
-		z-index: 2;
+		z-index: 3;
 		pointer-events: none;
 	}
-	/* Overlay 3: vinheta atrás do texto — agora mais forte pra reforçar leitura */
+	/* Overlay 3: vinheta atrás do texto */
 	.hero-fade-left {
 		position: absolute;
 		top: 8%;
@@ -583,17 +616,17 @@
 		width: 70%;
 		background: radial-gradient(
 			ellipse 72% 65% at 28% 50%,
-			rgba(5, 5, 5, 0.55) 0%,
-			rgba(5, 5, 5, 0.25) 60%,
+			rgba(5, 5, 5, 0.5) 0%,
+			rgba(5, 5, 5, 0.2) 60%,
 			transparent 100%
 		);
-		z-index: 1;
+		z-index: 2;
 		pointer-events: none;
 	}
 
 	.hero-content {
 		position: relative;
-		z-index: 3;
+		z-index: 4;
 		max-width: 880px;
 		display: flex;
 		flex-direction: column;
@@ -718,7 +751,7 @@
 	/* Trust strip no rodapé do hero */
 	.hero-strip {
 		position: relative;
-		z-index: 3;
+		z-index: 4;
 		margin-top: auto;
 		padding-top: 60px;
 		display: flex;
