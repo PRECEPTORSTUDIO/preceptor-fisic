@@ -103,7 +103,10 @@
 
 	<!-- HERO -->
 	<section class="hero">
-		<!-- Video bg -->
+		<!-- Video bg
+			Ordem dos sources: WebM VP9 1080p (Chrome/FF/Edge — 6.7MB)
+			MP4 H.264 1080p   (Safari/iOS — 11.8MB)
+			Browser pega o primeiro que entender. -->
 		<video
 			bind:this={videoEl}
 			class="hero-video"
@@ -116,7 +119,8 @@
 			poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'%3E%3Crect width='16' height='9' fill='%23050505'/%3E%3C/svg%3E"
 			oncanplay={() => (videoReady = true)}
 		>
-			<source src="/hero.mp4" type="video/mp4" />
+			<source src="/hero.webm" type="video/webm" />
+			<source src="/hero-1080.mp4" type="video/mp4" />
 		</video>
 
 		<!-- Overlays pra contraste -->
