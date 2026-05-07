@@ -88,7 +88,7 @@
 	<nav class="pf-sidebar__nav">
 		{#each NAV_PRO as it (it.id)}
 			{@const on = isActive(it.href)}
-			<a class="pf-navitem" class:on href={it.href} data-sveltekit-preload-data="hover">
+			<a class="pf-navitem" class:on href={it.href}>
 				<span class="pf-navitem__indicator" class:on></span>
 				<span class="pf-navitem__icon" class:on>
 					<NavIcon name={it.icon} size={18} />

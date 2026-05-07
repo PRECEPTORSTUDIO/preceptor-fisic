@@ -1,16 +1,20 @@
-// Preceptor Fisic — service worker mínimo.
-// Estratégia: network-first com fallback pra cache. Suficiente pra
-// instalação em home screen (cumpre requisito de PWA installability) +
-// offline graceful degradation.
+// Preceptor Fisic — service worker.
+// Estratégias:
+//  - /_app/immutable/* (hash no nome) → cache-first, ETERNO
+//  - HTML (navigations) → stale-while-revalidate (mostra cache na hora, atualiza em bg)
+//  - resto same-origin → network-first com fallback de cache
+//  - cross-origin / non-GET / form actions → bypass
 
-const CACHE = 'preceptor-v1';
-const PRECACHE = ['/', '/dashboard', '/manifest.webmanifest', '/favicon.svg', '/icon-192.svg', '/icon-512.svg'];
+const VERSION = 'v3';
+const CACHE_IMMUT = `pf-immut-${VERSION}`;
+const CACHE_PAGES = `pf-pages-${VERSION}`;
+const PRECACHE_PAGES = ['/', '/dashboard', '/manifest.webmanifest', '/favicon.svg', '/icon-192.svg', '/icon-512.svg'];
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(
 		(async () => {
-			const cache = await caches.open(CACHE);
-			await cache.addAll(PRECACHE).catch(() => {});
+			const cache = await caches.open(CACHE_PAGES);
+			await cache.addAll(PRECACHE_PAGES).catch(() => {});
 			await self.skipWaiting();
 		})()
 	);
@@ -20,7 +24,9 @@ self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		(async () => {
 			const keys = await caches.keys();
-			await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+			await Promise.all(
+				keys.filter((k) => k !== CACHE_IMMUT && k !== CACHE_PAGES).map((k) => caches.delete(k))
+			);
 			await self.clients.claim();
 		})()
 	);
@@ -29,27 +35,82 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
 	const req = event.request;
 
-	// Não interceptar non-GET ou cross-origin
+	// Bypass non-GET, cross-origin, e form actions/api
 	if (req.method !== 'GET') return;
 	const url = new URL(req.url);
 	if (url.origin !== self.location.origin) return;
-
-	// Skip API routes, auth callbacks, form actions — sempre rede
 	if (url.pathname.startsWith('/api/') || url.search.includes('?/')) return;
 
-	event.respondWith(
-		(async () => {
-			try {
-				const fresh = await fetch(req);
-				if (fresh.ok && req.headers.get('accept')?.includes('text/html')) {
-					const cache = await caches.open(CACHE);
-					cache.put(req, fresh.clone()).catch(() => {});
-				}
-				return fresh;
-			} catch {
-				const cached = await caches.match(req);
-				return cached ?? new Response('Offline · sem conexão.', { status: 503, headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-			}
-		})()
-	);
+	// 1) Assets imutáveis (hash no path) → cache-first eterno
+	//    SvelteKit mete tudo em /_app/immutable/* com hash no nome
+	if (url.pathname.startsWith('/_app/immutable/')) {
+		event.respondWith(cacheFirst(req, CACHE_IMMUT));
+		return;
+	}
+
+	// 2) Static assets (icons, manifest, sw.js) → cache-first com revalidação
+	if (
+		url.pathname.startsWith('/icon-') ||
+		url.pathname === '/favicon.svg' ||
+		url.pathname === '/manifest.webmanifest'
+	) {
+		event.respondWith(staleWhileRevalidate(req, CACHE_IMMUT));
+		return;
+	}
+
+	// 3) HTML/navigations → stale-while-revalidate
+	//    Mostra cache instantâneo, atualiza em background pra próximo load.
+	const accept = req.headers.get('accept') ?? '';
+	if (req.mode === 'navigate' || accept.includes('text/html')) {
+		event.respondWith(staleWhileRevalidate(req, CACHE_PAGES));
+		return;
+	}
+
+	// 4) Resto same-origin → network-first
+	event.respondWith(networkFirst(req, CACHE_PAGES));
 });
+
+async function cacheFirst(req, cacheName) {
+	const cache = await caches.open(cacheName);
+	const cached = await cache.match(req);
+	if (cached) return cached;
+	try {
+		const fresh = await fetch(req);
+		if (fresh.ok) cache.put(req, fresh.clone()).catch(() => {});
+		return fresh;
+	} catch {
+		return new Response('Offline', { status: 503 });
+	}
+}
+
+async function staleWhileRevalidate(req, cacheName) {
+	const cache = await caches.open(cacheName);
+	const cached = await cache.match(req);
+	const fetchPromise = fetch(req)
+		.then((fresh) => {
+			if (fresh.ok) cache.put(req, fresh.clone()).catch(() => {});
+			return fresh;
+		})
+		.catch(() => null);
+
+	return (
+		cached ??
+		(await fetchPromise) ??
+		new Response('Offline · sem conexão.', {
+			status: 503,
+			headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+		})
+	);
+}
+
+async function networkFirst(req, cacheName) {
+	const cache = await caches.open(cacheName);
+	try {
+		const fresh = await fetch(req);
+		if (fresh.ok) cache.put(req, fresh.clone()).catch(() => {});
+		return fresh;
+	} catch {
+		const cached = await cache.match(req);
+		return cached ?? new Response('Offline', { status: 503 });
+	}
+}

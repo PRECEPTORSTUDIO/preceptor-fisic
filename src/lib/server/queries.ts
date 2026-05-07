@@ -79,89 +79,106 @@ const GOAL_LABELS: Record<string, string> = {
 };
 
 export async function getStudentsByProfessional(professionalId: string): Promise<StudentListItem[]> {
-	// Join estudantes + plano ativo + agg de sessões dos últimos 7d
-	const rows = await db
-		.select({
-			id: students.id,
-			name: students.name,
-			birthDate: students.birthDate,
-			sex: students.sex,
-			weightKg: students.weightKg,
-			heightCm: students.heightCm,
-			deletedAt: students.deletedAt,
-			goals: trainingPreferences.goals,
-			weeklySessions: trainingPreferences.weeklySessions
-		})
-		.from(students)
-		.leftJoin(trainingPreferences, eq(trainingPreferences.studentId, students.id))
-		.where(and(eq(students.professionalId, professionalId), isNull(students.deletedAt)))
-		.orderBy(students.name);
+	// 1 query única — antes era 3N+1 round-trips (~1.5s pra 10 alunos no SP→SP).
+	// Agora usa correlated subqueries em uma só ida ao Postgres (~80ms).
+	const rows = await db.execute<{
+		id: string;
+		name: string;
+		birth_date: string | null;
+		sex: string;
+		weight_kg: number | null;
+		height_cm: number | null;
+		goals: string[] | null;
+		weekly_sessions: number | null;
+		plan_summary: string | null;
+		plan_status: string | null;
+		sessions_7: number;
+		last_session: Date | null;
+	}>(sql`
+		SELECT
+			s.id,
+			s.name,
+			s.birth_date,
+			s.sex::text AS sex,
+			s.weight_kg,
+			s.height_cm,
+			tp.goals,
+			tp.weekly_sessions,
+			(
+				SELECT plan_summary FROM training_plans
+				WHERE student_id = s.id
+				ORDER BY created_at DESC LIMIT 1
+			) AS plan_summary,
+			(
+				SELECT status::text FROM training_plans
+				WHERE student_id = s.id
+				ORDER BY created_at DESC LIMIT 1
+			) AS plan_status,
+			COALESCE((
+				SELECT COUNT(*) FROM training_sessions
+				WHERE student_id = s.id
+				  AND session_date >= now() - interval '7 days'
+			), 0)::int AS sessions_7,
+			(
+				SELECT MAX(session_date) FROM training_sessions
+				WHERE student_id = s.id
+			) AS last_session
+		FROM students s
+		LEFT JOIN training_preferences tp ON tp.student_id = s.id
+		WHERE s.professional_id = ${professionalId}
+		  AND s.deleted_at IS NULL
+		ORDER BY s.name
+	`);
 
-	// Para cada aluno, agregar dados de planos e sessões
-	const result: StudentListItem[] = [];
-	for (const r of rows) {
-		// Plano ativo mais recente
-		const planRows = await db
-			.select({ planSummary: trainingPlans.planSummary, status: trainingPlans.status, createdAt: trainingPlans.createdAt })
-			.from(trainingPlans)
-			.where(eq(trainingPlans.studentId, r.id))
-			.orderBy(desc(trainingPlans.createdAt))
-			.limit(1);
-		const plan = planRows[0];
+	const list = (rows as unknown as { rows?: typeof rows }).rows ?? rows;
 
-		// Sessões últimos 7d
-		const [s7] = await db
-			.select({ n: count() })
-			.from(trainingSessions)
-			.where(
-				and(
-					eq(trainingSessions.studentId, r.id),
-					sql`${trainingSessions.sessionDate} >= now() - interval '7 days'`
-				)
-			);
-		const sessions7 = Number(s7?.n ?? 0);
-
-		// Última sessão
-		const lastRows = await db
-			.select({ d: trainingSessions.sessionDate })
-			.from(trainingSessions)
-			.where(eq(trainingSessions.studentId, r.id))
-			.orderBy(desc(trainingSessions.sessionDate))
-			.limit(1);
-		const lastDate = lastRows[0]?.d as Date | undefined;
-		const lastFmt = lastDate
-			? new Date(lastDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')
-			: null;
-
-		// Aderência: sessões/semana realizadas vs. esperadas
-		const adherence = r.weeklySessions ? Math.min(100, Math.round((sessions7 / r.weeklySessions) * 100)) : 0;
-
-		// Goal label
-		const goal = (r.goals as string[] | null)?.[0];
+	return (list as Array<{
+		id: string;
+		name: string;
+		birth_date: string | null;
+		sex: string;
+		weight_kg: number | null;
+		height_cm: number | null;
+		goals: string[] | null;
+		weekly_sessions: number | null;
+		plan_summary: string | null;
+		plan_status: string | null;
+		sessions_7: number;
+		last_session: Date | string | null;
+	}>).map((r) => {
+		const sessions7 = Number(r.sessions_7 ?? 0);
+		const goal = r.goals?.[0];
 		const goalLabel = goal ? (GOAL_LABELS[goal] ?? goal) : null;
+		const status: 'active' | 'paused' =
+			r.plan_status === 'published' || r.plan_status === 'generated' ? 'active' : 'paused';
+		const lastDate = r.last_session ? new Date(r.last_session) : null;
+		const lastFmt = lastDate
+			? lastDate
+					.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+					.replace('.', '')
+			: null;
+		const adherence = r.weekly_sessions
+			? Math.min(100, Math.round((sessions7 / r.weekly_sessions) * 100))
+			: 0;
 
-		const status: 'active' | 'paused' = plan?.status === 'published' || plan?.status === 'generated' ? 'active' : 'paused';
-
-		result.push({
+		return {
 			id: r.id,
 			name: r.name,
-			birthDate: r.birthDate,
-			age: calcAge(r.birthDate),
+			birthDate: r.birth_date,
+			age: calcAge(r.birth_date),
 			sex: r.sex,
-			weightKg: r.weightKg,
-			heightCm: r.heightCm,
+			weightKg: r.weight_kg,
+			heightCm: r.height_cm,
 			goal: goalLabel,
-			planTitle: plan?.planSummary?.slice(0, 60) ?? null,
+			planTitle: r.plan_summary?.slice(0, 60) ?? null,
 			planActive: status === 'active',
 			adherence,
 			sessions7,
 			last: lastFmt,
 			streak: 0, // TODO: calc real streak
 			status
-		});
-	}
-
-	return result;
+		};
+	});
 }
 
 export type StudentDetail = {
@@ -1121,42 +1138,45 @@ export async function logTrainingSession(input: LogSessionInput): Promise<string
 /* ────────── DASHBOARD STATS ────────── */
 
 export async function getDashboardStats(professionalId: string) {
-	const [activeStudents] = await db
-		.select({ n: count() })
-		.from(students)
-		.where(and(eq(students.professionalId, professionalId), isNull(students.deletedAt)));
+	// Tudo em 1 query — antes eram 5 round-trips sequenciais (~250ms).
+	// Postgres consegue agregar tudo num scan eficiente (~30ms).
+	const result = await db.execute<{
+		active_students: number;
+		all_plans: number;
+		active_plans: number;
+		sessions_7: number;
+		assessments_total: number;
+	}>(sql`
+		SELECT
+			(SELECT COUNT(*) FROM students
+				WHERE professional_id = ${professionalId} AND deleted_at IS NULL)::int AS active_students,
+			(SELECT COUNT(*) FROM training_plans
+				WHERE professional_id = ${professionalId})::int AS all_plans,
+			(SELECT COUNT(*) FROM training_plans
+				WHERE professional_id = ${professionalId}
+				  AND status IN ('published', 'generated'))::int AS active_plans,
+			(SELECT COUNT(*) FROM training_sessions
+				WHERE logged_by = ${professionalId}
+				  AND session_date >= now() - interval '7 days')::int AS sessions_7,
+			(SELECT COUNT(*) FROM physical_assessments
+				WHERE created_by = ${professionalId})::int AS assessments_total
+	`);
 
-	const [allPlans] = await db
-		.select({ n: count() })
-		.from(trainingPlans)
-		.where(eq(trainingPlans.professionalId, professionalId));
-
-	const [activePlans] = await db
-		.select({ n: count() })
-		.from(trainingPlans)
-		.where(and(eq(trainingPlans.professionalId, professionalId), sql`status IN ('published', 'generated')`));
-
-	const [sessions7] = await db
-		.select({ n: count() })
-		.from(trainingSessions)
-		.where(
-			and(
-				eq(trainingSessions.loggedBy, professionalId),
-				sql`${trainingSessions.sessionDate} >= now() - interval '7 days'`
-			)
-		);
-
-	const [pendingAssessments] = await db
-		.select({ n: count() })
-		.from(physicalAssessments)
-		.where(eq(physicalAssessments.createdBy, professionalId));
+	const list = (result as unknown as { rows?: typeof result }).rows ?? result;
+	const row = (list as Array<{
+		active_students: number;
+		all_plans: number;
+		active_plans: number;
+		sessions_7: number;
+		assessments_total: number;
+	}>)[0];
 
 	return {
-		activeStudents: Number(activeStudents?.n ?? 0),
-		totalStudents: Number(activeStudents?.n ?? 0),
-		totalPlans: Number(allPlans?.n ?? 0),
-		activePlans: Number(activePlans?.n ?? 0),
-		sessionsThisWeek: Number(sessions7?.n ?? 0),
-		assessmentsLogged: Number(pendingAssessments?.n ?? 0)
+		activeStudents: Number(row?.active_students ?? 0),
+		totalStudents: Number(row?.active_students ?? 0),
+		totalPlans: Number(row?.all_plans ?? 0),
+		activePlans: Number(row?.active_plans ?? 0),
+		sessionsThisWeek: Number(row?.sessions_7 ?? 0),
+		assessmentsLogged: Number(row?.assessments_total ?? 0)
 	};
 }

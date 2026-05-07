@@ -3,14 +3,17 @@
    Whoop / Eight Sleep · preto profundo · roxo lavanda · Geist
    ───────────────────────────────────────────────────────────── */
 
-@import '@fontsource/geist-sans/300.css';
-@import '@fontsource/geist-sans/400.css';
-@import '@fontsource/geist-sans/500.css';
-@import '@fontsource/geist-sans/600.css';
-@import '@fontsource/geist-sans/700.css';
-@import '@fontsource/geist-mono/400.css';
-@import '@fontsource/geist-mono/500.css';
-@import '@fontsource/geist-mono/600.css';
+/* ── Font subsetting: latin-only + apenas pesos usados ──
+   500 = primary (175 usos) · 400 = body (28) · 600 = títulos (29) · 700 = logo (4)
+   Mono: 500 = primary (46 usos) · 600 = bold rare (2)
+   Removidos: 300 sans (2 usos, fallback 400) e 400 mono (0 usos).
+   Subset latin: ~40% menor que default (sem latin-ext/cyrillic/greek). */
+@import '@fontsource/geist-sans/latin-400.css';
+@import '@fontsource/geist-sans/latin-500.css';
+@import '@fontsource/geist-sans/latin-600.css';
+@import '@fontsource/geist-sans/latin-700.css';
+@import '@fontsource/geist-mono/latin-500.css';
+@import '@fontsource/geist-mono/latin-600.css';
 
 @import 'tailwindcss';
 
