@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Hls from 'hls.js';
 
 	let videoEl: HTMLVideoElement | undefined = $state();
 	let videoReady = $state(false);
@@ -14,44 +15,34 @@
 		};
 		window.addEventListener('scroll', onScroll, { passive: true });
 
-		// HLS attach: hls.js PRIMEIRO (95% dos casos: Chrome/FF/Edge),
-		// native só como fallback (Safari/iOS verdadeiro).
-		// Chrome retorna "maybe" pra canPlayType('application/vnd.apple.mpegurl')
-		// mas NÃO decodifica HLS — então não dá pra confiar nesse check primeiro.
+		// HLS attach: hls.js primeiro (Chrome/FF/Edge — 95% do tráfego),
+		// native só como fallback (Safari/iOS reais).
+		// Import estático no topo — dynamic import com bare specifier
+		// não resolve no client bundle do SvelteKit/Vite.
 		let cleanupHls: (() => void) | undefined;
-		const attach = async () => {
-			if (!videoEl) return;
-			try {
-				const HlsMod = await import('hls.js');
-				const Hls = HlsMod.default;
-				if (Hls.isSupported()) {
-					const hls = new Hls({ enableWorker: false, lowLatencyMode: false });
-					hls.loadSource(HLS_URL);
-					hls.attachMedia(videoEl);
-					hls.on(Hls.Events.MANIFEST_PARSED, () => {
-						videoEl?.play().catch(() => {
-							// autoplay bloqueado — usuário interage e roda
-						});
+		if (videoEl) {
+			if (Hls.isSupported()) {
+				const hls = new Hls({ enableWorker: false, lowLatencyMode: false });
+				hls.loadSource(HLS_URL);
+				hls.attachMedia(videoEl);
+				hls.on(Hls.Events.MANIFEST_PARSED, () => {
+					videoEl?.play().catch(() => {
+						// autoplay bloqueado em algum browser — ignora
 					});
-					hls.on(Hls.Events.ERROR, (_evt: unknown, data: { fatal: boolean; type: string }) => {
-						if (!data.fatal) return;
-						if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-						else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-						else hls.destroy();
-					});
-					cleanupHls = () => hls.destroy();
-					return;
-				}
-			} catch {
-				/* hls.js falhou ao carregar — cai pro fallback abaixo */
-			}
-			// Fallback: native HLS (Safari/iOS reais)
-			if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+				});
+				hls.on(Hls.Events.ERROR, (_evt, data) => {
+					if (!data.fatal) return;
+					if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+					else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+					else hls.destroy();
+				});
+				cleanupHls = () => hls.destroy();
+			} else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+				// Safari/iOS: HLS native
 				videoEl.src = HLS_URL;
 				videoEl.play().catch(() => {});
 			}
-		};
-		attach();
+		}
 
 		return () => {
 			window.removeEventListener('scroll', onScroll);
