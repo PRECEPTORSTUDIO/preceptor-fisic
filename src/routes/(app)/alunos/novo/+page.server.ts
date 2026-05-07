@@ -1,6 +1,10 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getProfessionalByAuthId, createStudentTx } from '$lib/server/queries';
+import { signStudentToken } from '$lib/server/aluno-token';
+import { sendStudentMagicLink } from '$lib/server/email';
+import { env as pubEnv } from '$env/dynamic/public';
+import { logger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -91,6 +95,29 @@ export const actions: Actions = {
 			goals: parsed.data.goals,
 			equipmentAvailable: parseList(parsed.data.equipment)
 		});
+
+		// Se o aluno tem email cadastrado, dispara o magic-link automaticamente.
+		// Não bloqueia: erro de email não impede criação do aluno.
+		if (parsed.data.email) {
+			try {
+				const token = signStudentToken(id);
+				const appUrl = (
+					pubEnv.PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://preceptor-fisic.vercel.app'
+				);
+				const magicLinkUrl = `${appUrl}/a/${id}?t=${token}`;
+				await sendStudentMagicLink({
+					to: parsed.data.email,
+					studentName: parsed.data.name,
+					professionalName: professional.name,
+					magicLinkUrl
+				});
+			} catch (err) {
+				logger.error(
+					{ studentId: id, email: parsed.data.email, err: String(err).slice(0, 200) },
+					'student.magic_link.send_failed'
+				);
+			}
+		}
 
 		redirect(303, `/alunos/${id}`);
 	}

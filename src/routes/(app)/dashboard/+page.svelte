@@ -63,19 +63,59 @@
 		}
 	]);
 
-	const upcoming = [
-		{ day: 'Hoje', label: '0 sessões agendadas', color: 'var(--ink-2)' },
-		{ day: 'Amanhã', label: 'Sem agendamentos', color: 'var(--ink-3)' }
-	];
-
-	const heatmapColors = ['var(--bg-3)', 'rgba(167,139,250,0.18)', 'rgba(167,139,250,0.4)', 'rgba(167,139,250,0.7)', 'var(--accent)'];
-	function heatmapCells(weeks: number) {
-		return Array.from({ length: weeks * 7 }, (_, i) => {
-			const x = Math.sin(i * 12.9898) * 43758.5453;
-			return Math.max(0, Math.floor((x - Math.floor(x)) * 5));
+	// Upcoming appointments próximos 7 dias (vem do server, real)
+	const upcoming = $derived.by(() => {
+		const apps = stats?.upcomingAppointments ?? [];
+		if (apps.length === 0) {
+			return [
+				{ day: 'Hoje', label: 'Sem agendamentos', color: 'var(--ink-3)' }
+			];
+		}
+		const now = new Date();
+		const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const dayLabel = (d: Date) => {
+			const diff = Math.floor(
+				(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() -
+					startOfToday.getTime()) /
+					86400000
+			);
+			if (diff === 0) return 'Hoje';
+			if (diff === 1) return 'Amanhã';
+			return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).replace('.', '');
+		};
+		return apps.slice(0, 5).map((a) => {
+			const d = new Date(a.startsAt);
+			const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+			return {
+				day: dayLabel(d),
+				label: `${time} · ${a.studentName ?? 'Sessão'}`,
+				color: 'var(--accent)'
+			};
 		});
-	}
-	const cells = heatmapCells(26);
+	});
+
+	// Heatmap: cells vêm do server (1 cell por dia, últimos 182 dias).
+	// Buckets relativos ao max do período pra escalar bem em qualquer volume.
+	const heatmapColors = [
+		'var(--bg-3)',
+		'rgba(167,139,250,0.18)',
+		'rgba(167,139,250,0.4)',
+		'rgba(167,139,250,0.7)',
+		'var(--accent)'
+	];
+	const cells = $derived.by(() => {
+		const raw = stats?.heatmap ?? [];
+		const max = stats?.heatmapMax ?? 1;
+		// Mapeia count → bucket 0..4
+		return raw.map((count) => {
+			if (count === 0) return 0;
+			const ratio = count / max;
+			if (ratio < 0.25) return 1;
+			if (ratio < 0.5) return 2;
+			if (ratio < 0.8) return 3;
+			return 4;
+		});
+	});
 
 	function adherenceColor(a: number) {
 		if (a >= 85) return 'var(--success)';

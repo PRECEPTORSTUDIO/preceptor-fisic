@@ -94,6 +94,7 @@ export async function getStudentsByProfessional(professionalId: string): Promise
 		plan_status: string | null;
 		sessions_7: number;
 		last_session: Date | null;
+		streak: number;
 	}>(sql`
 		SELECT
 			s.id,
@@ -122,7 +123,28 @@ export async function getStudentsByProfessional(professionalId: string): Promise
 			(
 				SELECT MAX(session_date) FROM training_sessions
 				WHERE student_id = s.id
-			) AS last_session
+			) AS last_session,
+			-- streak: dias consecutivos contando de hoje pra trás onde teve ao menos 1 sessão.
+			-- Usa generate_series + EXISTS pra encontrar o gap. Streak = 1º dia sem sessão (-1).
+			COALESCE((
+				WITH days AS (
+					SELECT generate_series(0, 60)::int AS d
+				),
+				flags AS (
+					SELECT
+						d,
+						EXISTS (
+							SELECT 1 FROM training_sessions ts
+							WHERE ts.student_id = s.id
+							  AND ts.session_date::date = (CURRENT_DATE - d * INTERVAL '1 day')::date
+						) AS has_session
+					FROM days
+				),
+				first_gap AS (
+					SELECT MIN(d) AS gap FROM flags WHERE has_session = false
+				)
+				SELECT COALESCE((SELECT gap FROM first_gap), 60)
+			), 0)::int AS streak
 		FROM students s
 		LEFT JOIN training_preferences tp ON tp.student_id = s.id
 		WHERE s.professional_id = ${professionalId}
@@ -145,6 +167,7 @@ export async function getStudentsByProfessional(professionalId: string): Promise
 		plan_status: string | null;
 		sessions_7: number;
 		last_session: Date | string | null;
+		streak: number;
 	}>).map((r) => {
 		const sessions7 = Number(r.sessions_7 ?? 0);
 		const goal = r.goals?.[0];
@@ -175,7 +198,7 @@ export async function getStudentsByProfessional(professionalId: string): Promise
 			adherence,
 			sessions7,
 			last: lastFmt,
-			streak: 0, // TODO: calc real streak
+			streak: Number(r.streak ?? 0),
 			status
 		};
 	});
@@ -1261,35 +1284,111 @@ export async function logTrainingSession(input: LogSessionInput): Promise<string
 	return row.id;
 }
 
+/* ────────── RATE LIMIT ────────── */
+
+/**
+ * Conta planos gerados por um professional em uma janela de tempo.
+ * Usado pra limitar `/alunos/[id]/gerar` e evitar abuse de quota Gemini.
+ */
+export async function countPlansGeneratedRecent(
+	professionalId: string,
+	windowMinutes: number
+): Promise<number> {
+	const result = await db.execute<{ count: number }>(sql`
+		SELECT COUNT(*)::int AS count
+		FROM training_plans
+		WHERE professional_id = ${professionalId}
+		  AND created_at >= now() - (${windowMinutes} || ' minutes')::interval
+	`);
+	const list = (result as unknown as { rows?: typeof result }).rows ?? result;
+	const row = (list as Array<{ count: number }>)[0];
+	return Number(row?.count ?? 0);
+}
+
 /* ────────── DASHBOARD STATS ────────── */
 
-export async function getDashboardStats(professionalId: string) {
-	// Tudo em 1 query — antes eram 5 round-trips sequenciais (~250ms).
-	// Postgres consegue agregar tudo num scan eficiente (~30ms).
-	const result = await db.execute<{
-		active_students: number;
-		all_plans: number;
-		active_plans: number;
-		sessions_7: number;
-		assessments_total: number;
-	}>(sql`
-		SELECT
-			(SELECT COUNT(*) FROM students
-				WHERE professional_id = ${professionalId} AND deleted_at IS NULL)::int AS active_students,
-			(SELECT COUNT(*) FROM training_plans
-				WHERE professional_id = ${professionalId})::int AS all_plans,
-			(SELECT COUNT(*) FROM training_plans
-				WHERE professional_id = ${professionalId}
-				  AND status IN ('published', 'generated'))::int AS active_plans,
-			(SELECT COUNT(*) FROM training_sessions
-				WHERE logged_by = ${professionalId}
-				  AND session_date >= now() - interval '7 days')::int AS sessions_7,
-			(SELECT COUNT(*) FROM physical_assessments
-				WHERE created_by = ${professionalId})::int AS assessments_total
-	`);
+export type DashboardStats = {
+	activeStudents: number;
+	totalStudents: number;
+	totalPlans: number;
+	activePlans: number;
+	sessionsThisWeek: number;
+	assessmentsLogged: number;
+	/** 26*7 = 182 cells, 1 cell por dia. Valor = nº de sessões nesse dia. */
+	heatmap: number[];
+	heatmapMax: number;
+	upcomingAppointments: Array<{
+		id: string;
+		startsAt: string;
+		title: string | null;
+		studentName: string | null;
+	}>;
+};
 
-	const list = (result as unknown as { rows?: typeof result }).rows ?? result;
-	const row = (list as Array<{
+export async function getDashboardStats(professionalId: string): Promise<DashboardStats> {
+	// Métricas + heatmap + próximos appointments em 3 queries paralelas.
+	const [statsResult, heatmapResult, upcomingResult] = await Promise.all([
+		db.execute<{
+			active_students: number;
+			all_plans: number;
+			active_plans: number;
+			sessions_7: number;
+			assessments_total: number;
+		}>(sql`
+			SELECT
+				(SELECT COUNT(*) FROM students
+					WHERE professional_id = ${professionalId} AND deleted_at IS NULL)::int AS active_students,
+				(SELECT COUNT(*) FROM training_plans
+					WHERE professional_id = ${professionalId})::int AS all_plans,
+				(SELECT COUNT(*) FROM training_plans
+					WHERE professional_id = ${professionalId}
+					  AND status IN ('published', 'generated'))::int AS active_plans,
+				(SELECT COUNT(*) FROM training_sessions
+					WHERE logged_by = ${professionalId}
+					  AND session_date >= now() - interval '7 days')::int AS sessions_7,
+				(SELECT COUNT(*) FROM physical_assessments
+					WHERE created_by = ${professionalId})::int AS assessments_total
+		`),
+		// Heatmap: 26 semanas (182 dias) — count de sessões por dia
+		db.execute<{ day_offset: number; sessions_count: number }>(sql`
+			WITH days AS (
+				SELECT generate_series(0, 181)::int AS day_offset
+			)
+			SELECT
+				d.day_offset,
+				COALESCE((
+					SELECT COUNT(*) FROM training_sessions ts
+					WHERE ts.logged_by = ${professionalId}
+					  AND ts.session_date::date = (CURRENT_DATE - d.day_offset * INTERVAL '1 day')::date
+				), 0)::int AS sessions_count
+			FROM days d
+			ORDER BY d.day_offset DESC
+		`),
+		// Próximos 7 dias de agendamentos
+		db.execute<{
+			id: string;
+			starts_at: Date;
+			title: string | null;
+			student_name: string | null;
+		}>(sql`
+			SELECT
+				a.id,
+				a.starts_at,
+				a.title,
+				s.name AS student_name
+			FROM appointments a
+			LEFT JOIN students s ON s.id = a.student_id
+			WHERE a.professional_id = ${professionalId}
+			  AND a.starts_at >= now()
+			  AND a.starts_at < now() + interval '7 days'
+			  AND a.status NOT IN ('cancelled')
+			ORDER BY a.starts_at ASC
+			LIMIT 8
+		`)
+	]);
+
+	const statsRows = (statsResult as unknown as { rows?: typeof statsResult }).rows ?? statsResult;
+	const stats = (statsRows as Array<{
 		active_students: number;
 		all_plans: number;
 		active_plans: number;
@@ -1297,12 +1396,36 @@ export async function getDashboardStats(professionalId: string) {
 		assessments_total: number;
 	}>)[0];
 
+	const heatmapRows =
+		(heatmapResult as unknown as { rows?: typeof heatmapResult }).rows ?? heatmapResult;
+	const heatmap = (heatmapRows as Array<{ day_offset: number; sessions_count: number }>).map(
+		(r) => Number(r.sessions_count)
+	);
+	const heatmapMax = heatmap.length > 0 ? Math.max(...heatmap, 1) : 1;
+
+	const upcomingRows =
+		(upcomingResult as unknown as { rows?: typeof upcomingResult }).rows ?? upcomingResult;
+	const upcomingAppointments = (upcomingRows as Array<{
+		id: string;
+		starts_at: Date | string;
+		title: string | null;
+		student_name: string | null;
+	}>).map((r) => ({
+		id: r.id,
+		startsAt: new Date(r.starts_at).toISOString(),
+		title: r.title,
+		studentName: r.student_name
+	}));
+
 	return {
-		activeStudents: Number(row?.active_students ?? 0),
-		totalStudents: Number(row?.active_students ?? 0),
-		totalPlans: Number(row?.all_plans ?? 0),
-		activePlans: Number(row?.active_plans ?? 0),
-		sessionsThisWeek: Number(row?.sessions_7 ?? 0),
-		assessmentsLogged: Number(row?.assessments_total ?? 0)
+		activeStudents: Number(stats?.active_students ?? 0),
+		totalStudents: Number(stats?.active_students ?? 0),
+		totalPlans: Number(stats?.all_plans ?? 0),
+		activePlans: Number(stats?.active_plans ?? 0),
+		sessionsThisWeek: Number(stats?.sessions_7 ?? 0),
+		assessmentsLogged: Number(stats?.assessments_total ?? 0),
+		heatmap,
+		heatmapMax,
+		upcomingAppointments
 	};
 }

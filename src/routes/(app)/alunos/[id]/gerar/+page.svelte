@@ -5,7 +5,10 @@
 	import { onDestroy } from 'svelte';
 	import type { PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let {
+		data,
+		form
+	}: { data: PageData; form: { error?: string; rateLimited?: boolean } | null } = $props();
 	const detail = $derived(data.detail);
 	const student = $derived(detail.student);
 	const hp = $derived(detail.healthProfile);
@@ -187,11 +190,38 @@
 				action="?/generate"
 				use:enhance={() => {
 					phase = 'generating';
-					return async ({ update }) => {
+					return async ({ update, result }) => {
 						await update();
+						// Se falhou (ex: rate limit), volta pra idle
+						if (result.type === 'failure') phase = 'idle';
 					};
 				}}
 			>
+				{#if form?.error}
+					<div
+						class="card"
+						style="padding:14px 18px;margin-bottom:14px;background:{form.rateLimited
+							? 'var(--warn-dim)'
+							: 'var(--danger-dim)'};border:1px solid {form.rateLimited
+							? 'var(--warn)'
+							: 'var(--danger)'};display:flex;align-items:flex-start;gap:10px"
+					>
+						<span style="color:{form.rateLimited ? 'var(--warn)' : 'var(--danger)'};font-size:18px;line-height:1"
+							>{form.rateLimited ? '⏱' : '⚠'}</span
+						>
+						<div style="flex:1">
+							<div
+								style="font:500 13px var(--font-sans);color:{form.rateLimited
+									? 'var(--warn)'
+									: 'var(--danger)'};margin-bottom:4px"
+							>
+								{form.rateLimited ? 'Limite de geração atingido' : 'Erro ao gerar plano'}
+							</div>
+							<div style="font:var(--body-sm);color:var(--ink-0);line-height:1.5">{form.error}</div>
+						</div>
+					</div>
+				{/if}
+
 				<div class="card" style="padding:24px;margin-bottom:20px">
 					<Eyebrow>Observações profissionais (opcional)</Eyebrow>
 					<textarea

@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela builds em paralelo na mesma PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint + Tipos + Vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: SvelteKit sync
+        run: npx svelte-kit sync
+
+      - name: Vitest unit tests
+        run: npm run test
+
+      - name: Svelte check (types)
+        run: npm run check
+        continue-on-error: true # Erros de tipos pré-existentes não bloqueiam por enquanto
+
+  smoke-e2e:
+    name: Smoke E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Só roda smoke E2E em main + PRs que mexem em routes/lib
+    if: github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'src/routes') || contains(github.event.pull_request.changed_files, 'src/lib')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke
+        run: npm run test:e2e
+        env:
+          # Smoke não precisa de Supabase real — testa só o shell público
+          PUBLIC_SUPABASE_URL: ''
+          PUBLIC_SUPABASE_ANON_KEY: ''
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

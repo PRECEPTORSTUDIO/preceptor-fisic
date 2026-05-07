@@ -1,11 +1,13 @@
 import { redirect } from '@sveltejs/kit';
+import { sql } from 'drizzle-orm';
+import { db } from '$lib/server/db';
 import { getProfessionalByAuthId } from '$lib/server/queries';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		// Sem auth (modo design) — devolve null pro layout/páginas tratarem
-		return { professional: null, user: null };
+		return { professional: null, user: null, sidebarCounts: null };
 	}
 
 	const professional = await getProfessionalByAuthId(locals.user.id);
@@ -13,6 +15,23 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		// Auth user existe mas não tem professional record → onboarding
 		redirect(303, '/onboarding');
 	}
+
+	// Counts do sidebar (1 query agregada — sem N+1)
+	const result = await db.execute<{
+		students_count: number;
+		unread_messages: number;
+	}>(sql`
+		SELECT
+			(SELECT COUNT(*) FROM students
+				WHERE professional_id = ${professional.id} AND deleted_at IS NULL)::int AS students_count,
+			(SELECT COUNT(*) FROM messages m
+				JOIN conversations c ON c.id = m.conversation_id
+				WHERE c.professional_id = ${professional.id}
+				  AND m.from_role = 'student'
+				  AND m.read_at IS NULL)::int AS unread_messages
+	`);
+	const list = (result as unknown as { rows?: typeof result }).rows ?? result;
+	const counts = (list as Array<{ students_count: number; unread_messages: number }>)[0];
 
 	return {
 		professional: {
@@ -23,6 +42,10 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			specialty: professional.specialty,
 			avatarUrl: professional.avatarUrl
 		},
-		user: { id: locals.user.id, email: locals.user.email }
+		user: { id: locals.user.id, email: locals.user.email },
+		sidebarCounts: {
+			students: Number(counts?.students_count ?? 0),
+			unreadMessages: Number(counts?.unread_messages ?? 0)
+		}
 	};
 };

@@ -113,3 +113,32 @@ src/
       dashboard/           Visão geral
       alunos/[id]/         Ficha do aluno
 ```
+
+---
+
+## CI / Email / Operações
+
+### GitHub Actions
+PRs e push pra `main` rodam automaticamente:
+- `npm run test` — vitest unit (10 testes)
+- `npm run check` — svelte-check de tipos
+- `npm run test:e2e` — Playwright smoke (6 testes, só em routes/lib touches)
+
+Ver `.github/workflows/ci.yml`.
+
+### Email transactional (Resend)
+Configure `RESEND_API_KEY` em `.env.local` (e em Vercel) pra ativar:
+- Magic-link automático ao criar aluno (se aluno tem email)
+- Reenvio manual via ação na ficha do aluno
+- Boas-vindas pro profissional após signup
+- Notificação quando plano IA fica pronto
+
+Sem a env var, helpers em `src/lib/server/email.ts` logam warnings e o fluxo continua sem quebrar — bom pra dev local.
+
+### Rate limit
+`/alunos/[id]/gerar` tem limite de 5 planos a cada 5 minutos por professional.
+Implementado em `queries.ts:countPlansGeneratedRecent`. Protege quota Gemini.
+
+### Recuperar senha
+Fluxo completo via Supabase: `/recuperar` → email → `/recuperar/redefinir`.
+

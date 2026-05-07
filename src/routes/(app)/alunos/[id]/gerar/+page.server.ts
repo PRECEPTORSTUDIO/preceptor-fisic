@@ -1,5 +1,9 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { getStudentDetail, getProfessionalByAuthId } from '$lib/server/queries';
+import {
+	getStudentDetail,
+	getProfessionalByAuthId,
+	countPlansGeneratedRecent
+} from '$lib/server/queries';
 import { createPlanPlaceholder, generateTrainingPlanInBackground } from '$lib/server/ai/generator';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -8,6 +12,11 @@ import type { Actions, PageServerLoad } from './$types';
 export const config = {
 	maxDuration: 60
 };
+
+// Rate limit: cada professional pode gerar no máximo 5 planos a cada 5 minutos.
+// Protege quota Gemini de abuse (loop, retries em UI bug, etc.) e limita custo.
+const RATE_LIMIT_PLANS = 5;
+const RATE_LIMIT_WINDOW_MIN = 5;
 
 export const load: PageServerLoad = async ({ params, parent }) => {
 	const { professional } = await parent();
@@ -25,6 +34,16 @@ export const actions: Actions = {
 		if (!locals.user) return fail(401, { error: 'não autenticado' });
 		const professional = await getProfessionalByAuthId(locals.user.id);
 		if (!professional) return fail(401, { error: 'professional não encontrado' });
+
+		// Rate limit check ANTES de criar placeholder ou chamar IA
+		const recent = await countPlansGeneratedRecent(professional.id, RATE_LIMIT_WINDOW_MIN);
+		if (recent >= RATE_LIMIT_PLANS) {
+			return fail(429, {
+				error: `Limite de ${RATE_LIMIT_PLANS} planos a cada ${RATE_LIMIT_WINDOW_MIN} minutos atingido. Aguarde alguns minutos e tente de novo.`,
+				rateLimited: true,
+				windowMinutes: RATE_LIMIT_WINDOW_MIN
+			});
+		}
 
 		const data = await request.formData();
 		const notes = String(data.get('notes') ?? '').slice(0, 2000) || undefined;

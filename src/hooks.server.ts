@@ -63,6 +63,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		event.url.pathname.startsWith('/login') ||
 		event.url.pathname.startsWith('/a/') ||
 		event.url.pathname.startsWith('/onboarding') ||
+		event.url.pathname.startsWith('/recuperar') ||
 		event.url.pathname === '/';
 	if (!session && !isPublic) {
 		redirect(303, '/login');

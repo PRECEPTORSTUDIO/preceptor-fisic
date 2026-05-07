@@ -20,6 +20,8 @@
 		accentLogo?: boolean;
 		userName?: string;
 		userCref?: string;
+		studentsCount?: number;
+		unreadMessages?: number;
 	};
 
 	let {
@@ -29,17 +31,31 @@
 		dense = false,
 		accentLogo = true,
 		userName = 'Matheus Castro',
-		userCref = 'CREF 123456-G'
+		userCref = 'CREF 123456-G',
+		studentsCount = 0,
+		unreadMessages = 0
 	}: Props = $props();
 
-	const NAV_PRO: NavItem[] = [
+	const NAV_PRO = $derived<NavItem[]>([
 		{ id: 'home', label: 'Visão geral', icon: 'home', href: '/dashboard' },
-		{ id: 'alunos', label: 'Alunos', icon: 'alunos', href: '/alunos', count: 12 },
+		{
+			id: 'alunos',
+			label: 'Alunos',
+			icon: 'alunos',
+			href: '/alunos',
+			count: studentsCount > 0 ? studentsCount : undefined
+		},
 		{ id: 'planos', label: 'Planos', icon: 'planos', href: '/planos' },
 		{ id: 'exer', label: 'Exercícios', icon: 'exer', href: '/exercicios' },
-		{ id: 'msgs', label: 'Mensagens', icon: 'msgs', href: '/mensagens', badge: 3 },
+		{
+			id: 'msgs',
+			label: 'Mensagens',
+			icon: 'msgs',
+			href: '/mensagens',
+			badge: unreadMessages > 0 ? unreadMessages : undefined
+		},
 		{ id: 'agenda', label: 'Agenda', icon: 'agenda', href: '/agenda' }
-	];
+	]);
 	const NAV_FOOTER: NavItem[] = [
 		{ id: 'aluno', label: 'Visão do aluno', icon: 'aluno', href: '/aluno-preview' },
 		{ id: 'config', label: 'Configurações', icon: 'config', href: '/configuracoes' },
