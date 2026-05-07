@@ -525,39 +525,57 @@
 		opacity: 0;
 		transition: opacity 800ms var(--ease);
 		z-index: 0;
+		/* Hardware accel — força decodificação na GPU, evita banding */
+		will-change: transform, opacity;
+		transform: translateZ(0);
+		backface-visibility: hidden;
+		/* Compensa o upscale de 720p pra full-HD: aviva cores e contraste */
+		filter: saturate(1.18) contrast(1.06) brightness(1.02);
+		image-rendering: high-quality;
+		-webkit-transform: translateZ(0);
 	}
 	.hero-video.on {
 		opacity: 1;
 	}
-	/* Overlay 1: véu escuro radial — escurece bordas, preserva centro pra ler texto */
+	/* Overlay 1: vinheta sutil — escurece SÓ os cantos extremos, preserva o video no meio */
 	.hero-veil {
 		position: absolute;
 		inset: 0;
-		background:
-			radial-gradient(ellipse at 30% 50%, rgba(5, 5, 5, 0.35) 0%, rgba(5, 5, 5, 0.78) 65%, rgba(5, 5, 5, 0.92) 100%),
-			linear-gradient(180deg, rgba(5, 5, 5, 0.55) 0%, rgba(5, 5, 5, 0.2) 25%, rgba(5, 5, 5, 0.4) 70%, rgba(5, 5, 5, 0.95) 100%);
+		background: radial-gradient(
+			ellipse 80% 70% at 50% 45%,
+			transparent 0%,
+			rgba(5, 5, 5, 0.15) 60%,
+			rgba(5, 5, 5, 0.55) 100%
+		);
 		z-index: 1;
 		pointer-events: none;
 	}
-	/* Overlay 2: fade pra preto absoluto na base — emenda com a próxima section */
+	/* Overlay 2: fade pra preto na base — emenda com a próxima section */
 	.hero-fade-bottom {
 		position: absolute;
 		bottom: 0;
 		left: 0;
 		right: 0;
-		height: 240px;
-		background: linear-gradient(180deg, transparent 0%, var(--bg-0) 90%);
+		height: 200px;
+		background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 5, 0.4) 50%, var(--bg-0) 95%);
 		z-index: 2;
 		pointer-events: none;
 	}
-	/* Overlay 3: fade lateral esquerdo pra dar mais peso visual ao texto */
+	/* Overlay 3: vinheta atrás do texto SOMENTE — não cobre o vídeo todo.
+	   Posicionada à esquerda, com elipse suave, dá peso pra leitura sem
+	   sacrificar 50% do vídeo como antes. */
 	.hero-fade-left {
 		position: absolute;
-		top: 0;
-		bottom: 0;
+		top: 10%;
+		bottom: 10%;
 		left: 0;
-		width: 50%;
-		background: linear-gradient(90deg, rgba(5, 5, 5, 0.55) 0%, transparent 100%);
+		width: 65%;
+		background: radial-gradient(
+			ellipse 70% 60% at 30% 50%,
+			rgba(5, 5, 5, 0.45) 0%,
+			rgba(5, 5, 5, 0.18) 60%,
+			transparent 100%
+		);
 		z-index: 1;
 		pointer-events: none;
 	}
@@ -569,7 +587,18 @@
 		display: flex;
 		flex-direction: column;
 		gap: 24px;
-		text-shadow: 0 1px 30px rgba(0, 0, 0, 0.5);
+		/* Halo escuro grudado nos glifos — preserva o vídeo de fundo
+		   intacto E garante contraste local de cada caractere */
+		filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.85))
+			drop-shadow(0 2px 18px rgba(0, 0, 0, 0.6));
+	}
+	.hero-content :global(h1),
+	.hero-content :global(p),
+	.hero-content :global(.hero-eyebrow),
+	.hero-content :global(.hero-trust-item) {
+		/* Reforço extra de text-shadow pra browsers que renderizam
+		   drop-shadow com perda de qualidade em filtros aninhados */
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.5);
 	}
 	.hero-eyebrow {
 		display: inline-flex;
