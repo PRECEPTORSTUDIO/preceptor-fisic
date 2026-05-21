@@ -605,6 +605,38 @@ export const exerciseLibrary = pgTable(
 	]
 );
 
+/* ────────── exercise_catalog (catálogo global ExerciseDB Pro — read-only) ──────────
+   Diferente da exercise_library (custom por profissional), o catálogo é
+   compartilhado: 1.324 exercícios licenciados com vídeo demonstrativo.
+   A IA recomenda destes; o profissional pode complementar com os custom dele. */
+export const exerciseCatalog = pgTable(
+	'exercise_catalog',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		externalId: text('external_id').notNull().unique(), // "0001" do ExerciseDB Pro
+		name: text('name').notNull(), // PT-BR (traduzido)
+		nameEn: text('name_en').notNull(), // original EN — matching com output da IA
+		bodyPart: text('body_part').notNull(),
+		targetMuscle: text('target_muscle').notNull(),
+		secondaryMuscles: jsonb('secondary_muscles').$type<string[]>().default([]).notNull(),
+		equipment: text('equipment'),
+		difficulty: text('difficulty'), // beginner | intermediate | advanced
+		category: text('category'), // strength | stretching | mobility | cardio | ...
+		instructions: jsonb('instructions').$type<string[]>().default([]).notNull(), // PT-BR
+		instructionsEn: jsonb('instructions_en').$type<string[]>().default([]).notNull(),
+		description: text('description'), // PT-BR
+		videoUrl: text('video_url'), // URL pública no Supabase Storage
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [
+		uniqueIndex('exercise_catalog_external_idx').on(t.externalId),
+		index('exercise_catalog_body_part_idx').on(t.bodyPart),
+		index('exercise_catalog_target_idx').on(t.targetMuscle),
+		index('exercise_catalog_name_en_idx').on(t.nameEn)
+	]
+);
+export type ExerciseCatalogItem = typeof exerciseCatalog.$inferSelect;
+
 /* ────────── conversations + messages (chat com aluno) ────────── */
 export const conversations = pgTable(
 	'conversations',

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { getPlanDetail, getRecentSessionLogs } from '$lib/server/queries';
+import { getPlanDetail, getRecentSessionLogs, matchCatalogByName } from '$lib/server/queries';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, parent }) => {
@@ -14,7 +14,24 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	if (!session) error(404, 'sessão não encontrada');
 
 	const sessionLabel = session.label ?? `Sessão ${idx + 1}`;
-	const recentLogs = await getRecentSessionLogs(params.id, sessionLabel, 5);
 
-	return { plan, session, idx, recentLogs };
+	// Match dos exercícios contra o catálogo (vídeo tutorial)
+	const allExercises = [
+		...(session.warmup ?? []),
+		...(session.main ?? []),
+		...(session.cooldown ?? [])
+	];
+	const uniqueNames = [...new Set(allExercises.map((e) => e.name).filter(Boolean))];
+	const videoMap: Record<string, string> = {};
+	const [recentLogs] = await Promise.all([
+		getRecentSessionLogs(params.id, sessionLabel, 5),
+		Promise.all(
+			uniqueNames.map(async (name) => {
+				const match = await matchCatalogByName(name);
+				if (match?.videoUrl) videoMap[name] = match.videoUrl;
+			})
+		)
+	]);
+
+	return { plan, session, idx, recentLogs, videoMap };
 };

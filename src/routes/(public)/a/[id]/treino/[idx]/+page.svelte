@@ -10,6 +10,9 @@
 	const idx = $derived(data.sessionIdx);
 	const studentId = $derived(data.student.id);
 	const exercises = $derived(session.main ?? []);
+	const videoMap = $derived(
+		(data.videoMap ?? {}) as Record<string, { videoUrl: string | null; instructions: string[] }>
+	);
 	const tokenParam = $derived(page.url.searchParams.get('t'));
 	const tq = $derived(tokenParam ? `?t=${tokenParam}` : '');
 
@@ -21,6 +24,7 @@
 	let submitting = $state(false);
 
 	const ex = $derived(exercises[activeIdx]);
+	const exVideo = $derived(ex ? (videoMap[ex.name]?.videoUrl ?? null) : null);
 	const completedCount = $derived(Object.values(completed).filter(Boolean).length);
 	const allCompleted = $derived(completedCount === exercises.length);
 
@@ -123,11 +127,24 @@
 					</div>
 				{/if}
 
-				<!-- Vídeo placeholder -->
-				<div class="video">
-					<div class="play-btn">▶</div>
-					<div class="eyebrow" style="margin-top:8px">Vídeo · em breve</div>
-				</div>
+				<!-- Vídeo tutorial — do catálogo, match por nome -->
+				{#if exVideo}
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						class="ex-video"
+						src={exVideo}
+						autoplay
+						loop
+						muted
+						playsinline
+						preload="metadata"
+					></video>
+				{:else}
+					<div class="video">
+						<div class="play-btn">▶</div>
+						<div class="eyebrow" style="margin-top:8px">Sem vídeo pra este exercício</div>
+					</div>
+				{/if}
 
 				{#if ex.execution_notes}
 					<div class="card" style="padding:14px;margin-bottom:12px">
@@ -306,6 +323,17 @@
 	}
 	.ex-meta .dot {
 		color: var(--ink-3);
+	}
+	.ex-video {
+		width: 100%;
+		aspect-ratio: 1;
+		max-height: 320px;
+		object-fit: cover;
+		background: var(--bg-3);
+		border: 1px solid var(--ink-line-2);
+		border-radius: var(--r-3);
+		margin-bottom: 14px;
+		display: block;
 	}
 	.video {
 		height: 180px;

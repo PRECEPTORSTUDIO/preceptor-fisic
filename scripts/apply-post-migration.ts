@@ -18,7 +18,12 @@ if (!BR) {
 const sql = postgres(BR, { prepare: false });
 const dir = join(process.cwd(), 'drizzle', 'post-migration');
 
-const files = ['0001-rls.sql', '0002-auth-fk.sql', '0003-rls-perf.sql'];
+const files = [
+	'0001-rls.sql',
+	'0002-auth-fk.sql',
+	'0003-rls-perf.sql',
+	'0004-exercise-catalog.sql'
+];
 try {
 	for (const f of files) {
 		console.log(`▸ aplicando ${f}…`);

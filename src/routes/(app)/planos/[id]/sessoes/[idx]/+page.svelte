@@ -9,6 +9,7 @@
 	const studentName = $derived(data.plan.studentName);
 	const exercises = $derived(session.main ?? []);
 	const sourceMap = $derived(data.plan.sourceMap ?? {});
+	const videoMap = $derived((data.videoMap ?? {}) as Record<string, string>);
 
 	type SrcRef = {
 		type?: string;
@@ -188,20 +189,25 @@
 							</div>
 						</div>
 
-						<!-- Vídeo placeholder -->
-						<div
-							style="height:240px;background:linear-gradient(135deg, var(--bg-2) 0%, var(--bg-1) 100%);border:1px solid var(--ink-line-2);border-radius:var(--r-3);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:24px;overflow:hidden"
-						>
+						<!-- Vídeo tutorial — do catálogo, match por nome -->
+						{#if videoMap[ex.name]}
+							<!-- svelte-ignore a11y_media_has_caption -->
+							<video
+								src={videoMap[ex.name]}
+								autoplay
+								loop
+								muted
+								playsinline
+								preload="metadata"
+								style="width:100%;max-height:320px;aspect-ratio:1;object-fit:cover;background:var(--bg-3);border:1px solid var(--ink-line-2);border-radius:var(--r-3);margin-bottom:24px;display:block"
+							></video>
+						{:else}
 							<div
-								style="position:absolute;inset:0;background:radial-gradient(circle at 60% 40%, var(--accent-wash) 0%, transparent 60%)"
-							></div>
-							<div style="position:relative;text-align:center">
-								<div
-									style="width:64px;height:64px;border-radius:50%;background:var(--accent);box-shadow:var(--glow-accent);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:#0a0a0a;font:400 24px var(--font-sans)"
-								>▶</div>
-								<div class="eyebrow">Vídeo · em breve</div>
+								style="height:200px;background:linear-gradient(135deg, var(--bg-2) 0%, var(--bg-1) 100%);border:1px solid var(--ink-line-2);border-radius:var(--r-3);display:flex;align-items:center;justify-content:center;margin-bottom:24px"
+							>
+								<div class="eyebrow">Sem vídeo no catálogo pra este exercício</div>
 							</div>
-						</div>
+						{/if}
 
 						{#if ex.execution_notes}
 							<div class="card" style="padding:20px;margin-bottom:16px">

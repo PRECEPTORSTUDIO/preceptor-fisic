@@ -28,12 +28,33 @@
 <div style="display:grid;grid-template-columns:1fr 420px;height:100vh;overflow:hidden">
 	<div style="overflow-y:auto;padding:32px 40px 64px;border-right:1px solid var(--ink-line)">
 		<header style="margin-bottom:24px">
-			<Eyebrow>Biblioteca · {exercises.length} exercícios</Eyebrow>
-			<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px">
+			<Eyebrow>Meus exercícios · {exercises.length} customizados</Eyebrow>
+			<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;gap:12px;flex-wrap:wrap">
 				<h1 style="font:var(--display-md);margin:0;letter-spacing:-0.025em">Exercícios</h1>
-				<Button onclick={() => goto('/exercicios/novo')}>+ Novo</Button>
+				<div style="display:flex;gap:8px">
+					<Button variant="secondary" onclick={() => goto('/exercicios/catalogo')}>
+						◆ Catálogo
+					</Button>
+					<Button onclick={() => goto('/exercicios/novo')}>+ Novo</Button>
+				</div>
 			</div>
 		</header>
+
+		<a
+			href="/exercicios/catalogo"
+			style="display:flex;align-items:center;gap:14px;padding:16px 18px;margin-bottom:20px;background:var(--accent-wash);border:1px solid var(--accent);border-radius:var(--r-2);text-decoration:none"
+		>
+			<div style="font-size:22px">◆</div>
+			<div style="flex:1">
+				<div style="font:500 14px var(--font-sans);color:var(--ink-0)">
+					Catálogo com 1.300+ exercícios em vídeo
+				</div>
+				<div style="font:var(--body-sm);color:var(--ink-2);margin-top:2px">
+					Biblioteca licenciada com tutorial. A IA recomenda destes ao gerar planos.
+				</div>
+			</div>
+			<div style="color:var(--accent-2);font:500 13px var(--font-sans)">Explorar →</div>
+		</a>
 
 		{#if exercises.length === 0}
 			<div class="card" style="padding:48px;text-align:center">

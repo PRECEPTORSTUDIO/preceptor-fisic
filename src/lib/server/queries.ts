@@ -1536,3 +1536,171 @@ export async function getDashboardStats(professionalId: string): Promise<Dashboa
 		upcomingAppointments
 	};
 }
+
+/* ────────── EXERCISE CATALOG (ExerciseDB Pro — global) ────────── */
+
+export type CatalogExercise = {
+	id: string;
+	externalId: string;
+	name: string;
+	nameEn: string;
+	bodyPart: string;
+	targetMuscle: string;
+	secondaryMuscles: string[];
+	equipment: string | null;
+	difficulty: string | null;
+	category: string | null;
+	instructions: string[];
+	description: string | null;
+	videoUrl: string | null;
+};
+
+type CatalogRow = {
+	id: string;
+	external_id: string;
+	name: string;
+	name_en: string;
+	body_part: string;
+	target_muscle: string;
+	secondary_muscles: string[] | null;
+	equipment: string | null;
+	difficulty: string | null;
+	category: string | null;
+	instructions: string[] | null;
+	description: string | null;
+	video_url: string | null;
+};
+
+function mapCatalogRow(r: CatalogRow): CatalogExercise {
+	return {
+		id: r.id,
+		externalId: r.external_id,
+		name: r.name,
+		nameEn: r.name_en,
+		bodyPart: r.body_part,
+		targetMuscle: r.target_muscle,
+		secondaryMuscles: r.secondary_muscles ?? [],
+		equipment: r.equipment,
+		difficulty: r.difficulty,
+		category: r.category,
+		instructions: r.instructions ?? [],
+		description: r.description,
+		videoUrl: r.video_url
+	};
+}
+
+function unwrapRows<T>(result: unknown): T[] {
+	const r = result as { rows?: T[] };
+	return (r.rows ?? (result as T[])) ?? [];
+}
+
+/**
+ * Busca paginada no catálogo. Filtros opcionais por bodyPart/equipment/difficulty
+ * e texto livre (trigram no nome PT-BR + match no nome EN).
+ */
+export async function searchExerciseCatalog(opts: {
+	query?: string;
+	bodyPart?: string;
+	equipment?: string;
+	difficulty?: string;
+	limit?: number;
+	offset?: number;
+}): Promise<{ items: CatalogExercise[]; total: number }> {
+	const limit = Math.min(opts.limit ?? 60, 200);
+	const offset = opts.offset ?? 0;
+	const q = opts.query?.trim();
+
+	const conds = [sql`1=1`];
+	if (opts.bodyPart) conds.push(sql`body_part = ${opts.bodyPart}`);
+	if (opts.equipment) conds.push(sql`equipment = ${opts.equipment}`);
+	if (opts.difficulty) conds.push(sql`difficulty = ${opts.difficulty}`);
+	if (q) conds.push(sql`(name ILIKE ${'%' + q + '%'} OR name_en ILIKE ${'%' + q + '%'})`);
+	const where = sql.join(conds, sql` AND `);
+
+	const [itemsResult, countResult] = await Promise.all([
+		db.execute<CatalogRow>(sql`
+			SELECT id, external_id, name, name_en, body_part, target_muscle,
+			       secondary_muscles, equipment, difficulty, category,
+			       instructions, description, video_url
+			FROM exercise_catalog
+			WHERE ${where}
+			ORDER BY name
+			LIMIT ${limit} OFFSET ${offset}
+		`),
+		db.execute<{ n: number }>(sql`
+			SELECT COUNT(*)::int AS n FROM exercise_catalog WHERE ${where}
+		`)
+	]);
+
+	const items = unwrapRows<CatalogRow>(itemsResult).map(mapCatalogRow);
+	const total = Number(unwrapRows<{ n: number }>(countResult)[0]?.n ?? 0);
+	return { items, total };
+}
+
+export async function getCatalogExercise(id: string): Promise<CatalogExercise | null> {
+	const result = await db.execute<CatalogRow>(sql`
+		SELECT id, external_id, name, name_en, body_part, target_muscle,
+		       secondary_muscles, equipment, difficulty, category,
+		       instructions, description, video_url
+		FROM exercise_catalog WHERE id = ${id} LIMIT 1
+	`);
+	const row = unwrapRows<CatalogRow>(result)[0];
+	return row ? mapCatalogRow(row) : null;
+}
+
+/**
+ * Fuzzy match de um nome de exercício (PT ou EN) contra o catálogo,
+ * via trigram similarity. Usado pra anexar vídeo aos exercícios que
+ * a IA gera no plano. Retorna null se nenhum match passar do threshold.
+ */
+export async function matchCatalogByName(
+	exerciseName: string,
+	threshold = 0.3
+): Promise<CatalogExercise | null> {
+	const name = exerciseName.trim();
+	if (name.length < 3) return null;
+	const result = await db.execute<CatalogRow & { sim: number }>(sql`
+		SELECT id, external_id, name, name_en, body_part, target_muscle,
+		       secondary_muscles, equipment, difficulty, category,
+		       instructions, description, video_url,
+		       GREATEST(similarity(name, ${name}), similarity(name_en, ${name})) AS sim
+		FROM exercise_catalog
+		WHERE name % ${name} OR name_en % ${name}
+		ORDER BY sim DESC
+		LIMIT 1
+	`);
+	const row = unwrapRows<CatalogRow & { sim: number }>(result)[0];
+	if (!row || Number(row.sim) < threshold) return null;
+	return mapCatalogRow(row);
+}
+
+/** Facetas pros filtros da página de catálogo. */
+export async function getCatalogFacets(): Promise<{
+	total: number;
+	bodyParts: { value: string; count: number }[];
+	equipment: { value: string; count: number }[];
+}> {
+	const [totalRes, bpRes, eqRes] = await Promise.all([
+		db.execute<{ n: number }>(sql`SELECT COUNT(*)::int AS n FROM exercise_catalog`),
+		db.execute<{ value: string; count: number }>(sql`
+			SELECT body_part AS value, COUNT(*)::int AS count
+			FROM exercise_catalog GROUP BY body_part ORDER BY count DESC
+		`),
+		db.execute<{ value: string; count: number }>(sql`
+			SELECT equipment AS value, COUNT(*)::int AS count
+			FROM exercise_catalog WHERE equipment IS NOT NULL
+			GROUP BY equipment ORDER BY count DESC LIMIT 20
+		`)
+	]);
+	return {
+		total: Number(unwrapRows<{ n: number }>(totalRes)[0]?.n ?? 0),
+		bodyParts: unwrapRows<{ value: string; count: number }>(bpRes).map((r) => ({
+			value: r.value,
+			count: Number(r.count)
+		})),
+		equipment: unwrapRows<{ value: string; count: number }>(eqRes).map((r) => ({
+			value: r.value,
+			count: Number(r.count)
+		}))
+	};
+}

@@ -1,5 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { getAlunoAppData, logTrainingSession } from '$lib/server/queries';
+import { getAlunoAppData, logTrainingSession, matchCatalogByName } from '$lib/server/queries';
 import { verifyStudentToken } from '$lib/server/aluno-token';
 import { dev } from '$app/environment';
 import type { Actions, PageServerLoad } from './$types';
@@ -17,7 +17,26 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const session = data.plan.planData.weekly_sessions?.[idx];
 	if (!session) error(404, 'sessão não encontrada');
 
-	return { ...data, sessionIdx: idx, session };
+	// Match cada exercício do treino contra o catálogo (fuzzy por nome).
+	// Resultado: videoMap { nomeDoExercicio → { videoUrl, instructions } }
+	// pra exibir o tutorial em vídeo durante a execução.
+	const allExercises = [
+		...(session.warmup ?? []),
+		...(session.main ?? []),
+		...(session.cooldown ?? [])
+	];
+	const uniqueNames = [...new Set(allExercises.map((e) => e.name).filter(Boolean))];
+	const videoMap: Record<string, { videoUrl: string | null; instructions: string[] }> = {};
+	await Promise.all(
+		uniqueNames.map(async (name) => {
+			const match = await matchCatalogByName(name);
+			if (match) {
+				videoMap[name] = { videoUrl: match.videoUrl, instructions: match.instructions };
+			}
+		})
+	);
+
+	return { ...data, sessionIdx: idx, session, videoMap };
 };
 
 export const actions: Actions = {
