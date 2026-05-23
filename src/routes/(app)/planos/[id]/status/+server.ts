@@ -24,6 +24,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			errorMessage: trainingPlans.errorMessage,
 			generatedAt: trainingPlans.generatedAt,
 			planData: trainingPlans.planData,
+			streamText: trainingPlans.streamText,
 			updatedAt: trainingPlans.updatedAt
 		})
 		.from(trainingPlans)
@@ -48,6 +49,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		generated: status === 'generated' || status === 'published',
 		failed: status === 'failed',
 		// Partial planData durante streaming — o UI renderiza sessões/restrições à medida que chegam
-		partial: row.planData ?? null
+		partial: row.planData ?? null,
+		// Texto bruto da IA em streaming (alimenta UI "Gemini escrevendo")
+		streamText: row.streamText ?? null
 	});
 };

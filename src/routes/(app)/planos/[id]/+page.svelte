@@ -12,6 +12,14 @@
 	const restrictions = $derived(planData.restrictions ?? []);
 	const dbRestrictions = $derived((data.plan as any).dbRestrictions ?? []);
 	const sourceMap = $derived(plan.sourceMap ?? {});
+	const catalogMap = $derived(plan.catalogMap ?? {});
+
+	// Vídeo aberto inline: chave "sessionIdx-blockKey-exerciseIdx".
+	// Click no botão ▶ vídeo expande/colapsa abaixo da linha do exercício.
+	let openVideoKey = $state<string | null>(null);
+	function toggleVideo(key: string) {
+		openVideoKey = openVideoKey === key ? null : key;
+	}
 
 	type SrcRef = {
 		type?: string;
@@ -79,12 +87,22 @@
 		generated: boolean;
 		failed: boolean;
 		partial: PartialPlan | null;
+		streamText: string | null;
 	};
 
 	let livePhase = $state(plan.status === 'pending' ? 'enfileirado' : 'iniciando…');
 	let liveProgress = $state(5);
 	let livePartial = $state<PartialPlan | null>(null);
+	let liveStreamText = $state<string>('');
+	let streamScrollEl: HTMLPreElement | undefined = $state();
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+	// Auto-scroll do bloco "Gemini escrevendo" pro fim quando texto cresce
+	$effect(() => {
+		if (liveStreamText && streamScrollEl) {
+			streamScrollEl.scrollTop = streamScrollEl.scrollHeight;
+		}
+	});
 
 	$effect(() => {
 		if (!isGenerating) {
@@ -99,6 +117,7 @@
 				livePhase = s.phase ?? livePhase;
 				liveProgress = s.progress;
 				livePartial = s.partial;
+				if (s.streamText) liveStreamText = s.streamText;
 				if (s.generated || s.failed) {
 					if (pollInterval) clearInterval(pollInterval);
 					await invalidateAll();
@@ -108,7 +127,9 @@
 			}
 		};
 		tick();
-		pollInterval = setInterval(tick, 1200);
+		// 800ms = ~3 atualizações por segundo. textStream do backend grava
+		// a cada 180ms, então cada poll pega ~4 deltas de texto novos.
+		pollInterval = setInterval(tick, 800);
 	});
 
 	onDestroy(() => {
@@ -162,7 +183,20 @@
 				{livePhase}
 			</div>
 
-			<!-- Plano materializando ao vivo -->
+			<!-- Gemini escrevendo — texto bruto chegando token por token,
+				 estilo terminal/log. Cursor piscando no fim. -->
+			{#if liveStreamText}
+				<div class="gen-stream-block">
+					<div class="gen-stream-header">
+						<span class="gen-stream-dot"></span>
+						<span>Gemini · gerando</span>
+						<span class="gen-stream-meta">{liveStreamText.length.toLocaleString('pt-BR')} chars</span>
+					</div>
+					<pre class="gen-stream-text" bind:this={streamScrollEl}>{liveStreamText}<span class="gen-stream-cursor">▋</span></pre>
+				</div>
+			{/if}
+
+			<!-- Plano materializando ao vivo (estruturado) -->
 			{#if livePartial}
 				<div class="gen-live">
 					{#if livePartial.summary}
@@ -358,6 +392,71 @@
 			border: 1px solid var(--ink-line);
 			border-radius: var(--r-2);
 			padding: 18px 20px;
+		}
+
+		/* "Gemini escrevendo" — bloco terminal/log com texto chegando ao vivo */
+		.gen-stream-block {
+			margin-top: 24px;
+			background: #0a0a0d;
+			border: 1px solid var(--ink-line);
+			border-radius: var(--r-2);
+			overflow: hidden;
+			animation: gen-fade 240ms var(--ease) backwards;
+		}
+		.gen-stream-header {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 14px;
+			background: rgba(167, 139, 250, 0.06);
+			border-bottom: 1px solid var(--ink-line);
+			font: 500 11px var(--font-mono);
+			color: var(--ink-2);
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+		}
+		.gen-stream-dot {
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: var(--accent);
+			box-shadow: 0 0 8px var(--accent);
+			animation: gen-pulse 1.4s ease-in-out infinite;
+		}
+		.gen-stream-meta {
+			margin-left: auto;
+			color: var(--ink-3);
+			font-variant-numeric: tabular-nums;
+		}
+		.gen-stream-text {
+			margin: 0;
+			padding: 14px 18px;
+			max-height: 260px;
+			overflow-y: auto;
+			overflow-x: hidden;
+			font: 400 12.5px/1.55 var(--font-mono);
+			color: var(--ink-1);
+			white-space: pre-wrap;
+			word-break: break-word;
+			background: transparent;
+		}
+		.gen-stream-text::-webkit-scrollbar {
+			width: 6px;
+		}
+		.gen-stream-text::-webkit-scrollbar-thumb {
+			background: var(--ink-line-2);
+			border-radius: 3px;
+		}
+		.gen-stream-cursor {
+			display: inline-block;
+			color: var(--accent);
+			animation: gen-cursor-blink 1s steps(2, start) infinite;
+			margin-left: 1px;
+		}
+		@keyframes gen-cursor-blink {
+			to {
+				opacity: 0;
+			}
 		}
 		.gen-fade {
 			animation: gen-in 240ms var(--ease) backwards;
@@ -692,29 +791,67 @@
 					</button>
 
 					{#each (s.main ?? []) as ex, j (ex.name + j)}
+						{@const catEntry = ex.catalog_id ? catalogMap[ex.catalog_id] : null}
+						{@const videoKey = `${i}-main-${j}`}
+						{@const videoOpen = openVideoKey === videoKey}
 						<div
-							style="padding:14px 20px;display:grid;grid-template-columns:32px 1fr auto auto auto;gap:14px;align-items:center;{j ? 'border-top:1px solid var(--ink-line)' : ''}"
+							style="display:flex;flex-direction:column;{j ? 'border-top:1px solid var(--ink-line)' : ''}"
 						>
-							<div class="num" style="font:500 13px var(--font-mono);color:var(--ink-3)">
-								{String(j + 1).padStart(2, '0')}
-							</div>
-							<div>
-								<div style="font:500 14px var(--font-sans);color:var(--ink-0)">{ex.name}</div>
-								{#if ex.muscle_groups && ex.muscle_groups.length > 0}
-									<div style="font:var(--label-mono);color:var(--ink-3);margin-top:2px">
-										{ex.muscle_groups.join(' · ')}
-									</div>
+							<div
+								style="padding:14px 20px;display:grid;grid-template-columns:32px 1fr auto auto auto auto;gap:14px;align-items:center"
+							>
+								<div class="num" style="font:500 13px var(--font-mono);color:var(--ink-3)">
+									{String(j + 1).padStart(2, '0')}
+								</div>
+								<div>
+									<div style="font:500 14px var(--font-sans);color:var(--ink-0)">{ex.name}</div>
+									{#if ex.muscle_groups && ex.muscle_groups.length > 0}
+										<div style="font:var(--label-mono);color:var(--ink-3);margin-top:2px">
+											{ex.muscle_groups.join(' · ')}
+										</div>
+									{/if}
+								</div>
+								<span class="num" style="font:500 13px var(--font-mono);color:var(--ink-1)">{ex.sets ?? '—'}×{ex.reps ?? '—'}</span>
+								<span class="num" style="font:500 12px var(--font-mono);color:var(--ink-2)">↺ {ex.rest_seconds ?? '—'}s</span>
+								{#if ex.load_guidance}
+									<span
+										style="font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:var(--r-pill);color:var(--accent);background:var(--accent-wash)"
+										>{ex.load_guidance}</span
+									>
+								{:else}
+									<span></span>
+								{/if}
+								{#if catEntry?.videoUrl}
+									<button
+										type="button"
+										onclick={() => toggleVideo(videoKey)}
+										style="all:unset;cursor:pointer;font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 10px;border:1px solid var(--ink-line);border-radius:var(--r-pill);color:{videoOpen ? 'var(--accent)' : 'var(--ink-1)'};background:{videoOpen ? 'var(--accent-wash)' : 'transparent'}"
+										aria-expanded={videoOpen}
+									>{videoOpen ? '× fechar' : '▶ vídeo'}</button>
+								{:else}
+									<span></span>
 								{/if}
 							</div>
-							<span class="num" style="font:500 13px var(--font-mono);color:var(--ink-1)">{ex.sets ?? '—'}×{ex.reps ?? '—'}</span>
-							<span class="num" style="font:500 12px var(--font-mono);color:var(--ink-2)">↺ {ex.rest_seconds ?? '—'}s</span>
-							{#if ex.load_guidance}
-								<span
-									style="font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:var(--r-pill);color:var(--accent);background:var(--accent-wash)"
-									>{ex.load_guidance}</span
-								>
-							{:else}
-								<span></span>
+							{#if catEntry?.videoUrl && videoOpen}
+								<div style="padding:0 20px 16px 60px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+									<video
+										src={catEntry.videoUrl}
+										controls
+										autoplay
+										loop
+										muted
+										playsinline
+										preload="metadata"
+										style="width:280px;max-width:100%;border-radius:var(--r-md);background:var(--bg-0);border:1px solid var(--ink-line)"
+									><track kind="captions" /></video>
+									{#if catEntry.instructions && catEntry.instructions.length > 0}
+										<ol style="flex:1;min-width:260px;margin:0;padding-left:20px;font:400 12px var(--font-sans);color:var(--ink-2);line-height:1.55">
+											{#each catEntry.instructions as step (step)}
+												<li style="margin-bottom:3px">{step}</li>
+											{/each}
+										</ol>
+									{/if}
+								</div>
 							{/if}
 						</div>
 					{/each}

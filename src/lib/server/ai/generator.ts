@@ -302,9 +302,25 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	lines.push('');
 	lines.push(ragContext);
 	lines.push('');
+	lines.push(`## CATÁLOGO DE EXERCÍCIOS DISPONÍVEIS (${ctx.catalog.length} itens)`);
+	lines.push(
+		'Cada linha: `external_id — nome (equipamento · grupo muscular · nível)`. Esses exercícios têm vídeo demonstrativo e instruções traduzidas no app do aluno.'
+	);
+	lines.push('');
+	lines.push(formatCatalogForPrompt(ctx.catalog));
+	lines.push('');
 	lines.push('## TAREFA');
 	lines.push(
-		'Gere um plano de treino semanal estruturado conforme o schema. Para cada recomendação crítica, cite chunk_id do CONTEXTO CLÍNICO acima — preferindo chunks ACSM quando disponíveis. Se não estiver coberto, marque source.type = "inference".'
+		'Gere um plano de treino semanal estruturado conforme o schema. Regras:'
+	);
+	lines.push(
+		'1. PREFERIR exercícios do CATÁLOGO acima sempre que possível — quando usar um, preencha `catalog_id` da exercise com o external_id (formato 4-5 dígitos, ex: "0001"). Mira em ≥80% dos exercícios do bloco principal vindos do catálogo. Para aquecimento/desaquecimento, pode usar exercícios livres se necessário.'
+	);
+	lines.push(
+		'2. Para cada recomendação crítica, cite chunk_id do CONTEXTO CLÍNICO acima — preferindo chunks ACSM quando disponíveis. Se não estiver coberto, marque source.type = "inference".'
+	);
+	lines.push(
+		'3. Quando escolher do catálogo, use o nome EXATO do catálogo no campo `name` (não invente variações), e copie o external_id PRECISO em `catalog_id`.'
 	);
 
 	return lines.join('\n');
@@ -393,6 +409,11 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 					.catch(() => {});
 			}, 2500);
 
+			// Texto bruto acumulado do stream (alimenta UI "Gemini escrevendo").
+			// Truncado em sliding window pra não bloar o DB row.
+			let accumulatedText = '';
+			let lastTextWrite = 0;
+
 			try {
 				const result = streamObject({
 					model: google(model),
@@ -409,32 +430,64 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 					abortSignal: AbortSignal.timeout(AI_GEN_TIMEOUT_MS)
 				});
 
-				for await (const partial of result.partialObjectStream) {
+				// fullStream emite eventos token-por-token (text-delta) +
+				// object-parsed-throttled (object). Consumindo ambos num loop
+				// só nos dá: texto raw streaming + structured partial. UI mostra
+				// o texto chegando estilo ChatGPT enquanto a estrutura também
+				// vai materializando.
+				for await (const event of result.fullStream) {
 					const now = Date.now();
-					const sessions = (partial as { weekly_sessions?: unknown[] }).weekly_sessions ?? [];
-					const sessionsCount = Array.isArray(sessions) ? sessions.length : 0;
 
-					// Throttle: escreve a cada 700ms OU quando nova sessão aparece.
-					if (now - lastWriteAt < 700 && sessionsCount === lastSessionsCount) continue;
-					lastWriteAt = now;
-					lastSessionsCount = sessionsCount;
+					if (event.type === 'text-delta') {
+						accumulatedText += (event as { textDelta?: string }).textDelta ?? '';
+						// Throttle write a cada 180ms — frontend polla a 800ms,
+						// então sempre tem texto novo em cada poll
+						if (now - lastTextWrite < 180) continue;
+						lastTextWrite = now;
+						// Mantém só últimos ~6KB (suficiente pra encher viewport
+						// com texto mono) — evita row gigante no DB
+						const slice = accumulatedText.slice(-6000);
+						await db
+							.update(trainingPlans)
+							.set({ streamText: slice, updatedAt: new Date() })
+							.where(eq(trainingPlans.id, planId))
+							.catch(() => {});
+					} else if (event.type === 'object') {
+						const sessions =
+							(event.object as { weekly_sessions?: unknown[] }).weekly_sessions ?? [];
+						const sessionsCount = Array.isArray(sessions) ? sessions.length : 0;
 
-					const targetSessions = 3;
-					const phase =
-						sessionsCount === 0
-							? 'estruturando plano clínico'
-							: sessionsCount < targetSessions
-								? `bloco ${sessionsCount} de ${targetSessions}: compondo exercícios`
-								: 'finalizando monitoramento e restrições';
+						// Throttle 700ms OU quando nova sessão completa
+						if (now - lastWriteAt < 700 && sessionsCount === lastSessionsCount) continue;
+						lastWriteAt = now;
+						lastSessionsCount = sessionsCount;
 
-					// progressPct é do timer; aqui só planData + fase
+						const targetSessions = 3;
+						const phase =
+							sessionsCount === 0
+								? 'estruturando plano clínico'
+								: sessionsCount < targetSessions
+									? `bloco ${sessionsCount} de ${targetSessions}: compondo exercícios`
+									: 'finalizando monitoramento e restrições';
+
+						await db
+							.update(trainingPlans)
+							.set({
+								progressPhase: phase,
+								planData: event.object as TrainingPlanOutput,
+								updatedAt: new Date()
+							})
+							.where(eq(trainingPlans.id, planId))
+							.catch(() => {});
+					}
+				}
+
+				// Flush final do texto acumulado (último chunk pode ter ficado
+				// abaixo do throttle de 180ms)
+				if (accumulatedText) {
 					await db
 						.update(trainingPlans)
-						.set({
-							progressPhase: phase,
-							planData: partial as TrainingPlanOutput,
-							updatedAt: new Date()
-						})
+						.set({ streamText: accumulatedText.slice(-6000), updatedAt: new Date() })
 						.where(eq(trainingPlans.id, planId))
 						.catch(() => {});
 				}

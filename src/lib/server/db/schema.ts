@@ -305,6 +305,10 @@ export const trainingPlans = pgTable(
 		errorMessage: text('error_message'),
 		progressPct: integer('progress_pct').default(0).notNull(),
 		progressPhase: text('progress_phase'),
+		/** Texto bruto sendo gerado pela IA (textStream do AI SDK) —
+		 *  alimenta a UI "Gemini escrevendo" em tempo real. Truncado
+		 *  em ~6KB pelo backend (suficiente pra renderizar tela cheia). */
+		streamText: text('stream_text'),
 		generatedAt: timestamp('generated_at', { withTimezone: true }),
 		publishedAt: timestamp('published_at', { withTimezone: true }),
 		archivedAt: timestamp('archived_at', { withTimezone: true }),

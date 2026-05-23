@@ -2,7 +2,7 @@
  * Queries Drizzle centralizadas — toda interação com DB passa por aqui.
  * Filtragem por professional_id é responsabilidade dos callers (RLS também garante).
  */
-import { eq, and, desc, asc, isNull, sql, count, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, asc, isNull, sql, count, gte, lte, inArray } from 'drizzle-orm';
 import { db } from './db';
 import {
 	professionals,
@@ -14,6 +14,7 @@ import {
 	physicalAssessments,
 	progressRecords,
 	exerciseLibrary,
+	exerciseCatalog,
 	conversations,
 	messages,
 	appointments,
@@ -393,6 +394,8 @@ export type PlanRestriction = {
 
 export type PlanExercise = {
 	name: string;
+	/** external_id do exercise_catalog quando o exercício vem do catálogo. */
+	catalog_id?: string;
 	reps?: string;
 	sets?: number;
 	rest_seconds?: number;
@@ -408,6 +411,23 @@ export type PlanExercise = {
 		page_number?: number;
 	}[];
 };
+
+/**
+ * Mapa external_id → metadata do catálogo (videoUrl, instruções PT, etc).
+ * Usado pra renderizar vídeo demonstrativo na ficha do aluno.
+ */
+export type CatalogEntry = {
+	externalId: string;
+	name: string;
+	nameEn: string;
+	videoUrl: string | null;
+	instructions: string[];
+	bodyPart: string;
+	targetMuscle: string;
+	equipment: string | null;
+	difficulty: string | null;
+};
+export type CatalogMap = Record<string, CatalogEntry>;
 
 /**
  * Mapa de chunk_id → metadata da fonte (título, org, ano, página).
@@ -452,6 +472,8 @@ export type PlanDetail = {
 	publishedAt: Date | null;
 	planData: PlanData;
 	sourceMap: SourceMap;
+	/** external_id → catálogo (vídeo + instruções) pros exercícios do plano. */
+	catalogMap: CatalogMap;
 };
 
 /**
@@ -561,6 +583,53 @@ async function collectAndEnrichSources(planData: PlanData): Promise<SourceMap> {
 	return map;
 }
 
+/**
+ * Coleta todos os catalog_ids referenciados nos exercícios do plano e
+ * carrega as linhas do exercise_catalog. O resultado vira um map
+ * external_id → { videoUrl, instruções PT, etc } usado pelo UI pra
+ * mostrar vídeo demonstrativo.
+ */
+async function collectAndEnrichCatalog(planData: PlanData): Promise<CatalogMap> {
+	const ids = new Set<string>();
+	for (const session of planData.weekly_sessions ?? []) {
+		for (const block of [session.warmup ?? [], session.main ?? [], session.cooldown ?? []]) {
+			for (const ex of block) {
+				if (ex.catalog_id && /^\d{4,5}$/.test(ex.catalog_id)) ids.add(ex.catalog_id);
+			}
+		}
+	}
+	if (ids.size === 0) return {};
+	const rows = await db
+		.select({
+			externalId: exerciseCatalog.externalId,
+			name: exerciseCatalog.name,
+			nameEn: exerciseCatalog.nameEn,
+			videoUrl: exerciseCatalog.videoUrl,
+			instructions: exerciseCatalog.instructions,
+			bodyPart: exerciseCatalog.bodyPart,
+			targetMuscle: exerciseCatalog.targetMuscle,
+			equipment: exerciseCatalog.equipment,
+			difficulty: exerciseCatalog.difficulty
+		})
+		.from(exerciseCatalog)
+		.where(inArray(exerciseCatalog.externalId, [...ids]));
+	const map: CatalogMap = {};
+	for (const r of rows) {
+		map[r.externalId] = {
+			externalId: r.externalId,
+			name: r.name,
+			nameEn: r.nameEn,
+			videoUrl: r.videoUrl,
+			instructions: r.instructions ?? [],
+			bodyPart: r.bodyPart,
+			targetMuscle: r.targetMuscle,
+			equipment: r.equipment,
+			difficulty: r.difficulty
+		};
+	}
+	return map;
+}
+
 export async function getPlanDetail(
 	planId: string,
 	professionalId: string
@@ -582,7 +651,10 @@ export async function getPlanDetail(
 	const r = rows[0];
 	if (!r) return null;
 	const planData = (r.planData as PlanData) ?? {};
-	const sourceMap = await collectAndEnrichSources(planData);
+	const [sourceMap, catalogMap] = await Promise.all([
+		collectAndEnrichSources(planData),
+		collectAndEnrichCatalog(planData)
+	]);
 	return {
 		id: r.id,
 		studentName: r.studentName ?? '—',
@@ -592,7 +664,8 @@ export async function getPlanDetail(
 		createdAt: r.createdAt,
 		publishedAt: r.publishedAt,
 		planData,
-		sourceMap
+		sourceMap,
+		catalogMap
 	};
 }
 
