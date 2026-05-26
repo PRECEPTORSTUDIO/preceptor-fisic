@@ -325,6 +325,9 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	lines.push(
 		'3. Quando escolher do catálogo, use o nome EXATO do catálogo no campo `name` (não invente variações), e copie o external_id PRECISO em `catalog_id`.'
 	);
+	lines.push(
+		'4. CONCISÃO: gere EXATAMENTE 2 sessões semanais (não 3, não mais — qualidade > quantidade). `execution_notes` de cada exercício em 1-2 frases curtas, direto ao ponto. monitoring_parameters: 2-3 itens essenciais. restrictions: só se houver red flag clínico real.'
+	);
 
 	return lines.join('\n');
 }
@@ -398,6 +401,9 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 		const streamPlan = async (model: string) => {
 			let lastWriteAt = 0;
 			let lastSessionsCount = 0;
+			/** Última partial structured emitida — usada como salvamento
+			 *  se o stream abortar antes de terminar. */
+			let lastPartial: unknown = null;
 
 			// Timer de progresso — garante movimento visual mesmo se o
 			// partialObjectStream do Gemini não emitir incrementalmente
@@ -457,6 +463,9 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 							.where(eq(trainingPlans.id, planId))
 							.catch(() => {});
 					} else if (event.type === 'object') {
+						// Salva antes do throttle — partial mais recente sempre
+						// disponível pra fallback se abortar.
+						lastPartial = event.object;
 						const sessions =
 							(event.object as { weekly_sessions?: unknown[] }).weekly_sessions ?? [];
 						const sessionsCount = Array.isArray(sessions) ? sessions.length : 0;
@@ -499,6 +508,28 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 				}
 
 				return { object: await result.object, usage: await result.usage };
+			} catch (streamErr) {
+				// Salvamento: se o stream foi abortado pelo nosso timeout mas
+				// o último partial valida contra o schema (monitoring/restrictions
+				// agora têm default([])), devolvemos o plano mesmo assim. Melhor
+				// um plano bom-o-suficiente que `failed` no rosto do user.
+				const msg = streamErr instanceof Error ? streamErr.message : String(streamErr);
+				const wasAbort = /aborted|timeout|AbortError/i.test(msg);
+				if (wasAbort && lastPartial) {
+					const parsed = trainingPlanSchema.safeParse(lastPartial);
+					if (parsed.success) {
+						log.warn(
+							{ sessions: parsed.data.weekly_sessions.length },
+							'plan.generate.salvaged_from_timeout'
+						);
+						return { object: parsed.data, usage: undefined };
+					}
+					log.warn(
+						{ msg: msg.slice(0, 150), parseIssues: parsed.error.issues.length },
+						'plan.generate.salvage_failed_partial_invalid'
+					);
+				}
+				throw streamErr;
 			} finally {
 				clearInterval(progressTimer);
 			}

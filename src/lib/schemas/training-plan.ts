@@ -44,6 +44,10 @@ export const sourceRefSchema = z
 	);
 
 export const exerciseSchema = z.object({
+	// Schema enxuto: cada exercício menor = LLM mais ágil. min(40) em
+	// execution_notes forçava parágrafo por exercício, com 20+ exercícios
+	// no plano isso somava muito output token. min(10) deixa o modelo ser
+	// conciso quando faz sentido (ex: bodyweight simples).
 	name: z.string().min(2).max(400),
 	/**
 	 * external_id do exercise_catalog (ExerciseDB Pro) quando o exercício
@@ -59,7 +63,7 @@ export const exerciseSchema = z.object({
 	load_guidance: z.string().min(2).max(400),
 	rest_seconds: z.number().int().min(0).max(900),
 	tempo: z.string().optional(),
-	execution_notes: z.string().min(40).max(3000),
+	execution_notes: z.string().min(10).max(3000),
 	contraindications: z.array(z.string()).default([]),
 	source_refs: z.array(sourceRefSchema).default([])
 });
@@ -100,8 +104,13 @@ export const restrictionSchema = z.object({
 export const trainingPlanSchema = z.object({
 	summary: z.string().min(80).max(2000),
 	progression_strategy: z.string().min(120).max(3000),
-	weekly_sessions: z.array(sessionSchema).min(1).max(7),
-	monitoring_parameters: z.array(monitoringParameterSchema).min(1),
+	// Cap em 3 sessões — Hobby tem 60s pra gerar tudo. Schema antes pedia
+	// até 7, LLM gerava 3-4 e estourava o tempo. min(1) garante pelo menos 1.
+	weekly_sessions: z.array(sessionSchema).min(1).max(3),
+	// Monitoring relaxado pra .default([]) (era min(1)). LLM emite esses
+	// campos POR ÚLTIMO; quando aborta no timeout, o partial até as sessões
+	// ainda é válido e o plano vai pra `generated` em vez de `failed`.
+	monitoring_parameters: z.array(monitoringParameterSchema).default([]),
 	assessment_protocols: z.array(assessmentProtocolSchema).default([]),
 	restrictions: z.array(restrictionSchema).default([])
 });

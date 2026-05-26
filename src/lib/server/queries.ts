@@ -479,8 +479,20 @@ export type PlanDetail = {
 /**
  * Coleta todos os chunk_id e source_id citados em planData e enriquece com
  * metadata da fonte (título, org, ano, página, trecho). Single query — sem N+1.
+ *
+ * Wrapper defensivo: planos failed têm planData parcial. Erro aqui não
+ * deve derrubar a página inteira com 500.
  */
 async function collectAndEnrichSources(planData: PlanData): Promise<SourceMap> {
+	try {
+		return await collectAndEnrichSourcesInner(planData);
+	} catch (err) {
+		console.error('collectAndEnrichSources.failed', String(err).slice(0, 300));
+		return {};
+	}
+}
+
+async function collectAndEnrichSourcesInner(planData: PlanData): Promise<SourceMap> {
 	const chunkIds = new Set<string>();
 	const sourceIds = new Set<string>();
 
@@ -588,13 +600,32 @@ async function collectAndEnrichSources(planData: PlanData): Promise<SourceMap> {
  * carrega as linhas do exercise_catalog. O resultado vira um map
  * external_id → { videoUrl, instruções PT, etc } usado pelo UI pra
  * mostrar vídeo demonstrativo.
+ *
+ * Defensivo: planos de status=failed têm planData PARCIAL (sessões sem
+ * warmup/cooldown, exercícios incompletos). Qualquer throw aqui derruba
+ * a página inteira com 500. try/catch garante que a página renderiza
+ * mesmo se o enriquecimento falhar — UI degrada para "sem vídeo" em vez
+ * de quebrar tudo.
  */
 async function collectAndEnrichCatalog(planData: PlanData): Promise<CatalogMap> {
+	try {
+		return await collectAndEnrichCatalogInner(planData);
+	} catch (err) {
+		console.error('collectAndEnrichCatalog.failed', String(err).slice(0, 300));
+		return {};
+	}
+}
+
+async function collectAndEnrichCatalogInner(planData: PlanData): Promise<CatalogMap> {
 	const ids = new Set<string>();
 	for (const session of planData.weekly_sessions ?? []) {
+		if (!session || typeof session !== 'object') continue;
 		for (const block of [session.warmup ?? [], session.main ?? [], session.cooldown ?? []]) {
+			if (!Array.isArray(block)) continue;
 			for (const ex of block) {
-				if (ex.catalog_id && /^\d{4,5}$/.test(ex.catalog_id)) ids.add(ex.catalog_id);
+				if (ex && typeof ex === 'object' && typeof ex.catalog_id === 'string' && /^\d{4,5}$/.test(ex.catalog_id)) {
+					ids.add(ex.catalog_id);
+				}
 			}
 		}
 	}
