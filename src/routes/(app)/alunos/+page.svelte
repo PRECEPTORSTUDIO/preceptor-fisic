@@ -312,9 +312,16 @@
 		cursor: pointer;
 		display: grid;
 		grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 1.3fr) 96px 88px 72px 32px;
+		/* IMPORTANTE: re-declara gap + align-items DEPOIS do all:unset,
+		   senão a row tem gap=0 enquanto o header tem gap=18px → as
+		   colunas fr ficam com larguras diferentes, desalinhando tudo. */
+		gap: 18px;
+		align-items: center;
 		padding: 14px 18px;
 		border-top: 1px solid var(--ink-line);
 		transition: background 140ms var(--ease);
+		box-sizing: border-box;
+		width: 100%;
 	}
 	.row-aluno {
 		display: flex;
