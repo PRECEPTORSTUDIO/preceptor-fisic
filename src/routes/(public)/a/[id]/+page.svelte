@@ -85,6 +85,20 @@
 	const todaySession = $derived(todaySessionIdx >= 0 ? sessions[todaySessionIdx] : null);
 	const exerciseCount = $derived(todaySession ? (todaySession.main?.length ?? 0) : 0);
 
+	// Thumbnails dos primeiros exercícios da sessão de hoje — só os que
+	// têm catalog_id e vídeo resolvido no load. Limita a 6 pra não pesar.
+	const videoByCatalogId = $derived(
+		(data.videoByCatalogId ?? {}) as Record<string, string>
+	);
+	const todayThumbnails = $derived(
+		todaySession
+			? ((todaySession.main ?? []) as Array<{ name: string; catalog_id?: string }>)
+					.map((ex) => ({ name: ex.name, src: ex.catalog_id ? videoByCatalogId[ex.catalog_id] : undefined }))
+					.filter((t): t is { name: string; src: string } => Boolean(t.src))
+					.slice(0, 6)
+			: []
+	);
+
 	const recentDone = $derived(recent.length);
 	const weeklyTarget = 5; // tomar do prefs.weeklySessions futuramente
 </script>
@@ -139,6 +153,26 @@
 							</div>
 						{/each}
 					</div>
+
+					{#if todayThumbnails.length > 0}
+						<div class="thumb-strip" aria-label="Prévia dos exercícios">
+							{#each todayThumbnails as t (t.src)}
+								<div class="thumb-card" title={t.name}>
+									<!-- svelte-ignore a11y_media_has_caption -->
+									<video
+										src={t.src}
+										autoplay
+										loop
+										muted
+										playsinline
+										preload="metadata"
+										class="thumb-vid"
+									></video>
+									<div class="thumb-label">{t.name}</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
 
 					<button class="cta" onclick={() => goto(`/a/${student.id}/treino/${todaySessionIdx}${tq}`)}>
 						Iniciar treino →
@@ -391,6 +425,40 @@
 		font: 500 16px var(--font-sans);
 		letter-spacing: -0.01em;
 		box-shadow: 0 8px 24px rgba(167, 139, 250, 0.3);
+	}
+	.thumb-strip {
+		display: flex;
+		gap: 10px;
+		overflow-x: auto;
+		padding: 4px 4px 16px;
+		margin: 0 -4px 14px;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+	}
+	.thumb-strip::-webkit-scrollbar { display: none; }
+	.thumb-card {
+		flex: 0 0 96px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.thumb-vid {
+		width: 96px;
+		height: 96px;
+		object-fit: cover;
+		border-radius: var(--r-2);
+		background: var(--bg-2);
+		border: 1px solid var(--ink-line-2);
+	}
+	.thumb-label {
+		font: 400 11px var(--font-sans);
+		color: var(--ink-2);
+		line-height: 1.2;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.stats-row {
 		padding: 0 16px 16px;
