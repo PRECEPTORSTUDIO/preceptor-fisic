@@ -88,7 +88,7 @@
 			<!-- Tabela em desktop -->
 			<div class="card students-table">
 				<div class="students-thead">
-					<span></span><span>Aluno</span><span>Plano</span><span>Aderência</span><span>7d sessões</span><span>Última</span><span>Streak</span><span></span>
+					<span>Aluno</span><span>Plano</span><span>Aderência</span><span>7d sessões</span><span>Última</span><span>Streak</span><span></span>
 				</div>
 				{#each filtered as s (s.id)}
 					<button
@@ -99,15 +99,17 @@
 						class="students-row"
 						class:hot={hover === s.id}
 					>
-						<Avatar name={s.name} size={36} />
-						<div>
-							<div style="display:flex;align-items:center;gap:8px">
-								<span style="font:500 14px var(--font-sans);color:var(--ink-0)">{s.name}</span>
-								<StatusDot variant={s.status === 'active' ? 'success' : 'muted'} />
+						<div class="row-aluno">
+							<Avatar name={s.name} size={36} />
+							<div class="row-aluno-info">
+								<div style="display:flex;align-items:center;gap:8px">
+									<span style="font:500 14px var(--font-sans);color:var(--ink-0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{s.name}</span>
+									<StatusDot variant={s.status === 'active' ? 'success' : 'muted'} />
+								</div>
+								<div
+									style="font:var(--label-mono);color:var(--ink-2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+								>{s.age ? s.age + ' anos · ' : ''}{s.goal ?? 'sem objetivo'}</div>
 							</div>
-							<div
-								style="font:var(--label-mono);color:var(--ink-2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px"
-							>{s.age ? s.age + ' anos · ' : ''}{s.goal ?? 'sem objetivo'}</div>
 						</div>
 						<div style="font:var(--body-sm);color:var(--ink-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 							{s.planTitle ?? '—'}
@@ -211,6 +213,13 @@
 		z-index: 10;
 		gap: 14px;
 	}
+	/* Em telas largas, centraliza o conteúdo do header pra alinhar com .al-main */
+	@media (min-width: 1024px) {
+		.al-header {
+			padding-left: max(32px, calc((100vw - 1440px) / 2 + 32px));
+			padding-right: max(32px, calc((100vw - 1440px) / 2 + 32px));
+		}
+	}
 	.al-h1 {
 		margin: 6px 0 0;
 		font: 600 22px var(--font-sans);
@@ -254,6 +263,10 @@
 		gap: 20px;
 		overflow-y: auto;
 		flex: 1;
+		max-width: 1440px;
+		width: 100%;
+		margin: 0 auto;
+		box-sizing: border-box;
 	}
 
 	/* Cards visível só em mobile */
@@ -263,7 +276,11 @@
 	.students-thead,
 	.students-row {
 		display: grid;
-		grid-template-columns: 40px 2fr 1fr 1fr 100px 80px 60px 40px;
+		/* Auno (avatar + nome+idade) + Plano + Aderência (mais espaço pro
+		   bar) + 3 métricas compactas no fim. Proporção 1.4 : 1.1 : 1.3 :
+		   métricas fixas dá distribuição equilibrada em telas largas
+		   sem buraco gigante no meio. */
+		grid-template-columns: 1.4fr 1.1fr 1.3fr 96px 88px 72px 32px;
 		gap: 18px;
 		align-items: center;
 		padding: 12px 18px;
@@ -275,14 +292,29 @@
 		letter-spacing: 0.08em;
 		background: var(--bg-1);
 	}
+	.students-thead :global(.thead-aluno) {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
 	.students-row {
 		all: unset;
 		cursor: pointer;
 		display: grid;
-		grid-template-columns: 40px 2fr 1fr 1fr 100px 80px 60px 40px;
+		grid-template-columns: 1.4fr 1.1fr 1.3fr 96px 88px 72px 32px;
 		padding: 14px 18px;
 		border-top: 1px solid var(--ink-line);
 		transition: background 140ms var(--ease);
+	}
+	.row-aluno {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		min-width: 0;
+	}
+	.row-aluno-info {
+		min-width: 0;
+		flex: 1;
 	}
 	.students-row.hot {
 		background: var(--bg-2);
