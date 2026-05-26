@@ -4,7 +4,7 @@ import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 48;
 
-export const load: PageServerLoad = async ({ parent, url }) => {
+export const load = (async ({ parent, url }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -34,4 +34,4 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 		pageSize: PAGE_SIZE,
 		filters: { query: query ?? '', bodyPart: bodyPart ?? '', equipment: equipment ?? '', difficulty: difficulty ?? '' }
 	};
-};
+}) satisfies PageServerLoad;

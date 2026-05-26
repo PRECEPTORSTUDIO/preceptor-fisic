@@ -90,6 +90,7 @@ function parseRpe(s: string | undefined): number | null {
 	const m = s.match(/RPE\s*(\d+(?:[.,]\d+)?)\s*(?:[-–a]\s*(\d+(?:[.,]\d+)?))?/i);
 	if (!m) return null;
 	const high = m[2] ?? m[1];
+	if (!high) return null;
 	return Number(high.replace(',', '.'));
 }
 

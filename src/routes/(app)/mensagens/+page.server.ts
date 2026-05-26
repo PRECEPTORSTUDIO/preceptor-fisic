@@ -1,8 +1,13 @@
 import { error, fail } from '@sveltejs/kit';
-import { getConversationThreads, getMessagesForThread, postMessage } from '$lib/server/queries';
+import {
+	getConversationThreads,
+	getMessagesForThread,
+	postMessage,
+	getProfessionalByAuthId
+} from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url, parent }) => {
+export const load = (async ({ url, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -11,11 +16,13 @@ export const load: PageServerLoad = async ({ url, parent }) => {
 	const activeMessages = activeId ? await getMessagesForThread(activeId) : [];
 
 	return { threads, activeId, activeMessages };
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
-	send: async ({ request, parent }) => {
-		const { professional } = await parent();
+	send: async ({ request, locals }) => {
+		// Actions não têm parent(); resolve professional via locals.user.
+		if (!locals.user) return fail(401, { error: 'não autenticado' });
+		const professional = await getProfessionalByAuthId(locals.user.id);
 		if (!professional) return fail(401, { error: 'não autenticado' });
 		const data = await request.formData();
 		const conversationId = String(data.get('conversationId') ?? '');

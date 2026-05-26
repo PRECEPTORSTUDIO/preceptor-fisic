@@ -12,12 +12,10 @@
 	let date = $state(startDate.toISOString().slice(0, 10));
 	let time = $state(startDate.toTimeString().slice(0, 5));
 	let studentId = $state(a.studentId ?? '');
-	let type = $state<'treino' | 'avaliacao' | 'reabilitacao' | 'consulta'>(
-		(a.type as typeof type) ?? 'treino'
-	);
-	let status = $state<'scheduled' | 'completed' | 'cancelled'>(
-		(a.status as typeof status) ?? 'scheduled'
-	);
+	type AgendaType = 'treino' | 'avaliacao' | 'reabilitacao' | 'consulta';
+	type AgendaStatus = 'scheduled' | 'completed' | 'cancelled';
+	let type = $state<AgendaType>((a.type as AgendaType) ?? 'treino');
+	let status = $state<AgendaStatus>((a.status as AgendaStatus) ?? 'scheduled');
 	let duration = $state(a.durationMinutes);
 	let label = $state(a.label ?? '');
 	let notes = $state(a.notes ?? '');

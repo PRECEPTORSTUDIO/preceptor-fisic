@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { getStudentsByProfessional, getDashboardStats } from '$lib/server/queries';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load = (async ({ parent }) => {
 	const { professional } = await parent();
 	if (!professional) {
 		// Sem auth/professional — devolve mock pra UI continuar funcional em modo design
@@ -15,4 +15,4 @@ export const load: PageServerLoad = async ({ parent }) => {
 	]);
 
 	return { students, stats, professional };
-};
+}) satisfies PageServerLoad;

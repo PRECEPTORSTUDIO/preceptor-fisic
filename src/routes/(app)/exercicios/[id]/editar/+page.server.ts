@@ -7,7 +7,7 @@ import {
 } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load = (async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	if (!ex) error(404, 'exercício não encontrado');
 
 	return { exercise: ex };
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
 	save: async ({ params, request, locals }) => {

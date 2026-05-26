@@ -67,7 +67,7 @@
 		</div>
 
 		{#if view === 'grid'}
-			<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
+			<div class="planos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
 				{#each filtered as p (p.id)}
 					<button
 						type="button"
@@ -119,9 +119,7 @@
 			</div>
 		{:else}
 			<div class="card" style="padding:0">
-				<div
-					style="display:grid;grid-template-columns:1.5fr 2fr 100px 100px 120px 60px;gap:16px;padding:12px 20px;border-bottom:1px solid var(--ink-line-2);background:var(--bg-3)"
-				>
+				<div class="planos-list-head">
 					{#each ['Aluno', 'Plano', 'Sessões', 'Status', 'Criado', ''] as h (h)}
 						<div class="eyebrow">{h}</div>
 					{/each}
@@ -130,19 +128,17 @@
 					<button
 						type="button"
 						onclick={() => goto(`/planos/${p.id}`)}
-						style="all:unset;cursor:pointer;display:grid;grid-template-columns:1.5fr 2fr 100px 100px 120px 60px;gap:16px;padding:14px 20px;align-items:center;{i <
-						filtered.length - 1
-							? 'border-bottom:1px solid var(--ink-line)'
-							: ''};width:100%;box-sizing:border-box"
+						class="planos-list-row"
+						class:last={i === filtered.length - 1}
 					>
-						<div style="font:500 14px var(--font-sans);color:var(--ink-0)">{p.studentName}</div>
-						<div style="font:var(--body-sm);color:var(--ink-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+						<div class="cell-aluno" style="font:500 14px var(--font-sans);color:var(--ink-0)">{p.studentName}</div>
+						<div class="cell-plano" style="font:var(--body-sm);color:var(--ink-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 							{p.title}
 						</div>
-						<div class="num" style="font:500 14px var(--font-mono);color:var(--ink-0)">{p.sessionsTotal}</div>
-						<Chip variant={p.isActive ? 'active' : 'default'}>{p.status}</Chip>
-						<div class="num" style="font:var(--label-mono);color:var(--ink-2)">{new Date(p.createdAt).toLocaleDateString('pt-BR')}</div>
-						<span style="color:var(--accent);text-align:right">→</span>
+						<div class="cell-sessoes num" style="font:500 14px var(--font-mono);color:var(--ink-0)">{p.sessionsTotal}</div>
+						<div class="cell-status"><Chip variant={p.isActive ? 'active' : 'default'}>{p.status}</Chip></div>
+						<div class="cell-data num" style="font:var(--label-mono);color:var(--ink-2)">{new Date(p.createdAt).toLocaleDateString('pt-BR')}</div>
+						<span class="cell-arrow" style="color:var(--accent);text-align:right">→</span>
 					</button>
 				{/each}
 			</div>
@@ -178,9 +174,32 @@
 		gap: 8px;
 		flex-shrink: 0;
 	}
+	.planos-list-head {
+		display: grid;
+		grid-template-columns: 1.5fr 2fr 100px 100px 120px 60px;
+		gap: 16px;
+		padding: 12px 20px;
+		border-bottom: 1px solid var(--ink-line-2);
+		background: var(--bg-3);
+	}
+	.planos-list-row {
+		all: unset;
+		cursor: pointer;
+		display: grid;
+		grid-template-columns: 1.5fr 2fr 100px 100px 120px 60px;
+		gap: 16px;
+		padding: 14px 20px;
+		align-items: center;
+		width: 100%;
+		box-sizing: border-box;
+		border-bottom: 1px solid var(--ink-line);
+	}
+	.planos-list-row.last {
+		border-bottom: 0;
+	}
 	@media (max-width: 1023px) {
 		.planos-main {
-			padding: 16px 18px 32px;
+			padding: 16px 14px 32px;
 		}
 		.planos-header {
 			flex-direction: column;
@@ -199,6 +218,49 @@
 		.planos-actions :global(.pf-btn) {
 			flex: 1;
 			justify-content: center;
+		}
+		.planos-grid {
+			grid-template-columns: 1fr !important;
+		}
+		/* Lista compacta: header some, linha vira card de 2 linhas */
+		.planos-list-head {
+			display: none;
+		}
+		.planos-list-row {
+			grid-template-columns: 1fr auto;
+			grid-template-areas:
+				'aluno arrow'
+				'plano data'
+				'sessoes status';
+			row-gap: 6px;
+			padding: 14px 16px;
+		}
+		.cell-aluno {
+			grid-area: aluno;
+		}
+		.cell-plano {
+			grid-area: plano;
+			max-width: 100%;
+		}
+		.cell-data {
+			grid-area: data;
+			text-align: right;
+		}
+		.cell-arrow {
+			grid-area: arrow;
+		}
+		.cell-sessoes {
+			grid-area: sessoes;
+			justify-self: start;
+		}
+		.cell-sessoes::after {
+			content: ' sessões';
+			font: var(--label-mono);
+			color: var(--ink-3);
+		}
+		.cell-status {
+			grid-area: status;
+			justify-self: end;
 		}
 	}
 </style>

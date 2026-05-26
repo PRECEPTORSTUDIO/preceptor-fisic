@@ -11,6 +11,7 @@
 		style?: string;
 		type?: 'button' | 'submit' | 'reset';
 		disabled?: boolean;
+		title?: string;
 		onclick?: (e: MouseEvent) => void;
 	};
 
@@ -22,6 +23,7 @@
 		style = '',
 		type = 'button',
 		disabled = false,
+		title,
 		onclick
 	}: Props = $props();
 
@@ -31,6 +33,7 @@
 <button
 	{type}
 	{disabled}
+	{title}
 	class="pf-btn pf-btn--{variant} pf-btn--{size}"
 	class:is-hover={hover}
 	{style}

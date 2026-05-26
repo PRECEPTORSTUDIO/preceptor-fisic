@@ -4,7 +4,7 @@ import { signStudentToken } from '$lib/server/aluno-token';
 import { sendStudentMagicLink } from '$lib/server/email';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent, url }) => {
+export const load = (async ({ params, parent, url }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const alunoUrl = `${url.origin}/a/${params.id}?t=${token}`;
 
 	return { detail, alunoUrl };
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
 	resendMagicLink: async ({ params, locals, url }) => {

@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { getProfessionalByAuthId } from '$lib/server/queries';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load = (async ({ locals }) => {
 	if (!locals.user) {
 		// Sem auth (modo design) — devolve null pro layout/páginas tratarem
 		return { professional: null, user: null, sidebarCounts: null };
@@ -48,4 +48,4 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			unreadMessages: Number(counts?.unread_messages ?? 0)
 		}
 	};
-};
+}) satisfies LayoutServerLoad;

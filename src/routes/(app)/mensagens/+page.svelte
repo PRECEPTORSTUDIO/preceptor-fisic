@@ -85,7 +85,7 @@
 		</div>
 		<div style="display:flex;gap:4px;padding:10px 16px;border-bottom:1px solid var(--ink-line)">
 			{#each [['all', 'Todas'], ['unread', 'Não lidas']] as [k, l] (k)}
-				<Chip active={activeFilter === k} onclick={() => (activeFilter = k)}>
+				<Chip active={activeFilter === k} onclick={() => k && (activeFilter = k)}>
 					{l}
 					{#if k === 'all'}<span class="num" style="margin-left:4px">{threads.length}</span>{/if}
 					{#if k === 'unread'}<span class="num" style="margin-left:4px;color:var(--accent)">{totalUnread}</span>{/if}

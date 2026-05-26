@@ -51,20 +51,22 @@
 	);
 </script>
 
-<div style="flex:1;overflow-y:auto;background:var(--bg-0)">
-	<div style="padding:32px 40px;border-bottom:1px solid var(--ink-line)">
+<div class="cfg-page" style="flex:1;overflow-y:auto;background:var(--bg-0)">
+	<div class="cfg-pagehead" style="padding:32px 40px;border-bottom:1px solid var(--ink-line)">
 		<div class="eyebrow" style="margin-bottom:6px">Configurações</div>
 		<h1 style="font:500 32px var(--font-sans);margin:0;letter-spacing:-0.02em">Conta e preferências</h1>
 	</div>
 
-	<div style="display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 130px)">
+	<div class="cfg-grid" style="display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 130px)">
 		<!-- Sub-nav -->
-		<div style="border-right:1px solid var(--ink-line);padding:20px 12px">
-			<div style="display:flex;flex-direction:column;gap:2px">
+		<div class="cfg-subnav" style="border-right:1px solid var(--ink-line);padding:20px 12px">
+			<div class="cfg-tabs">
 				{#each TABS as t (t.id)}
 					{@const on = tab === t.id}
 					<button
 						onclick={() => (tab = t.id)}
+						class="cfg-tab"
+						class:on
 						style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:{on
 							? 'var(--bg-3)'
 							: 'transparent'};border:0;cursor:pointer;border-radius:var(--r-2);color:{on
@@ -78,7 +80,7 @@
 			</div>
 		</div>
 
-		<div style="padding:32px 40px 80px;max-width:760px">
+		<div class="cfg-content" style="padding:32px 40px 80px;max-width:760px">
 			{#if tab === 'perfil'}
 				<form
 					method="POST"
@@ -402,5 +404,48 @@
 	}
 	.settings-inp:disabled {
 		opacity: 0.6;
+	}
+	.cfg-tabs {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	@media (max-width: 1023px) {
+		.cfg-pagehead {
+			padding: 16px 16px !important;
+		}
+		.cfg-pagehead :global(h1) {
+			font-size: 22px !important;
+		}
+		.cfg-grid {
+			grid-template-columns: 1fr !important;
+			min-height: auto !important;
+		}
+		.cfg-subnav {
+			border-right: 0 !important;
+			border-bottom: 1px solid var(--ink-line);
+			padding: 12px 8px !important;
+			overflow-x: auto;
+		}
+		.cfg-tabs {
+			display: flex !important;
+			flex-direction: row !important;
+			flex-wrap: nowrap;
+			gap: 6px !important;
+			min-width: max-content;
+		}
+		.cfg-tab {
+			flex-shrink: 0;
+			white-space: nowrap;
+		}
+		.cfg-content {
+			padding: 16px 14px 48px !important;
+			max-width: none !important;
+		}
+		/* Forms: 180px label + 1fr input → label em cima do input */
+		.cfg-content :global(div[style*="grid-template-columns:180px 1fr"]) {
+			grid-template-columns: 1fr !important;
+			gap: 8px !important;
+		}
 	}
 </style>

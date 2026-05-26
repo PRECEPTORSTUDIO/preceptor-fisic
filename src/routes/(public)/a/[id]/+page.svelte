@@ -173,26 +173,28 @@
 					HISTÓRICO →
 				</a>
 			</div>
-			{#each sessions as s, i (i)}
-				{@const isToday = i === todaySessionIdx}
-				<button
-					class="session-card"
-					class:today={isToday}
-					onclick={() => goto(`/a/${student.id}/treino/${i}${tq}`)}
-				>
-					<div class="session-letter" class:today={isToday}>{String.fromCharCode(65 + i)}</div>
-					<div style="flex:1;min-width:0;text-align:left">
-						<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-							<span style="font:500 16px var(--font-sans);color:var(--ink-0)">{s.label ?? `Treino ${String.fromCharCode(65 + i)}`}</span>
-							{#if isToday}<Chip variant="active">● hoje</Chip>{/if}
+			<div class="sessions-list">
+				{#each sessions as s, i (i)}
+					{@const isToday = i === todaySessionIdx}
+					<button
+						class="session-card"
+						class:today={isToday}
+						onclick={() => goto(`/a/${student.id}/treino/${i}${tq}`)}
+					>
+						<div class="session-letter" class:today={isToday}>{String.fromCharCode(65 + i)}</div>
+						<div style="flex:1;min-width:0;text-align:left">
+							<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+								<span style="font:500 16px var(--font-sans);color:var(--ink-0)">{s.label ?? `Treino ${String.fromCharCode(65 + i)}`}</span>
+								{#if isToday}<Chip variant="active">● hoje</Chip>{/if}
+							</div>
+							<div style="font:var(--body-sm);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+								{s.focus ?? `${s.main?.length ?? 0} exercícios · ${s.duration_minutes ?? '—'} min`}
+							</div>
 						</div>
-						<div style="font:var(--body-sm);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-							{s.focus ?? `${s.main?.length ?? 0} exercícios · ${s.duration_minutes ?? '—'} min`}
-						</div>
-					</div>
-					<span class="num" style="font:var(--label-mono);color:var(--ink-2)">{s.main?.length ?? 0} ex</span>
-				</button>
-			{/each}
+						<span class="num" style="font:var(--label-mono);color:var(--ink-2)">{s.main?.length ?? 0} ex</span>
+					</button>
+				{/each}
+			</div>
 		</div>
 
 		<!-- Mensagem do treinador -->
@@ -238,9 +240,10 @@
 				{/each}
 			</div>
 			{#if onboardingSteps[onboardingStep]}
-				<div class="onb-icon">{onboardingSteps[onboardingStep].icon}</div>
-				<h2 class="onb-title">{onboardingSteps[onboardingStep].title}</h2>
-				<p class="onb-body">{onboardingSteps[onboardingStep].body}</p>
+				{@const step = onboardingSteps[onboardingStep]!}
+				<div class="onb-icon">{step.icon}</div>
+				<h2 class="onb-title">{step.title}</h2>
+				<p class="onb-body">{step.body}</p>
 			{/if}
 			<div class="onb-actions">
 				<button type="button" class="onb-skip" onclick={dismissOnboarding}>Pular</button>
@@ -263,6 +266,95 @@
 		padding: 18px 20px 14px;
 		position: relative;
 		overflow: hidden;
+	}
+	.sessions-list {
+		display: flex;
+		flex-direction: column;
+	}
+	/* ═══════════════════════════════════════════════════════════
+	   Desktop dashboard mode (>= 1024px)
+	   Reorganiza pra grid de cards estilo dashboard de PC.
+	   Mobile permanece intocada — tudo dentro de @media só ativa
+	   no breakpoint de desktop.
+	   ═══════════════════════════════════════════════════════════ */
+	@media (min-width: 1024px) {
+		.page {
+			padding-bottom: 24px;
+			gap: 20px;
+		}
+		.header {
+			padding: 8px 8px 0;
+		}
+		.empty {
+			padding: 80px 24px;
+		}
+		.hero-card-wrap {
+			padding: 0 8px;
+		}
+		.hero-card {
+			padding: 36px 40px;
+		}
+		.cta {
+			max-width: 320px;
+		}
+		.stats-row {
+			padding: 0 8px;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 16px;
+		}
+		.card.mini {
+			padding: 24px;
+		}
+		.section {
+			padding: 0 8px;
+		}
+		.section-header {
+			margin-bottom: 16px;
+		}
+		.sessions-list {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 12px;
+		}
+		.session-card {
+			margin-bottom: 0;
+			padding: 16px 18px;
+		}
+		.msg-card {
+			padding: 22px 24px;
+		}
+		/* Bottom tab bar vira top nav bar no desktop */
+		.tab-bar {
+			position: static;
+			transform: none;
+			max-width: none;
+			width: auto;
+			background: transparent;
+			backdrop-filter: none;
+			-webkit-backdrop-filter: none;
+			border-top: 0;
+			border-bottom: 1px solid var(--ink-line);
+			grid-template-columns: repeat(3, max-content);
+			justify-content: start;
+			gap: 8px;
+			padding: 0 0 14px;
+			margin: 0 8px;
+			z-index: auto;
+			order: -1; /* aparece no topo, antes do header */
+		}
+		.tab-link {
+			flex-direction: row;
+			gap: 10px;
+			padding: 10px 18px;
+			border-radius: var(--r-2);
+			transition: background 140ms var(--ease);
+		}
+		.tab-link:hover {
+			background: var(--bg-2);
+		}
+		.tab-link.on {
+			background: var(--accent-wash);
+		}
 	}
 	.header-glow {
 		position: absolute;

@@ -18,7 +18,7 @@ export const config = {
 const RATE_LIMIT_PLANS = 5;
 const RATE_LIMIT_WINDOW_MIN = 5;
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load = (async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	if (!detail) error(404, 'aluno não encontrado');
 
 	return { detail };
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
 	generate: async ({ params, request, locals }) => {

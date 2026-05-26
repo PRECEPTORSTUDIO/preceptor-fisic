@@ -58,8 +58,9 @@
 	);
 </script>
 
-<div style="overflow:hidden;height:100vh;display:flex;flex-direction:column">
+<div class="ag-shell" style="overflow:hidden;height:100vh;display:flex;flex-direction:column">
 	<header
+		class="ag-header"
 		style="padding:24px 32px 18px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--ink-line);background:var(--bg-1)"
 	>
 		<div>
@@ -87,8 +88,9 @@
 		</div>
 	</header>
 
-	<div style="display:flex;flex:1;overflow:hidden">
+	<div class="ag-body" style="display:flex;flex:1;overflow:hidden">
 		<aside
+			class="ag-aside"
 			style="width:260px;padding:24px;border-right:1px solid var(--ink-line);overflow-y:auto;background:var(--bg-1)"
 		>
 			<Eyebrow>Esta semana</Eyebrow>
@@ -116,8 +118,9 @@
 			</div>
 		</aside>
 
-		<div style="flex:1;overflow:auto;background:var(--bg-0)">
+		<div class="ag-grid-wrap" style="flex:1;overflow:auto;background:var(--bg-0)">
 			<div
+				class="ag-day-head"
 				style="display:grid;grid-template-columns:60px repeat(7, 1fr);position:sticky;top:0;background:var(--bg-1);border-bottom:1px solid var(--ink-line-2);z-index:2"
 			>
 				<div></div>
@@ -139,7 +142,7 @@
 				{/each}
 			</div>
 
-			<div style="display:grid;grid-template-columns:60px repeat(7, 1fr);position:relative">
+			<div class="ag-day-body" style="display:grid;grid-template-columns:60px repeat(7, 1fr);position:relative">
 				<div>
 					{#each HOURS as h (h)}
 						<div style="height:{slot}px;padding:4px 8px 0;text-align:right">
@@ -185,3 +188,36 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	@media (max-width: 1023px) {
+		.ag-shell {
+			height: auto !important;
+			min-height: 100vh;
+		}
+		.ag-header {
+			padding: 14px 16px !important;
+			flex-direction: column !important;
+			align-items: stretch !important;
+			gap: 12px !important;
+		}
+		.ag-header :global(h1) {
+			font-size: 22px !important;
+		}
+		.ag-aside {
+			display: none;
+		}
+		.ag-body {
+			overflow: visible !important;
+		}
+		/* Timeline rola horizontalmente em mobile, com dias largura mínima */
+		.ag-grid-wrap {
+			overflow-x: auto;
+		}
+		.ag-day-head,
+		.ag-day-body {
+			grid-template-columns: 48px repeat(7, minmax(110px, 1fr)) !important;
+			min-width: 820px;
+		}
+	}
+</style>

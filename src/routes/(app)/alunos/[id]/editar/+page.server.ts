@@ -8,7 +8,7 @@ import {
 } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load = (async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	if (!detail) error(404, 'aluno não encontrado');
 
 	return { detail };
-};
+}) satisfies PageServerLoad;
 
 const SexEnum = z.enum(['feminino', 'masculino', 'outro', 'nao_informado']);
 const RiskEnum = z.enum(['baixo', 'moderado', 'alto', 'muito_alto']);

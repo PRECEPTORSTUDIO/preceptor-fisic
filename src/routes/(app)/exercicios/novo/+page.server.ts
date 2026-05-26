@@ -2,11 +2,11 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { getProfessionalByAuthId, createExercise } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load = (async ({ parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 	return {};
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
 	default: async ({ request, locals }) => {

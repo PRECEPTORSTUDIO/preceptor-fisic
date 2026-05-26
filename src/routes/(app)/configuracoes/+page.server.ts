@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { getProfessionalByAuthId, updateProfessional } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load = (async ({ parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 	return { professional };
-};
+}) satisfies PageServerLoad;
 
 const SpecialtyEnum = z.enum([
 	'prescricao_clinica',

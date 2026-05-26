@@ -79,6 +79,7 @@
 
 <div style="flex:1;display:flex;flex-direction:column;background:var(--bg-0);height:100vh;overflow:hidden">
 	<div
+		class="sd-header"
 		style="padding:20px 32px;border-bottom:1px solid var(--ink-line);background:var(--bg-1);display:flex;align-items:center;gap:16px;flex-shrink:0"
 	>
 		<button
@@ -158,7 +159,7 @@
 			</div>
 
 			<!-- Detalhe do exercício ativo -->
-			<div style="overflow-y:auto;padding:32px 40px 80px">
+			<div class="sd-body" style="overflow-y:auto;padding:32px 40px 80px">
 				{#if ex}
 					<div style="max-width:720px;margin:0 auto">
 						<div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:24px">
@@ -328,3 +329,25 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	@media (max-width: 1023px) {
+		.sd-header {
+			padding: 12px 14px !important;
+			flex-wrap: wrap;
+			gap: 10px !important;
+		}
+		.sd-header :global(h1),
+		.sd-header :global(.eyebrow) {
+			font-size: 14px;
+		}
+		.sd-body {
+			padding: 16px 14px 48px !important;
+		}
+		/* Exercise rows: 5-col grid → empilha tudo */
+		.sd-body :global(div[style*="grid-template-columns:40px 1fr 1fr 1fr 100px"]) {
+			grid-template-columns: 36px 1fr !important;
+			row-gap: 4px;
+		}
+	}
+</style>

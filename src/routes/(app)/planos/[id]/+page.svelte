@@ -561,6 +561,49 @@
 				transform: rotate(360deg);
 			}
 		}
+		/* ═══════════════════════════════════════════════
+		   Mobile refactor — modo visualização do plano
+		   Sobrescreve inline styles via !important onde
+		   necessário pra caber em telas pequenas.
+		   ═══════════════════════════════════════════════ */
+		@media (max-width: 1023px) {
+			.pd-header {
+				padding: 12px 14px !important;
+				flex-wrap: wrap;
+				gap: 10px;
+			}
+			.pd-header h1 {
+				font-size: 15px !important;
+				max-width: none !important;
+			}
+			.pd-header-actions {
+				flex-wrap: wrap;
+				gap: 6px !important;
+				width: 100%;
+			}
+			.pd-header-actions :global(.pf-btn) {
+				flex: 1;
+				min-width: 0;
+				font-size: 12px;
+				padding: 6px 10px;
+			}
+			.pd-body {
+				padding: 14px 14px 48px !important;
+			}
+			.pd-resumo-stats {
+				grid-template-columns: 1fr 1fr !important;
+			}
+			.pd-body :global(.card) {
+				padding: 16px !important;
+			}
+			/* O bloco "gerando" (gen-shell) já é estreito, mas reduz padding */
+			.gen-shell {
+				padding: 16px 12px 48px !important;
+			}
+			.gen-frame {
+				gap: 16px;
+			}
+		}
 	</style>
 {:else if hasFailed}
 	<div style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg-0);min-height:80vh">
@@ -577,8 +620,9 @@
 	</div>
 {:else}
 
-<div style="flex:1;overflow-y:auto;background:var(--bg-0)">
+<div class="pd-page" style="flex:1;overflow-y:auto;background:var(--bg-0)">
 	<header
+		class="pd-header"
 		style="display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--ink-line);background:var(--bg-1);position:sticky;top:0;z-index:10"
 	>
 		<div style="display:flex;align-items:center;gap:10px;min-width:0">
@@ -593,7 +637,7 @@
 				</h1>
 			</div>
 		</div>
-		<div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+		<div class="pd-header-actions" style="display:flex;gap:8px;flex-shrink:0;align-items:center">
 			{#if isGenerated}
 				<form
 					method="POST"
@@ -684,7 +728,7 @@
 		</div>
 	{/if}
 
-	<div style="padding:28px 32px 80px;max-width:1100px;margin:0 auto">
+	<div class="pd-body" style="padding:28px 32px 80px;max-width:1100px;margin:0 auto">
 		<!-- Resumo -->
 		<div class="card" style="padding:24px;margin-bottom:20px">
 			<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:24px">
@@ -696,6 +740,7 @@
 			</div>
 
 			<div
+				class="pd-resumo-stats"
 				style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px;padding-top:18px;border-top:1px solid var(--ink-line)"
 			>
 				<div>
@@ -750,7 +795,7 @@
 							</div>
 						{/if}
 						{#if r.source && (r.source.chunk_id || r.source.source_id) && sourceMap[r.source.chunk_id ?? r.source.source_id ?? '']}
-							{@const src = sourceMap[r.source.chunk_id ?? r.source.source_id ?? '']}
+							{@const src = sourceMap[r.source.chunk_id ?? r.source.source_id ?? '']!}
 							<details style="margin-top:12px">
 								<summary
 									style="cursor:pointer;font:var(--label-mono);color:var(--ink-2);user-select:none"

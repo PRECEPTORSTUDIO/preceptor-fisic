@@ -11,11 +11,11 @@ import { checkAndAudit } from '$lib/server/rate-limit';
 import { audit, clientFingerprint } from '$lib/server/audit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load = (async () => {
 	return {
 		appUrl: env.PUBLIC_APP_URL ?? 'https://preceptor-fisic.vercel.app'
 	};
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
 	default: async ({ request, locals, url, getClientAddress }) => {

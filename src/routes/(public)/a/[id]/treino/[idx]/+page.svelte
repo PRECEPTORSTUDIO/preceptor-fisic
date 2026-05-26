@@ -244,6 +244,18 @@
 		flex-direction: column;
 		padding-bottom: 24px;
 	}
+	/* Workout execution stays focused — 560px max no desktop */
+	@media (min-width: 1024px) {
+		.page {
+			max-width: 640px;
+			width: 100%;
+			margin: 0 auto;
+		}
+		.topbar {
+			background: transparent;
+			border-bottom: 1px solid var(--ink-line);
+		}
+	}
 	.topbar {
 		display: flex;
 		align-items: center;

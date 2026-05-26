@@ -4,7 +4,7 @@ import { verifyStudentToken } from '$lib/server/aluno-token';
 import { dev } from '$app/environment';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load = (async ({ params, url }) => {
 	const token = url.searchParams.get('t');
 	if (!verifyStudentToken(params.id, token) && !dev) {
 		error(403, 'link inválido ou expirado.');
@@ -37,7 +37,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	);
 
 	return { ...data, sessionIdx: idx, session, videoMap };
-};
+}) satisfies PageServerLoad;
 
 export const actions: Actions = {
 	complete: async ({ request, params, url }) => {

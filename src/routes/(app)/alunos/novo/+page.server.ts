@@ -7,11 +7,11 @@ import { env as pubEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load = (async ({ parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 	return {};
-};
+}) satisfies PageServerLoad;
 
 const SexEnum = z.enum(['feminino', 'masculino', 'outro', 'nao_informado']);
 const RiskEnum = z.enum(['baixo', 'moderado', 'alto', 'muito_alto']);

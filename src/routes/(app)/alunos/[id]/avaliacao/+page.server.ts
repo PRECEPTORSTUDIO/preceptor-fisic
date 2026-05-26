@@ -2,7 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { getStudentDetail, getProfessionalByAuthId, createAssessment } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load = (async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	if (!detail) error(404, 'aluno não encontrado');
 
 	return { student: detail.student };
-};
+}) satisfies PageServerLoad;
 
 function num(fd: FormData, key: string): number | undefined {
 	const v = fd.get(key);

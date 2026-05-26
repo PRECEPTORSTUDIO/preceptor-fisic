@@ -5,7 +5,7 @@ import { sendProfessionalWelcome } from '$lib/server/email';
 import { logger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load = (async ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');
 	const existing = await getProfessionalByAuthId(locals.user.id);
 	if (existing) redirect(303, '/dashboard');
@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				?.name ??
 			''
 	};
-};
+}) satisfies PageServerLoad;
 
 const SpecialtyEnum = z.enum([
 	'prescricao_clinica',

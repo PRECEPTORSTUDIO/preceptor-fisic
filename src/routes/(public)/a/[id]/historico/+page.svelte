@@ -47,7 +47,7 @@
 			<div style="font:var(--body);color:var(--ink-2)">Suas sessões concluídas aparecem aqui.</div>
 		</div>
 	{:else}
-		<div style="padding:16px">
+		<div class="history-list">
 			{#each sessions as s (s.id)}
 				{@const ex = exDoneCount(s.exercisesDone as any)}
 				{@const allDone = ex.total > 0 && ex.done === ex.total}
@@ -110,11 +110,30 @@
 		cursor: pointer;
 		font-size: 18px;
 	}
+	.history-list {
+		padding: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
 	.session-card {
 		padding: 16px;
 		background: var(--bg-2);
 		border: 1px solid var(--ink-line);
 		border-radius: var(--r-2);
-		margin-bottom: 8px;
+	}
+	/* Desktop dashboard mode */
+	@media (min-width: 1024px) {
+		.topbar {
+			background: transparent;
+			border-bottom: 0;
+			padding: 0 8px 16px;
+		}
+		.history-list {
+			padding: 0 8px;
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 12px;
+		}
 	}
 </style>

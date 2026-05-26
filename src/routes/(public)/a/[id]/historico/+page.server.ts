@@ -6,7 +6,7 @@ import { verifyStudentToken } from '$lib/server/aluno-token';
 import { dev } from '$app/environment';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load = (async ({ params, url }) => {
 	const token = url.searchParams.get('t');
 	if (!verifyStudentToken(params.id, token) && !dev) {
 		error(403, 'link inválido.');
@@ -33,4 +33,4 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			sessionDate: row.sessionDate.toISOString()
 		}))
 	};
-};
+}) satisfies PageServerLoad;

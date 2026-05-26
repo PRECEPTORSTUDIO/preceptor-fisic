@@ -9,7 +9,7 @@ import {
 } from '$lib/server/queries';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load = (async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		appointment: { ...appt, startsAt: appt.startsAt.toISOString() },
 		students: students.map((s) => ({ id: s.id, name: s.name }))
 	};
-};
+}) satisfies PageServerLoad;
 
 const TypeEnum = z.enum(['treino', 'avaliacao', 'reabilitacao', 'consulta']);
 const StatusEnum = z.enum(['scheduled', 'completed', 'cancelled']);

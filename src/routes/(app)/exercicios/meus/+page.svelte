@@ -162,7 +162,7 @@
 			{/if}
 
 			<div style="display:flex;gap:8px">
-				<Button style="flex:1" onclick={() => goto(`/exercicios/${sel.id}/editar`)}>✎ Editar exercício</Button>
+				<Button style="flex:1" onclick={() => sel && goto(`/exercicios/${sel.id}/editar`)}>✎ Editar exercício</Button>
 			</div>
 		</aside>
 	{/if}

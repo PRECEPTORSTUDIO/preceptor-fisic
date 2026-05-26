@@ -12,12 +12,12 @@ import { sendAppointmentNotification } from '$lib/server/email';
 import { logger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load = (async ({ parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 	const students = await getStudentsByProfessional(professional.id);
 	return { students: students.map((s) => ({ id: s.id, name: s.name })) };
-};
+}) satisfies PageServerLoad;
 
 const TypeEnum = z.enum(['treino', 'avaliacao', 'reabilitacao', 'consulta']);
 

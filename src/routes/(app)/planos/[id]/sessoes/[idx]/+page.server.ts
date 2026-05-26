@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { getPlanDetail, getRecentSessionLogs, matchCatalogByName } from '$lib/server/queries';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load = (async ({ params, parent }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
@@ -34,4 +34,4 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	]);
 
 	return { plan, session, idx, recentLogs, videoMap };
-};
+}) satisfies PageServerLoad;

@@ -1336,7 +1336,9 @@ export async function getAlunoAppData(studentId: string): Promise<AlunoAppData |
 				isActive: planRow.status === 'published' || planRow.status === 'generated',
 				createdAt: planRow.createdAt,
 				publishedAt: planRow.publishedAt,
-				planData: (planRow.planData as PlanData) ?? {}
+				planData: (planRow.planData as PlanData) ?? {},
+				sourceMap: {},
+				catalogMap: {}
 			}
 		: null;
 

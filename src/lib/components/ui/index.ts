@@ -1,5 +1,5 @@
 export { default as Eyebrow } from './eyebrow.svelte';
-export { default as Button } from './button.svelte';
+export { default as Button } from './Button.svelte';
 export { default as Ring } from './ring.svelte';
 export { default as Metric } from './metric.svelte';
 export { default as Chip } from './chip.svelte';
