@@ -129,7 +129,14 @@
 				<button type="button" class="cat-card" onclick={() => (selected = ex)}>
 					<div class="cat-card-video">
 						{#if ex.videoUrl}
-							<img src={ex.videoUrl} alt={ex.name} loading="lazy" />
+							<!-- Mostra POSTER (1º frame JPG ~30KB) em vez do GIF (~1.7MB).
+							     Sem isso 1324 GIFs animariam todos ao mesmo tempo. Click
+							     no card abre o modal que toca o GIF completo. -->
+							<img
+								src={ex.videoUrl.replace(/\.gif$/, '.jpg')}
+								alt={ex.name}
+								loading="lazy"
+							/>
 						{:else}
 							<div class="cat-card-novideo">▶</div>
 						{/if}
