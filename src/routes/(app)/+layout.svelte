@@ -39,7 +39,13 @@
 <style>
 	.app-shell {
 		display: flex;
-		min-height: 100vh;
+		/* height fixo (não min-height) — trava o shell na viewport pra que
+		   só .pf-main role, mantendo o sidebar fixo. Antes, com min-height,
+		   o shell crescia com o conteúdo e o body inteiro rolava, levando
+		   o sidebar junto. */
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
 		background: var(--bg-0);
 	}
 	.app-stack {
@@ -47,12 +53,15 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		min-height: 0;
 	}
 	.pf-main {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		min-height: 0;
+		overflow-y: auto;
 		view-transition-name: page-content;
 	}
 	@media (max-width: 1023px) {
