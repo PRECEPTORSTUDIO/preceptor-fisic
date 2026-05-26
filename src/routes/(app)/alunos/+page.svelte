@@ -276,14 +276,24 @@
 	.students-thead,
 	.students-row {
 		display: grid;
-		/* Auno (avatar + nome+idade) + Plano + Aderência (mais espaço pro
+		/* Aluno (avatar + nome+idade) + Plano + Aderência (mais espaço pro
 		   bar) + 3 métricas compactas no fim. Proporção 1.4 : 1.1 : 1.3 :
 		   métricas fixas dá distribuição equilibrada em telas largas
-		   sem buraco gigante no meio. */
+		   sem buraco gigante no meio.
+		   minmax(0, fr) é OBRIGATÓRIO — sem isso, conteúdo longo (ex:
+		   planTitle "O plano de treino para Matheus, de 21 anos…") força
+		   a col a expandir além do fr, desalinhando rows entre si. */
 		grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 1.3fr) 96px 88px 72px 32px;
 		gap: 18px;
 		align-items: center;
 		padding: 12px 18px;
+	}
+	/* Defesa: TODO filho direto das rows tem min-width 0 + overflow hidden
+	   pra garantir alinhamento mesmo se algum conteúdo passar batido sem
+	   text-overflow:ellipsis. */
+	.students-row > * {
+		min-width: 0;
+		overflow: hidden;
 	}
 	.students-thead {
 		font: var(--label-mono);
