@@ -1,5 +1,5 @@
 <script lang="ts">
-	type IconName = 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'config' | 'logout';
+	type IconName = 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout';
 	type Props = { name: IconName; size?: number };
 	let { name, size = 18 }: Props = $props();
 </script>
@@ -30,6 +30,9 @@
 	{:else if name === 'aluno'}
 		<rect x="6" y="3" width="12" height="18" rx="2.5" />
 		<path d="M10 18h4" />
+	{:else if name === 'crm'}
+		<!-- Funil/pipeline: linhas convergindo pra um ponto -->
+		<path d="M3 5h18l-7 8v6l-4-2v-4z" />
 	{:else if name === 'config'}
 		<circle cx="12" cy="12" r="3" />
 		<path d="M19.4 14.5c.1-.4.1-.8.1-1.2v-1c0-.4 0-.8-.1-1.2l2-1.5-2-3.4-2.4.7c-.6-.5-1.3-.9-2-1.2L14.5 3h-5l-.5 2.5c-.7.3-1.4.7-2 1.2l-2.4-.7-2 3.4 2 1.5c-.1.4-.1.8-.1 1.2v1c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-.7c.6.5 1.3.9 2 1.2L9.5 21h5l.5-2.5c.7-.3 1.4-.7 2-1.2l2.4.7 2-3.4z" />

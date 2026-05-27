@@ -6,7 +6,7 @@
 	type NavItem = {
 		id: string;
 		label: string;
-		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'config' | 'logout';
+		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout';
 		href: string;
 		count?: number;
 		badge?: number;
@@ -22,6 +22,7 @@
 		userCref?: string;
 		studentsCount?: number;
 		unreadMessages?: number;
+		newLeadsCount?: number;
 	};
 
 	let {
@@ -33,11 +34,19 @@
 		userName = 'Matheus Castro',
 		userCref = 'CREF 123456-G',
 		studentsCount = 0,
-		unreadMessages = 0
+		unreadMessages = 0,
+		newLeadsCount = 0
 	}: Props = $props();
 
 	const NAV_PRO = $derived<NavItem[]>([
 		{ id: 'home', label: 'Visão geral', icon: 'home', href: '/dashboard' },
+		{
+			id: 'crm',
+			label: 'CRM',
+			icon: 'crm',
+			href: '/crm',
+			badge: newLeadsCount > 0 ? newLeadsCount : undefined
+		},
 		{
 			id: 'alunos',
 			label: 'Alunos',

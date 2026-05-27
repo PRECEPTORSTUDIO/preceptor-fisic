@@ -18,6 +18,7 @@ import {
 	conversations,
 	messages,
 	appointments,
+	leads,
 	type Professional,
 	type Student,
 	type HealthProfile,
@@ -25,7 +26,9 @@ import {
 	type ExerciseLibraryItem,
 	type Conversation,
 	type Message,
-	type Appointment
+	type Appointment,
+	type Lead,
+	type NewLead
 } from './db/schema';
 
 /* ────────── PROFESSIONAL ────────── */
@@ -1815,4 +1818,197 @@ export async function getCatalogFacets(): Promise<{
 			count: Number(r.count)
 		}))
 	};
+}
+
+/* ────────── CRM / LEADS ────────── */
+
+export type LeadStage =
+	| 'novo'
+	| 'contatado'
+	| 'trial_agendado'
+	| 'trial_realizado'
+	| 'convertido'
+	| 'perdido';
+
+export type LeadSource = 'instagram' | 'indicacao' | 'anuncio' | 'site' | 'whatsapp' | 'outro';
+
+export const LEAD_STAGES: { id: LeadStage; label: string; color: string }[] = [
+	{ id: 'novo', label: 'Novo', color: 'var(--info)' },
+	{ id: 'contatado', label: 'Contatado', color: 'var(--ink-1)' },
+	{ id: 'trial_agendado', label: 'Trial agendado', color: 'var(--warn)' },
+	{ id: 'trial_realizado', label: 'Trial realizado', color: 'var(--accent)' },
+	{ id: 'convertido', label: 'Convertido', color: 'var(--success)' },
+	{ id: 'perdido', label: 'Perdido', color: 'var(--danger)' }
+];
+
+export const LEAD_SOURCES: { id: LeadSource; label: string }[] = [
+	{ id: 'instagram', label: 'Instagram' },
+	{ id: 'indicacao', label: 'Indicação' },
+	{ id: 'anuncio', label: 'Anúncio' },
+	{ id: 'site', label: 'Site' },
+	{ id: 'whatsapp', label: 'WhatsApp' },
+	{ id: 'outro', label: 'Outro' }
+];
+
+export type LeadListItem = {
+	id: string;
+	name: string;
+	phone: string | null;
+	email: string | null;
+	source: LeadSource;
+	stage: LeadStage;
+	notes: string | null;
+	nextFollowUpAt: Date | null;
+	convertedStudentId: string | null;
+	lostReason: string | null;
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+export async function getLeadsByProfessional(
+	professionalId: string
+): Promise<LeadListItem[]> {
+	const rows = await db
+		.select()
+		.from(leads)
+		.where(eq(leads.professionalId, professionalId))
+		.orderBy(desc(leads.createdAt));
+	return rows as LeadListItem[];
+}
+
+export async function getLeadById(
+	id: string,
+	professionalId: string
+): Promise<LeadListItem | null> {
+	const [row] = await db
+		.select()
+		.from(leads)
+		.where(and(eq(leads.id, id), eq(leads.professionalId, professionalId)))
+		.limit(1);
+	return (row ?? null) as LeadListItem | null;
+}
+
+export async function createLead(
+	professionalId: string,
+	data: {
+		name: string;
+		phone?: string | null;
+		email?: string | null;
+		source?: LeadSource;
+		stage?: LeadStage;
+		notes?: string | null;
+		nextFollowUpAt?: Date | null;
+	}
+): Promise<Lead> {
+	const insert: NewLead = {
+		professionalId,
+		name: data.name.trim(),
+		phone: data.phone?.trim() || null,
+		email: data.email?.trim() || null,
+		source: data.source ?? 'outro',
+		stage: data.stage ?? 'novo',
+		notes: data.notes?.trim() || null,
+		nextFollowUpAt: data.nextFollowUpAt ?? null
+	};
+	const [row] = await db.insert(leads).values(insert).returning();
+	if (!row) throw new Error('falha ao criar lead');
+	return row;
+}
+
+export async function updateLead(
+	id: string,
+	professionalId: string,
+	data: Partial<{
+		name: string;
+		phone: string | null;
+		email: string | null;
+		source: LeadSource;
+		stage: LeadStage;
+		notes: string | null;
+		nextFollowUpAt: Date | null;
+		lostReason: string | null;
+	}>
+): Promise<Lead | null> {
+	const [row] = await db
+		.update(leads)
+		.set({ ...data, updatedAt: new Date() })
+		.where(and(eq(leads.id, id), eq(leads.professionalId, professionalId)))
+		.returning();
+	return row ?? null;
+}
+
+export async function updateLeadStage(
+	id: string,
+	professionalId: string,
+	stage: LeadStage
+): Promise<Lead | null> {
+	return updateLead(id, professionalId, { stage });
+}
+
+export async function deleteLead(id: string, professionalId: string): Promise<boolean> {
+	const res = await db
+		.delete(leads)
+		.where(and(eq(leads.id, id), eq(leads.professionalId, professionalId)))
+		.returning({ id: leads.id });
+	return res.length > 0;
+}
+
+/**
+ * Converte lead em aluno — cria registro em students, marca o lead como
+ * 'convertido' apontando pro novo studentId. Idempotente: se o lead já
+ * estiver convertido, retorna o studentId existente.
+ */
+export async function convertLeadToStudent(
+	leadId: string,
+	professionalId: string
+): Promise<{ studentId: string } | null> {
+	const lead = await getLeadById(leadId, professionalId);
+	if (!lead) return null;
+	if (lead.convertedStudentId) return { studentId: lead.convertedStudentId };
+
+	// Cria student mínimo — o profissional pode completar dados depois
+	// na ficha do aluno (idade, peso, altura, objetivos, etc).
+	const [student] = await db
+		.insert(students)
+		.values({
+			professionalId,
+			name: lead.name,
+			sex: 'nao_informado'
+		})
+		.returning({ id: students.id });
+	if (!student) throw new Error('falha ao criar aluno');
+
+	await db
+		.update(leads)
+		.set({
+			stage: 'convertido',
+			convertedStudentId: student.id,
+			updatedAt: new Date()
+		})
+		.where(and(eq(leads.id, leadId), eq(leads.professionalId, professionalId)));
+
+	return { studentId: student.id };
+}
+
+/** Conta leads por stage — alimenta badges do sidebar e métricas do funil */
+export async function getLeadCountsByStage(
+	professionalId: string
+): Promise<Record<LeadStage, number>> {
+	const rows = await db.execute<{ stage: LeadStage; n: number }>(sql`
+		SELECT stage::text AS stage, COUNT(*)::int AS n
+		FROM leads
+		WHERE professional_id = ${professionalId}
+		GROUP BY stage
+	`);
+	const list = unwrapRows<{ stage: LeadStage; n: number }>(rows);
+	const counts: Record<LeadStage, number> = {
+		novo: 0,
+		contatado: 0,
+		trial_agendado: 0,
+		trial_realizado: 0,
+		convertido: 0,
+		perdido: 0
+	};
+	for (const r of list) counts[r.stage] = Number(r.n);
+	return counts;
 }

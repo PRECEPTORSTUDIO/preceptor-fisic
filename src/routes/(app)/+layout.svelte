@@ -8,13 +8,14 @@
 	const userCref = $derived(data.professional?.cref ?? 'modo design');
 	const studentsCount = $derived(data.sidebarCounts?.students ?? 0);
 	const unreadMessages = $derived(data.sidebarCounts?.unreadMessages ?? 0);
+	const newLeadsCount = $derived(data.sidebarCounts?.newLeads ?? 0);
 
 	let moreOpen = $state(false);
 </script>
 
 <div class="app-shell">
 	<!-- Sidebar — desktop only -->
-	<Sidebar {userName} {userCref} {studentsCount} {unreadMessages} />
+	<Sidebar {userName} {userCref} {studentsCount} {unreadMessages} {newLeadsCount} />
 
 	<!-- Conteúdo: topbar mobile + main + tabbar mobile -->
 	<div class="app-stack">

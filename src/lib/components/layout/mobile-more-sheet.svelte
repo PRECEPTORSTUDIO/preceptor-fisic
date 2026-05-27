@@ -15,12 +15,13 @@
 		id: string;
 		label: string;
 		sub: string;
-		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'config' | 'logout';
+		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout';
 		href: string;
 		danger?: boolean;
 	};
 
 	const ITEMS: Item[] = [
+		{ id: 'crm', label: 'CRM', sub: 'Pipeline de leads', icon: 'crm', href: '/crm' },
 		{ id: 'exer', label: 'Exercícios', sub: 'Catálogo + cadastro', icon: 'exer', href: '/exercicios' },
 		{ id: 'msgs', label: 'Mensagens', sub: 'Conversas com alunos', icon: 'msgs', href: '/mensagens' },
 		{ id: 'config', label: 'Configurações', sub: 'Perfil e preferências', icon: 'config', href: '/configuracoes' },

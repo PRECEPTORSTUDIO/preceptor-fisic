@@ -15,6 +15,13 @@
       "when": 1778107090675,
       "tag": "0001_gifted_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779849799265,
+      "tag": "0002_milky_flatman",
+      "breakpoints": true
     }
   ]
 }

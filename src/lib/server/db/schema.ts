@@ -704,11 +704,63 @@ export const appointments = pgTable(
 	]
 );
 
+/* CRM — Leads (prospects pré-aluno) */
+
+export const leadSourceEnum = pgEnum('lead_source', [
+	'instagram',
+	'indicacao',
+	'anuncio',
+	'site',
+	'whatsapp',
+	'outro'
+]);
+
+export const leadStageEnum = pgEnum('lead_stage', [
+	'novo',
+	'contatado',
+	'trial_agendado',
+	'trial_realizado',
+	'convertido',
+	'perdido'
+]);
+
+export const leads = pgTable(
+	'leads',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		professionalId: uuid('professional_id')
+			.notNull()
+			.references(() => professionals.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		phone: text('phone'),
+		email: text('email'),
+		source: leadSourceEnum('source').default('outro').notNull(),
+		stage: leadStageEnum('stage').default('novo').notNull(),
+		notes: text('notes'),
+		nextFollowUpAt: timestamp('next_follow_up_at', { withTimezone: true }),
+		/** Quando convertido em aluno, aponta pra students.id */
+		convertedStudentId: uuid('converted_student_id').references(() => students.id, {
+			onDelete: 'set null'
+		}),
+		/** Razão da perda (livre): "não respondeu", "preço alto", "fechou com outro", etc */
+		lostReason: text('lost_reason'),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [
+		index('leads_pro_stage_idx').on(t.professionalId, t.stage),
+		index('leads_pro_followup_idx').on(t.professionalId, t.nextFollowUpAt),
+		index('leads_pro_created_idx').on(t.professionalId, t.createdAt)
+	]
+);
+
 /* Inferred types */
 export type ExerciseLibraryItem = typeof exerciseLibrary.$inferSelect;
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
+export type Lead = typeof leads.$inferSelect;
+export type NewLead = typeof leads.$inferInsert;
 export type Professional = typeof professionals.$inferSelect;
 export type NewProfessional = typeof professionals.$inferInsert;
 export type Student = typeof students.$inferSelect;
