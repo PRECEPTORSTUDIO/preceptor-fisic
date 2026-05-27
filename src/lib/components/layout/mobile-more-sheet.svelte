@@ -8,8 +8,15 @@
 		onClose: () => void;
 		userName?: string;
 		userCref?: string;
+		isAdmin?: boolean;
 	};
-	let { open, onClose, userName = 'Profissional', userCref = '—' }: Props = $props();
+	let {
+		open,
+		onClose,
+		userName = 'Profissional',
+		userCref = '—',
+		isAdmin = false
+	}: Props = $props();
 
 	type Item = {
 		id: string;
@@ -20,13 +27,24 @@
 		danger?: boolean;
 	};
 
-	const ITEMS: Item[] = [
-		{ id: 'crm', label: 'CRM', sub: 'Pipeline de leads', icon: 'crm', href: '/crm' },
+	const ITEMS: Item[] = $derived([
+		// CRM admin-only — esconde pra usuários não-admin
+		...(isAdmin
+			? [
+					{
+						id: 'crm',
+						label: 'CRM',
+						sub: 'Funil de aquisição (admin)',
+						icon: 'crm' as const,
+						href: '/crm'
+					}
+				]
+			: []),
 		{ id: 'exer', label: 'Exercícios', sub: 'Catálogo + cadastro', icon: 'exer', href: '/exercicios' },
 		{ id: 'msgs', label: 'Mensagens', sub: 'Conversas com alunos', icon: 'msgs', href: '/mensagens' },
 		{ id: 'config', label: 'Configurações', sub: 'Perfil e preferências', icon: 'config', href: '/configuracoes' },
 		{ id: 'logout', label: 'Sair', sub: 'Encerrar sessão', icon: 'logout', href: '/logout', danger: true }
-	];
+	]);
 
 	const isActive = (href: string) => page.url.pathname.startsWith(href);
 </script>

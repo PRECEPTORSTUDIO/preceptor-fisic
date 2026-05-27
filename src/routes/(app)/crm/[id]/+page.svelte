@@ -9,11 +9,12 @@
 	const lead = $derived(data.lead);
 
 	const STAGES: { id: LeadStage; label: string; color: string }[] = [
-		{ id: 'novo', label: 'Novo', color: 'var(--info)' },
-		{ id: 'contatado', label: 'Contatado', color: 'var(--ink-1)' },
-		{ id: 'trial_agendado', label: 'Trial agendado', color: 'var(--warn)' },
-		{ id: 'trial_realizado', label: 'Trial realizado', color: 'var(--accent)' },
-		{ id: 'convertido', label: 'Convertido', color: 'var(--success)' },
+		{ id: 'visitante', label: 'Visitante', color: 'var(--ink-2)' },
+		{ id: 'cadastrou', label: 'Cadastrou', color: 'var(--info)' },
+		{ id: 'ativou_aluno', label: 'Ativou aluno', color: 'var(--accent-2)' },
+		{ id: 'trial', label: 'Trial', color: 'var(--warn)' },
+		{ id: 'pagante', label: 'Pagante', color: 'var(--success)' },
+		{ id: 'cancelado', label: 'Cancelado', color: 'var(--ink-3)' },
 		{ id: 'perdido', label: 'Perdido', color: 'var(--danger)' }
 	];
 	const SOURCES: { id: LeadSource; label: string }[] = [
@@ -26,7 +27,6 @@
 	];
 
 	let saving = $state(false);
-	let converting = $state(false);
 	let confirmingDelete = $state(false);
 
 	// Bind local form state pro stage atual (controla visibilidade do lostReason)
@@ -77,29 +77,10 @@
 			</div>
 		</div>
 		<div class="hdr-actions">
-			{#if lead.convertedStudentId}
-				<Button variant="secondary" onclick={() => goto(`/alunos/${lead.convertedStudentId}`)}>
-					Ver aluno →
+			{#if lead.subjectProfessionalId}
+				<Button variant="secondary" onclick={() => goto(`/admin/users/${lead.subjectProfessionalId}`)}>
+					Ver perfil →
 				</Button>
-			{:else if lead.stage !== 'convertido' && lead.stage !== 'perdido'}
-				<form
-					method="POST"
-					action="?/convert"
-					use:enhance={() => {
-						converting = true;
-						return async ({ update, result }) => {
-							await update();
-							converting = false;
-							if (result.type === 'redirect') {
-								toast.success('Lead convertido em aluno');
-							}
-						};
-					}}
-				>
-					<Button type="submit" disabled={converting}>
-						{converting ? 'Convertendo…' : '✓ Converter em aluno'}
-					</Button>
-				</form>
 			{/if}
 		</div>
 	</header>
@@ -171,13 +152,15 @@
 				/>
 			</div>
 
-			{#if stage === 'perdido'}
+			{#if stage === 'perdido' || stage === 'cancelado'}
 				<div class="row">
-					<label class="lbl">Motivo da perda</label>
+					<label class="lbl">
+						{stage === 'perdido' ? 'Motivo da perda' : 'Motivo do cancelamento'}
+					</label>
 					<input
 						name="lostReason"
 						class="inp"
-						placeholder="Ex: Não respondeu, preço alto, fechou com outro…"
+						placeholder="Ex: Preço alto, foi pra concorrente, deixou de usar…"
 						value={lead.lostReason ?? ''}
 					/>
 				</div>
@@ -252,11 +235,26 @@
 							</div>
 						</div>
 					{/if}
-					{#if lead.convertedStudentId}
+					{#if lead.subjectProfessionalId}
+						<div class="timeline-item">
+							<div class="t-dot" style="background:var(--info)"></div>
+							<div>
+								<div style="font:500 13px var(--font-sans);color:var(--info)">
+									Usuário da plataforma
+								</div>
+								<div style="font:var(--label-mono);color:var(--ink-3);margin-top:2px">
+									Sincronizado com /professionals
+								</div>
+							</div>
+						</div>
+					{/if}
+					{#if lead.stage === 'pagante'}
 						<div class="timeline-item">
 							<div class="t-dot" style="background:var(--success)"></div>
 							<div>
-								<div style="font:500 13px var(--font-sans);color:var(--success)">Convertido em aluno</div>
+								<div style="font:500 13px var(--font-sans);color:var(--success)">
+									Assinatura ativa
+								</div>
 								<div style="font:var(--label-mono);color:var(--ink-3);margin-top:2px">
 									{fmtDate(lead.updatedAt)}
 								</div>

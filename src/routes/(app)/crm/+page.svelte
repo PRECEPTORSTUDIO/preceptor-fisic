@@ -13,11 +13,12 @@
 	let view = $state<View>('kanban');
 
 	const STAGES: { id: LeadStage; label: string; color: string; bg: string }[] = [
-		{ id: 'novo', label: 'Novo', color: 'var(--info)', bg: 'rgba(96,165,250,0.08)' },
-		{ id: 'contatado', label: 'Contatado', color: 'var(--ink-1)', bg: 'rgba(255,255,255,0.04)' },
-		{ id: 'trial_agendado', label: 'Trial agendado', color: 'var(--warn)', bg: 'rgba(251,191,36,0.08)' },
-		{ id: 'trial_realizado', label: 'Trial realizado', color: 'var(--accent)', bg: 'rgba(167,139,250,0.10)' },
-		{ id: 'convertido', label: 'Convertido', color: 'var(--success)', bg: 'rgba(52,211,153,0.08)' },
+		{ id: 'visitante', label: 'Visitante', color: 'var(--ink-2)', bg: 'rgba(255,255,255,0.03)' },
+		{ id: 'cadastrou', label: 'Cadastrou', color: 'var(--info)', bg: 'rgba(96,165,250,0.08)' },
+		{ id: 'ativou_aluno', label: 'Ativou aluno', color: 'var(--accent-2)', bg: 'rgba(196,181,253,0.10)' },
+		{ id: 'trial', label: 'Trial', color: 'var(--warn)', bg: 'rgba(251,191,36,0.08)' },
+		{ id: 'pagante', label: 'Pagante', color: 'var(--success)', bg: 'rgba(52,211,153,0.10)' },
+		{ id: 'cancelado', label: 'Cancelado', color: 'var(--ink-3)', bg: 'rgba(255,255,255,0.02)' },
 		{ id: 'perdido', label: 'Perdido', color: 'var(--danger)', bg: 'rgba(248,113,113,0.06)' }
 	];
 
@@ -110,10 +111,11 @@
 	);
 
 	const total = $derived(leads.length);
-	const novosCount = $derived(counts.novo);
-	const convertidosCount = $derived(counts.convertido);
+	// Métricas chave do funil: novos cadastros e taxa de conversão pra pagante
+	const novosCount = $derived(counts.cadastrou);
+	const pagantesCount = $derived(counts.pagante);
 	const conversionRate = $derived(
-		total > 0 ? Math.round((convertidosCount / total) * 100) : 0
+		total > 0 ? Math.round((pagantesCount / total) * 100) : 0
 	);
 
 	function fmtDate(d: Date | null): string {
@@ -139,7 +141,7 @@
 <div class="crm-page">
 	<header class="crm-header">
 		<div style="min-width:0">
-			<Eyebrow>{total} leads · {novosCount} novos · {conversionRate}% conversão</Eyebrow>
+			<Eyebrow>{total} leads · {novosCount} novos cadastros · {conversionRate}% pagantes</Eyebrow>
 			<h1 class="crm-h1">CRM</h1>
 			<p class="crm-sub">
 				Pipeline de leads do contato inicial até virar aluno ativo.
@@ -432,7 +434,7 @@
 	/* ─── Funnel metric strip ─── */
 	.funnel-row {
 		display: grid;
-		grid-template-columns: repeat(6, 1fr);
+		grid-template-columns: repeat(7, 1fr);
 		gap: 10px;
 	}
 	.funnel-card {
@@ -465,7 +467,7 @@
 	}
 	.kanban {
 		display: grid;
-		grid-template-columns: repeat(6, minmax(240px, 1fr));
+		grid-template-columns: repeat(7, minmax(220px, 1fr));
 		gap: 12px;
 		min-width: 100%;
 	}
@@ -777,7 +779,7 @@
 			grid-template-columns: repeat(2, 1fr);
 		}
 		.kanban {
-			grid-template-columns: repeat(6, minmax(220px, 240px));
+			grid-template-columns: repeat(7, minmax(200px, 220px));
 		}
 		.tbl-search {
 			min-width: 0;

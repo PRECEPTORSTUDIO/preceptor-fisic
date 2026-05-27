@@ -1,6 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { getProfessionalByAuthId, createProfessional } from '$lib/server/queries';
+import {
+	getProfessionalByAuthId,
+	createProfessional,
+	createLeadFromSignup
+} from '$lib/server/queries';
 import { sendProfessionalWelcome } from '$lib/server/email';
 import { logger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
@@ -48,8 +52,9 @@ export const actions: Actions = {
 		const specialty = SpecialtyEnum.safeParse(specialtyRaw);
 		if (!specialty.success) return fail(400, { error: 'selecione uma especialidade' });
 
+		let newProId: string | null = null;
 		try {
-			await createProfessional({
+			newProId = await createProfessional({
 				authUserId: locals.user.id,
 				email: locals.user.email ?? '',
 				name,
@@ -58,6 +63,18 @@ export const actions: Actions = {
 			});
 		} catch (e) {
 			return fail(500, { error: (e as Error).message });
+		}
+
+		// Sincroniza no CRM admin — cria/atualiza lead no stage 'cadastrou'.
+		// Fire-and-forget: falha não bloqueia o onboarding.
+		if (newProId) {
+			createLeadFromSignup({
+				professionalId: newProId,
+				name,
+				email: locals.user.email ?? ''
+			}).catch((err) =>
+				logger.error({ err: String(err).slice(0, 200) }, 'crm.lead_from_signup.failed')
+			);
 		}
 
 		// Welcome email — fire-and-forget. Falha não bloqueia o onboarding.

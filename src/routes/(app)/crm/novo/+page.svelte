@@ -85,10 +85,11 @@
 				<div>
 					<label class="lbl">Estágio</label>
 					<select name="stage" class="inp">
-						<option value="novo" selected>Novo</option>
-						<option value="contatado">Contatado</option>
-						<option value="trial_agendado">Trial agendado</option>
-						<option value="trial_realizado">Trial realizado</option>
+						<option value="visitante" selected>Visitante</option>
+						<option value="cadastrou">Cadastrou</option>
+						<option value="ativou_aluno">Ativou aluno</option>
+						<option value="trial">Trial</option>
+						<option value="pagante">Pagante</option>
 					</select>
 				</div>
 			</div>

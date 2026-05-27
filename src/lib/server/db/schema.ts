@@ -112,6 +112,8 @@ export const professionals = pgTable(
 		specialty: specialtyEnum('specialty').default('prescricao_clinica').notNull(),
 		avatarUrl: text('avatar_url'),
 		onboardingCompleted: boolean('onboarding_completed').default(false).notNull(),
+		/** Acesso ao CRM interno do Preceptor Fisic. Flipar via SQL no Supabase. */
+		isAdmin: boolean('is_admin').default(false).notNull(),
 		aiPreferences: jsonb('ai_preferences')
 			.$type<{
 				default_modality: 'musculacao' | 'aerobio' | 'ambos';
@@ -715,12 +717,25 @@ export const leadSourceEnum = pgEnum('lead_source', [
 	'outro'
 ]);
 
+/**
+ * Estágios do funil de aquisição do Preceptor Fisic (CRM admin).
+ * Reflete a jornada do prospect → usuário → assinante.
+ *
+ * visitante: capturado em form da landing, ainda não criou conta
+ * cadastrou: criou conta (auto via createProfessional hook)
+ * ativou_aluno: cadastrou primeiro aluno (auto)
+ * trial: em período de avaliação (subscriptionStatus='trial')
+ * pagante: assinatura ativa (subscriptionStatus='active')
+ * cancelado: cancelou assinatura (subscriptionStatus='cancelled')
+ * perdido: prospect desistiu antes de virar pagante
+ */
 export const leadStageEnum = pgEnum('lead_stage', [
-	'novo',
-	'contatado',
-	'trial_agendado',
-	'trial_realizado',
-	'convertido',
+	'visitante',
+	'cadastrou',
+	'ativou_aluno',
+	'trial',
+	'pagante',
+	'cancelado',
 	'perdido'
 ]);
 
@@ -728,29 +743,38 @@ export const leads = pgTable(
 	'leads',
 	{
 		id: uuid('id').defaultRandom().primaryKey(),
-		professionalId: uuid('professional_id')
-			.notNull()
-			.references(() => professionals.id, { onDelete: 'cascade' }),
+		/**
+		 * Admin "dono" do lead. Nullable porque leads auto-criados via
+		 * signup não têm dono específico — qualquer admin os enxerga.
+		 */
+		professionalId: uuid('professional_id').references(() => professionals.id, {
+			onDelete: 'set null'
+		}),
+		/**
+		 * Quando o lead já é um usuário cadastrado do Preceptor Fisic,
+		 * aponta pro record dele. NULL pra leads externos (landing/manual).
+		 */
+		subjectProfessionalId: uuid('subject_professional_id').references(
+			() => professionals.id,
+			{ onDelete: 'cascade' }
+		),
 		name: text('name').notNull(),
 		phone: text('phone'),
 		email: text('email'),
 		source: leadSourceEnum('source').default('outro').notNull(),
-		stage: leadStageEnum('stage').default('novo').notNull(),
+		stage: leadStageEnum('stage').default('visitante').notNull(),
 		notes: text('notes'),
 		nextFollowUpAt: timestamp('next_follow_up_at', { withTimezone: true }),
-		/** Quando convertido em aluno, aponta pra students.id */
-		convertedStudentId: uuid('converted_student_id').references(() => students.id, {
-			onDelete: 'set null'
-		}),
-		/** Razão da perda (livre): "não respondeu", "preço alto", "fechou com outro", etc */
+		/** Razão da perda (livre): "preço alto", "fechou com concorrente", etc */
 		lostReason: text('lost_reason'),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [
-		index('leads_pro_stage_idx').on(t.professionalId, t.stage),
-		index('leads_pro_followup_idx').on(t.professionalId, t.nextFollowUpAt),
-		index('leads_pro_created_idx').on(t.professionalId, t.createdAt)
+		index('leads_stage_idx').on(t.stage),
+		index('leads_followup_idx').on(t.nextFollowUpAt),
+		index('leads_created_idx').on(t.createdAt),
+		index('leads_subject_pro_idx').on(t.subjectProfessionalId)
 	]
 );
 

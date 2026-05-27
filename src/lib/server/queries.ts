@@ -1820,24 +1820,29 @@ export async function getCatalogFacets(): Promise<{
 	};
 }
 
-/* ────────── CRM / LEADS ────────── */
+/* ────────── CRM / LEADS (admin interno do Preceptor Fisic) ────────── */
 
+/**
+ * Funil de aquisição. Estágios refletem a jornada visitante → usuário pagante.
+ */
 export type LeadStage =
-	| 'novo'
-	| 'contatado'
-	| 'trial_agendado'
-	| 'trial_realizado'
-	| 'convertido'
+	| 'visitante'
+	| 'cadastrou'
+	| 'ativou_aluno'
+	| 'trial'
+	| 'pagante'
+	| 'cancelado'
 	| 'perdido';
 
 export type LeadSource = 'instagram' | 'indicacao' | 'anuncio' | 'site' | 'whatsapp' | 'outro';
 
 export const LEAD_STAGES: { id: LeadStage; label: string; color: string }[] = [
-	{ id: 'novo', label: 'Novo', color: 'var(--info)' },
-	{ id: 'contatado', label: 'Contatado', color: 'var(--ink-1)' },
-	{ id: 'trial_agendado', label: 'Trial agendado', color: 'var(--warn)' },
-	{ id: 'trial_realizado', label: 'Trial realizado', color: 'var(--accent)' },
-	{ id: 'convertido', label: 'Convertido', color: 'var(--success)' },
+	{ id: 'visitante', label: 'Visitante', color: 'var(--ink-2)' },
+	{ id: 'cadastrou', label: 'Cadastrou', color: 'var(--info)' },
+	{ id: 'ativou_aluno', label: 'Ativou aluno', color: 'var(--accent-2)' },
+	{ id: 'trial', label: 'Trial', color: 'var(--warn)' },
+	{ id: 'pagante', label: 'Pagante', color: 'var(--success)' },
+	{ id: 'cancelado', label: 'Cancelado', color: 'var(--ink-3)' },
 	{ id: 'perdido', label: 'Perdido', color: 'var(--danger)' }
 ];
 
@@ -1859,54 +1864,49 @@ export type LeadListItem = {
 	stage: LeadStage;
 	notes: string | null;
 	nextFollowUpAt: Date | null;
-	convertedStudentId: string | null;
+	subjectProfessionalId: string | null;
 	lostReason: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 };
 
-export async function getLeadsByProfessional(
-	professionalId: string
-): Promise<LeadListItem[]> {
+/**
+ * Retorna TODOS os leads (admin-only — qualquer admin enxerga tudo).
+ * Não há filtro por professionalId aqui propositalmente — leads são
+ * compartilhados entre todos os admins do Preceptor Fisic.
+ */
+export async function getAllLeads(): Promise<LeadListItem[]> {
 	const rows = await db
 		.select()
 		.from(leads)
-		.where(eq(leads.professionalId, professionalId))
 		.orderBy(desc(leads.createdAt));
 	return rows as LeadListItem[];
 }
 
-export async function getLeadById(
-	id: string,
-	professionalId: string
-): Promise<LeadListItem | null> {
-	const [row] = await db
-		.select()
-		.from(leads)
-		.where(and(eq(leads.id, id), eq(leads.professionalId, professionalId)))
-		.limit(1);
+export async function getLeadById(id: string): Promise<LeadListItem | null> {
+	const [row] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
 	return (row ?? null) as LeadListItem | null;
 }
 
-export async function createLead(
-	professionalId: string,
-	data: {
-		name: string;
-		phone?: string | null;
-		email?: string | null;
-		source?: LeadSource;
-		stage?: LeadStage;
-		notes?: string | null;
-		nextFollowUpAt?: Date | null;
-	}
-): Promise<Lead> {
+export async function createLead(data: {
+	name: string;
+	phone?: string | null;
+	email?: string | null;
+	source?: LeadSource;
+	stage?: LeadStage;
+	notes?: string | null;
+	nextFollowUpAt?: Date | null;
+	subjectProfessionalId?: string | null;
+	professionalId?: string | null;
+}): Promise<Lead> {
 	const insert: NewLead = {
-		professionalId,
+		professionalId: data.professionalId ?? null,
+		subjectProfessionalId: data.subjectProfessionalId ?? null,
 		name: data.name.trim(),
 		phone: data.phone?.trim() || null,
 		email: data.email?.trim() || null,
 		source: data.source ?? 'outro',
-		stage: data.stage ?? 'novo',
+		stage: data.stage ?? 'visitante',
 		notes: data.notes?.trim() || null,
 		nextFollowUpAt: data.nextFollowUpAt ?? null
 	};
@@ -1917,7 +1917,6 @@ export async function createLead(
 
 export async function updateLead(
 	id: string,
-	professionalId: string,
 	data: Partial<{
 		name: string;
 		phone: string | null;
@@ -1932,83 +1931,116 @@ export async function updateLead(
 	const [row] = await db
 		.update(leads)
 		.set({ ...data, updatedAt: new Date() })
-		.where(and(eq(leads.id, id), eq(leads.professionalId, professionalId)))
+		.where(eq(leads.id, id))
 		.returning();
 	return row ?? null;
 }
 
-export async function updateLeadStage(
-	id: string,
-	professionalId: string,
-	stage: LeadStage
-): Promise<Lead | null> {
-	return updateLead(id, professionalId, { stage });
+export async function updateLeadStage(id: string, stage: LeadStage): Promise<Lead | null> {
+	return updateLead(id, { stage });
 }
 
-export async function deleteLead(id: string, professionalId: string): Promise<boolean> {
-	const res = await db
-		.delete(leads)
-		.where(and(eq(leads.id, id), eq(leads.professionalId, professionalId)))
-		.returning({ id: leads.id });
+export async function deleteLead(id: string): Promise<boolean> {
+	const res = await db.delete(leads).where(eq(leads.id, id)).returning({ id: leads.id });
 	return res.length > 0;
 }
 
-/**
- * Converte lead em aluno — cria registro em students, marca o lead como
- * 'convertido' apontando pro novo studentId. Idempotente: se o lead já
- * estiver convertido, retorna o studentId existente.
- */
-export async function convertLeadToStudent(
-	leadId: string,
-	professionalId: string
-): Promise<{ studentId: string } | null> {
-	const lead = await getLeadById(leadId, professionalId);
-	if (!lead) return null;
-	if (lead.convertedStudentId) return { studentId: lead.convertedStudentId };
-
-	// Cria student mínimo — o profissional pode completar dados depois
-	// na ficha do aluno (idade, peso, altura, objetivos, etc).
-	const [student] = await db
-		.insert(students)
-		.values({
-			professionalId,
-			name: lead.name,
-			sex: 'nao_informado'
-		})
-		.returning({ id: students.id });
-	if (!student) throw new Error('falha ao criar aluno');
-
-	await db
-		.update(leads)
-		.set({
-			stage: 'convertido',
-			convertedStudentId: student.id,
-			updatedAt: new Date()
-		})
-		.where(and(eq(leads.id, leadId), eq(leads.professionalId, professionalId)));
-
-	return { studentId: student.id };
-}
-
-/** Conta leads por stage — alimenta badges do sidebar e métricas do funil */
-export async function getLeadCountsByStage(
-	professionalId: string
-): Promise<Record<LeadStage, number>> {
+/** Conta leads por stage — alimenta badges + funil */
+export async function getLeadCountsByStage(): Promise<Record<LeadStage, number>> {
 	const rows = await db.execute<{ stage: LeadStage; n: number }>(sql`
 		SELECT stage::text AS stage, COUNT(*)::int AS n
 		FROM leads
-		WHERE professional_id = ${professionalId}
 		GROUP BY stage
 	`);
 	const list = unwrapRows<{ stage: LeadStage; n: number }>(rows);
 	const counts: Record<LeadStage, number> = {
-		novo: 0,
-		contatado: 0,
-		trial_agendado: 0,
-		trial_realizado: 0,
-		convertido: 0,
+		visitante: 0,
+		cadastrou: 0,
+		ativou_aluno: 0,
+		trial: 0,
+		pagante: 0,
+		cancelado: 0,
 		perdido: 0
 	};
 	for (const r of list) counts[r.stage] = Number(r.n);
 	return counts;
+}
+
+/**
+ * Auto-cria lead quando um professional faz signup. Idempotente: se já
+ * existe lead pra esse professional, atualiza ao invés de duplicar.
+ *
+ * Chamado pelo onboarding e por hooks futuros (Stripe etc).
+ */
+export async function createLeadFromSignup(params: {
+	professionalId: string;
+	name: string;
+	email: string;
+	source?: LeadSource;
+}): Promise<void> {
+	const existing = await db
+		.select({ id: leads.id })
+		.from(leads)
+		.where(eq(leads.subjectProfessionalId, params.professionalId))
+		.limit(1);
+
+	if (existing.length > 0) {
+		// Atualiza o stage pra 'cadastrou' caso ainda esteja como 'visitante'
+		await db
+			.update(leads)
+			.set({ stage: 'cadastrou', name: params.name, email: params.email, updatedAt: new Date() })
+			.where(eq(leads.id, existing[0]!.id));
+		return;
+	}
+
+	await db.insert(leads).values({
+		subjectProfessionalId: params.professionalId,
+		name: params.name,
+		email: params.email,
+		source: params.source ?? 'outro',
+		stage: 'cadastrou'
+	});
+}
+
+/**
+ * Sincroniza o stage do lead com base no estado atual do professional.
+ * Regras:
+ * - subscription_status='active' → pagante
+ * - subscription_status='trial' + has students → ativou_aluno (ou trial se sem alunos)
+ * - subscription_status='cancelled' → cancelado
+ *
+ * Chamado por hooks (Stripe webhook, after-add-student, etc).
+ */
+export async function syncLeadStageFromProfessional(
+	professionalId: string
+): Promise<void> {
+	const result = await db.execute<{
+		subscription_status: string;
+		has_students: boolean;
+	}>(sql`
+		SELECT
+			p.subscription_status::text AS subscription_status,
+			EXISTS (
+				SELECT 1 FROM students s
+				WHERE s.professional_id = p.id AND s.deleted_at IS NULL
+			) AS has_students
+		FROM professionals p
+		WHERE p.id = ${professionalId}
+	`);
+	const row = unwrapRows<{ subscription_status: string; has_students: boolean }>(result)[0];
+	if (!row) return;
+
+	let newStage: LeadStage = 'cadastrou';
+	if (row.subscription_status === 'active' || row.subscription_status === 'paid') {
+		newStage = 'pagante';
+	} else if (row.subscription_status === 'cancelled' || row.subscription_status === 'canceled') {
+		newStage = 'cancelado';
+	} else if (row.subscription_status === 'trial') {
+		newStage = row.has_students ? 'ativou_aluno' : 'trial';
+	}
+
+	await db
+		.update(leads)
+		.set({ stage: newStage, updatedAt: new Date() })
+		.where(eq(leads.subjectProfessionalId, professionalId));
 }

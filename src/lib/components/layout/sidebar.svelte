@@ -23,6 +23,7 @@
 		studentsCount?: number;
 		unreadMessages?: number;
 		newLeadsCount?: number;
+		isAdmin?: boolean;
 	};
 
 	let {
@@ -35,18 +36,24 @@
 		userCref = 'CREF 123456-G',
 		studentsCount = 0,
 		unreadMessages = 0,
-		newLeadsCount = 0
+		newLeadsCount = 0,
+		isAdmin = false
 	}: Props = $props();
 
 	const NAV_PRO = $derived<NavItem[]>([
 		{ id: 'home', label: 'Visão geral', icon: 'home', href: '/dashboard' },
-		{
-			id: 'crm',
-			label: 'CRM',
-			icon: 'crm',
-			href: '/crm',
-			badge: newLeadsCount > 0 ? newLeadsCount : undefined
-		},
+		// CRM aparece SÓ pro time admin do Preceptor Fisic
+		...(isAdmin
+			? [
+					{
+						id: 'crm',
+						label: 'CRM',
+						icon: 'crm' as const,
+						href: '/crm',
+						badge: newLeadsCount > 0 ? newLeadsCount : undefined
+					}
+				]
+			: []),
 		{
 			id: 'alunos',
 			label: 'Alunos',
