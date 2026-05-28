@@ -153,9 +153,12 @@
 		property="og:description"
 		content="PreceptorFISIC com diretrizes ACSM · Validação clínica automática · App mobile do aluno. Plataforma para profissionais CREF/CREFITO."
 	/>
-	<meta property="og:image" content="https://preceptor-fisic.vercel.app/og-image.svg" />
+	<!-- PNG (não SVG): WhatsApp/Facebook/LinkedIn/X não renderizam SVG em preview -->
+	<meta property="og:image" content="https://preceptor-fisic.vercel.app/og-image.png" />
+	<meta property="og:image:type" content="image/png" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content="Preceptor Fisic — prescrição clínica validada" />
 	<meta property="og:site_name" content="Preceptor Fisic" />
 	<meta property="og:locale" content="pt_BR" />
 
@@ -166,7 +169,7 @@
 		name="twitter:description"
 		content="PreceptorFISIC com diretrizes ACSM · Validação clínica automática · App mobile do aluno."
 	/>
-	<meta name="twitter:image" content="https://preceptor-fisic.vercel.app/og-image.svg" />
+	<meta name="twitter:image" content="https://preceptor-fisic.vercel.app/og-image.png" />
 
 	<!-- JSON-LD structured data (SoftwareApplication) -->
 	<script type="application/ld+json">

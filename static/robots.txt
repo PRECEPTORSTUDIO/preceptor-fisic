@@ -5,6 +5,7 @@ Allow: /legal/
 
 # Áreas privadas — não indexar
 Disallow: /dashboard
+Disallow: /crm
 Disallow: /alunos
 Disallow: /planos
 Disallow: /exercicios

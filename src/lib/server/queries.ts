@@ -1334,6 +1334,8 @@ export type AlunoAppData = {
 		sessionLabel: string | null;
 		perceivedEffort: number | null;
 	}[];
+	/** Sessões concluídas na semana corrente (segunda → hoje). Alimenta o card "Esta semana". */
+	sessionsThisWeek: number;
 	streakDays: number;
 };
 
@@ -1390,11 +1392,28 @@ export async function getAlunoAppData(studentId: string): Promise<AlunoAppData |
 
 	const streakDays = computeStreak(sessRows.map((r) => r.sessionDate));
 
+	// Sessões da semana corrente (segunda 00:00 → agora) — count dedicado
+	// pra não confundir com as "últimas 10 sessões" do recentSessions.
+	const weekStart = new Date();
+	const dow = (weekStart.getDay() + 6) % 7; // 0 = segunda
+	weekStart.setDate(weekStart.getDate() - dow);
+	weekStart.setHours(0, 0, 0, 0);
+	const [weekCount] = await db
+		.select({ n: count() })
+		.from(trainingSessions)
+		.where(
+			and(
+				eq(trainingSessions.studentId, studentId),
+				gte(trainingSessions.sessionDate, weekStart)
+			)
+		);
+
 	return {
 		student: { id: s.id, name: s.name, weightKg: s.weightKg, heightCm: s.heightCm },
 		professional: { id: pro.id, name: pro.name, cref: pro.cref },
 		plan,
 		recentSessions: sessRows,
+		sessionsThisWeek: Number(weekCount?.n ?? 0),
 		streakDays
 	};
 }

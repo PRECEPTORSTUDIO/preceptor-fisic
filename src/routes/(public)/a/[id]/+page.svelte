@@ -99,8 +99,11 @@
 			: []
 	);
 
-	const recentDone = $derived(recent.length);
-	const weeklyTarget = 5; // tomar do prefs.weeklySessions futuramente
+	// "Esta semana": usa contagem real da semana corrente (não as últimas 10
+	// sessões). weeklyTarget vem das preferências do plano quando disponível.
+	const weeklyTarget = 5; // TODO: ler de prefs.weeklySessions
+	const sessionsThisWeek = $derived(data.sessionsThisWeek ?? 0);
+	const recentDone = $derived(Math.min(sessionsThisWeek, weeklyTarget));
 </script>
 
 <svelte:head>
