@@ -18,7 +18,9 @@
 		return externalMetric === 'tonnage' ? w.tonnage : w.repVolume;
 	}
 
-	const extLabel = $derived(externalMetric === 'tonnage' ? 'Tonelagem' : 'Volume (reps)');
+	const extLabel = $derived(
+		externalMetric === 'tonnage' ? 'peso levantado (séries × reps × kg)' : 'volume (séries × reps)'
+	);
 	const extUnit = $derived(externalMetric === 'tonnage' ? 'kg' : 'reps');
 
 	// Geometria do SVG
@@ -155,11 +157,11 @@
 		<div class="lc-legend">
 			<span class="lc-leg">
 				<span class="lc-swatch" style="background:var(--accent)"></span>
-				Carga externa · {extLabel}
+				Carga externa — {extLabel}
 			</span>
 			<span class="lc-leg">
 				<span class="lc-swatch" style="background:var(--warn)"></span>
-				Carga interna · PSE-sessão
+				Carga interna — esforço (PSE × tempo)
 			</span>
 		</div>
 		{#if latest}

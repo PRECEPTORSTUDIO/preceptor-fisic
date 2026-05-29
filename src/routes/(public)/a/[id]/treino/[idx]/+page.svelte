@@ -31,10 +31,40 @@
 
 	let activeIdx = $state(0);
 	let completed = $state<Record<number, boolean>>({});
-	let loadByEx = $state<Record<number, string>>({});
 	let rpe = $state(7);
 	let observations = $state('');
 	let submitting = $state(false);
+
+	// Reps prescritas → número-base pra pré-preencher cada série.
+	// "8-12" vira "12" (alvo superior); "10" vira "10".
+	function defaultReps(reps: string | undefined): string {
+		if (!reps) return '';
+		const m = String(reps).match(/(\d+)\s*(?:-|–|a|to|até)\s*(\d+)/);
+		if (m) return m[2]!;
+		const s = String(reps).match(/(\d+)/);
+		return s ? s[1]! : '';
+	}
+
+	// Log por série: setLogs[exerciseIdx] = [{ weight, reps }, ...].
+	// Inicializa N linhas (= séries prescritas) com reps pré-preenchidas, peso vazio.
+	type SetRow = { weight: string; reps: string };
+	let setLogs = $state<Record<number, SetRow[]>>(
+		Object.fromEntries(
+			((data.session?.main ?? []) as Array<{ sets?: number; reps?: string }>).map((e, i) => {
+				const n = Math.max(1, Number(e.sets) || 1);
+				const r = defaultReps(e.reps);
+				return [i, Array.from({ length: n }, () => ({ weight: '', reps: r }))];
+			})
+		)
+	);
+
+	// Copia o peso da 1ª série pra todas (atalho comum — mesmo peso em todas).
+	function repeatWeight(exIdx: number) {
+		const rows = setLogs[exIdx];
+		if (!rows || rows.length === 0) return;
+		const w = rows[0]!.weight;
+		setLogs[exIdx] = rows.map((row) => ({ ...row, weight: w }));
+	}
 
 	const ex = $derived(exercises[activeIdx]);
 	const exVideo = $derived(ex ? (videoMap[ex.name]?.videoUrl ?? null) : null);
@@ -107,12 +137,12 @@
 			};
 		}}
 	>
-		<!-- Inputs ocultos: duração + cada exercício -->
+		<!-- Inputs ocultos: duração + por exercício (séries com peso/reps em JSON) -->
 		<input type="hidden" name="duration_minutes" value={elapsedMin} />
 		{#each exercises as exItem, i (i)}
 			<input type="hidden" name="sets_{i}" value={exItem.sets ?? 0} />
 			<input type="hidden" name="reps_{i}" value={exItem.reps ?? ''} />
-			<input type="hidden" name="load_{i}" value={loadByEx[i] ?? ''} />
+			<input type="hidden" name="setlogs_{i}" value={JSON.stringify(setLogs[i] ?? [])} />
 			<input type="hidden" name="completed_{i}" value={completed[i] ? 'on' : ''} />
 		{/each}
 
@@ -171,14 +201,46 @@
 					</div>
 				{/if}
 
-				<!-- Quick load entry -->
-				<div class="load-input-wrap">
-					<label class="lbl">Carga usada hoje</label>
-					<input
-						bind:value={loadByEx[activeIdx]}
-						placeholder={ex.load_guidance ?? 'ex: 20kg ou peso corporal'}
-						class="load-input"
-					/>
+				<!-- Registro por série: peso + reps de cada série feita.
+				     Alimenta a carga externa (Σ peso×reps) com precisão. -->
+				<div class="sets-log">
+					<div class="sets-log-head">
+						<span class="lbl">Como foi cada série</span>
+						{#if (setLogs[activeIdx]?.length ?? 0) > 1}
+							<button type="button" class="repeat-btn" onclick={() => repeatWeight(activeIdx)}>
+								= repetir peso da 1ª
+							</button>
+						{/if}
+					</div>
+					<div class="sets-rows">
+						{#each setLogs[activeIdx] ?? [] as row, si (si)}
+							<div class="set-row">
+								<span class="set-num">{si + 1}ª</span>
+								<div class="set-field">
+									<input
+										type="text"
+										inputmode="decimal"
+										bind:value={row.weight}
+										placeholder={ex.load_guidance ? '—' : 'peso'}
+										class="set-input"
+									/>
+									<span class="set-unit">kg</span>
+								</div>
+								<span class="set-x">×</span>
+								<div class="set-field">
+									<input
+										type="text"
+										inputmode="numeric"
+										bind:value={row.reps}
+										placeholder="reps"
+										class="set-input"
+									/>
+									<span class="set-unit">reps</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div class="sets-hint">Peso corporal? Deixe o peso vazio — conta só as repetições.</div>
 				</div>
 
 				<!-- Botão concluir exercício -->
@@ -390,24 +452,85 @@
 		color: var(--ink-2);
 		margin-bottom: 6px;
 	}
-	.load-input-wrap {
-		margin: 14px 0;
+	/* Registro por série */
+	.sets-log {
+		margin: 16px 0;
 	}
-	.load-input {
-		width: 100%;
-		box-sizing: border-box;
-		height: 48px;
-		padding: 0 14px;
+	.sets-log-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 10px;
+	}
+	.repeat-btn {
+		all: unset;
+		cursor: pointer;
+		font: var(--label-mono);
+		color: var(--accent);
+		padding: 4px 8px;
+		border-radius: var(--r-1);
+		border: 1px solid var(--accent-dim);
+	}
+	.repeat-btn:active {
+		background: var(--accent-wash);
+	}
+	.sets-rows {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.set-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.set-num {
+		flex-shrink: 0;
+		width: 26px;
+		font: 500 14px var(--font-mono);
+		color: var(--ink-2);
+		text-align: center;
+	}
+	.set-field {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		gap: 6px;
 		background: var(--bg-3);
 		border: 1px solid var(--ink-line-2);
 		border-radius: var(--r-2);
-		color: var(--ink-0);
-		font: 500 16px var(--font-mono);
-		outline: none;
+		padding: 0 12px;
+		height: 48px;
+		transition: border-color 140ms var(--ease);
 	}
-	.load-input:focus {
+	.set-field:focus-within {
 		border-color: var(--accent);
 		box-shadow: 0 0 0 3px var(--accent-wash);
+	}
+	.set-input {
+		width: 100%;
+		min-width: 0;
+		background: transparent;
+		border: 0;
+		outline: none;
+		color: var(--ink-0);
+		font: 500 17px var(--font-mono);
+		text-align: right;
+	}
+	.set-unit {
+		flex-shrink: 0;
+		font: var(--label-mono);
+		color: var(--ink-3);
+	}
+	.set-x {
+		flex-shrink: 0;
+		color: var(--ink-3);
+		font: 500 14px var(--font-mono);
+	}
+	.sets-hint {
+		margin-top: 8px;
+		font: var(--label-mono);
+		color: var(--ink-3);
 	}
 	.done-btn {
 		width: 100%;

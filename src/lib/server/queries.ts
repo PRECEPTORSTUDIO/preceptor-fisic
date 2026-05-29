@@ -1452,6 +1452,7 @@ export type LogSessionInput = {
 		sets_done: number;
 		reps_done: string;
 		load_used?: string;
+		set_logs?: { weight: number; reps: number }[];
 		notes?: string;
 		completed: boolean;
 	}[];
@@ -1590,14 +1591,25 @@ export async function getStudentLoadEvolution(
 
 		bucket.sessions += 1;
 
-		// Carga externa: percorre exercícios feitos
+		// Carga externa: percorre exercícios feitos.
+		// Preferência: set_logs (peso×reps reais por série). Fallback: modelo
+		// antigo (sets_done × reps × load_used em texto) pra logs anteriores.
 		for (const ex of row.exercisesDone ?? []) {
 			if (!ex.completed) continue;
-			const sets = Number(ex.sets_done) || 0;
-			const reps = parseRepsToNumber(ex.reps_done);
-			const kg = parseLoadToKg(ex.load_used);
-			bucket.repVolume += sets * reps;
-			bucket.tonnage += sets * reps * kg;
+			if (ex.set_logs && ex.set_logs.length > 0) {
+				for (const sl of ex.set_logs) {
+					const w = Number(sl.weight) || 0;
+					const r = Number(sl.reps) || 0;
+					bucket.repVolume += r;
+					bucket.tonnage += w * r;
+				}
+			} else {
+				const sets = Number(ex.sets_done) || 0;
+				const reps = parseRepsToNumber(ex.reps_done);
+				const kg = parseLoadToKg(ex.load_used);
+				bucket.repVolume += sets * reps;
+				bucket.tonnage += sets * reps * kg;
+			}
 		}
 
 		// Carga interna: session-RPE = PSE × duração

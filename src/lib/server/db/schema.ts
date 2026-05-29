@@ -353,6 +353,12 @@ export type ExerciseLog = {
 	sets_done: number;
 	reps_done: string;
 	load_used?: string;
+	/**
+	 * Peso e reps reais de cada série executada — fonte de verdade pra carga
+	 * externa (Σ peso×reps). Opcional pra compat com logs antigos que só tinham
+	 * load_used em texto livre.
+	 */
+	set_logs?: { weight: number; reps: number }[];
 	notes?: string;
 	completed: boolean;
 };

@@ -87,15 +87,43 @@ export const actions: Actions = {
 		if (!session) return fail(404, { error: 'sessão não encontrada' });
 
 		const fd = await request.formData();
-		const exerciseLogs = (session.main ?? []).map((ex, i) => ({
-			exercise_id: `${data.plan!.id}-${idx}-${i}`,
-			name: ex.name,
-			sets_done: Number(fd.get(`sets_${i}`) ?? ex.sets ?? 0),
-			reps_done: String(fd.get(`reps_${i}`) ?? ex.reps ?? '—'),
-			load_used: String(fd.get(`load_${i}`) ?? '').trim() || undefined,
-			notes: undefined,
-			completed: fd.get(`completed_${i}`) === 'on'
-		}));
+		const exerciseLogs = (session.main ?? []).map((ex, i) => {
+			// set_logs: peso/reps reais por série (JSON enviado pelo front).
+			// Cada série vira { weight, reps }; vazias (sem peso E sem reps) são descartadas.
+			let setLogs: { weight: number; reps: number }[] = [];
+			try {
+				const raw = JSON.parse(String(fd.get(`setlogs_${i}`) ?? '[]')) as Array<{
+					weight?: string;
+					reps?: string;
+				}>;
+				setLogs = raw
+					.map((r) => ({
+						weight: Number(String(r.weight ?? '').replace(',', '.')) || 0,
+						reps: parseInt(String(r.reps ?? ''), 10) || 0
+					}))
+					.filter((r) => r.weight > 0 || r.reps > 0);
+			} catch {
+				setLogs = [];
+			}
+
+			const setsDone = setLogs.length || Number(fd.get(`sets_${i}`) ?? ex.sets ?? 0);
+			// Resumo legível: reps reais ("10,10,8") e maior peso usado.
+			const repsSummary = setLogs.length
+				? setLogs.map((s) => s.reps).join(',')
+				: String(fd.get(`reps_${i}`) ?? ex.reps ?? '—');
+			const maxWeight = setLogs.reduce((m, s) => Math.max(m, s.weight), 0);
+
+			return {
+				exercise_id: `${data.plan!.id}-${idx}-${i}`,
+				name: ex.name,
+				sets_done: setsDone,
+				reps_done: repsSummary,
+				load_used: maxWeight > 0 ? `${maxWeight}kg` : undefined,
+				set_logs: setLogs.length ? setLogs : undefined,
+				notes: undefined,
+				completed: fd.get(`completed_${i}`) === 'on'
+			};
+		});
 		const rpeRaw = fd.get('rpe');
 		const perceivedEffort = rpeRaw ? Number(rpeRaw) : undefined;
 		const observations = String(fd.get('observations') ?? '').trim() || undefined;
