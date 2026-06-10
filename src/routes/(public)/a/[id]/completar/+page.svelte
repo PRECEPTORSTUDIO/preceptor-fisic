@@ -150,6 +150,16 @@
 			<p class="hint">Se você é novo na academia, prefira "Pequena" pra começar sem exercícios complexos.</p>
 		</section>
 
+		<!-- Consent LGPD — dados de saúde (art. 11) exigem consentimento explícito
+		     do titular. Validado server-side na action. -->
+		<label class="consent">
+			<input type="checkbox" name="accept_privacy" required />
+			<span>
+				Autorizo o tratamento dos meus dados de saúde pra prescrição de treinos,
+				conforme a <a href="/legal/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.
+			</span>
+		</label>
+
 		<button class="submit" type="submit" disabled={submitting}>
 			{submitting ? 'Salvando…' : 'Concluir cadastro →'}
 		</button>
@@ -162,6 +172,26 @@
 		display: flex;
 		flex-direction: column;
 		gap: 14px;
+	}
+	.consent {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 12px 14px;
+		background: var(--bg-2);
+		border: 1px solid var(--ink-line-2);
+		border-radius: var(--r-2);
+		font: 400 13px/1.5 var(--font-sans);
+		color: var(--ink-1);
+		cursor: pointer;
+	}
+	.consent input {
+		margin-top: 2px;
+		accent-color: var(--accent);
+		flex-shrink: 0;
+	}
+	.consent a {
+		color: var(--accent-2);
 	}
 	.hd .eyebrow {
 		font: var(--label-mono);

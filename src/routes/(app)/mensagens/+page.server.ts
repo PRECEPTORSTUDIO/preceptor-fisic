@@ -13,7 +13,9 @@ export const load = (async ({ url, parent }) => {
 
 	const threads = await getConversationThreads(professional.id);
 	const activeId = url.searchParams.get('t') ?? threads[0]?.id ?? null;
-	const activeMessages = activeId ? await getMessagesForThread(activeId) : [];
+	// getMessagesForThread valida ownership — thread de outro profissional
+	// retorna lista vazia em vez de vazar mensagens.
+	const activeMessages = activeId ? await getMessagesForThread(activeId, professional.id) : [];
 
 	return { threads, activeId, activeMessages };
 }) satisfies PageServerLoad;
@@ -28,7 +30,11 @@ export const actions: Actions = {
 		const conversationId = String(data.get('conversationId') ?? '');
 		const body = String(data.get('body') ?? '').trim();
 		if (!conversationId || !body) return fail(400, { error: 'preencha mensagem' });
-		await postMessage(conversationId, body, 'professional');
+		try {
+			await postMessage(conversationId, body, 'professional', professional.id);
+		} catch {
+			return fail(403, { error: 'conversa não encontrada' });
+		}
 		return { success: true };
 	}
 };

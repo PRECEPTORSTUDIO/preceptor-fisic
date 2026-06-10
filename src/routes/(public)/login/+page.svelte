@@ -6,17 +6,20 @@
 	let { form }: { form: ActionData } = $props();
 
 	let mode = $state<'login' | 'signup'>('login');
-	let email = $state(form?.email ?? 'matheus@studio.fit');
+	let email = $state(form?.email ?? '');
 	let pass = $state('');
 	let name = $state('');
 	let cref = $state('');
+	let acceptedTerms = $state(false);
 	let focused = $state<string | null>(null);
 	let submitting = $state(false);
 
+	// Propostas de valor reais — sem métricas fabricadas (risco CDC/CONFEF
+	// exibir números de usuários/aderência que não temos como comprovar).
 	const stats = [
-		{ num: '2.4k', lbl: 'profissionais ativos' },
-		{ num: '180k', lbl: 'planos prescritos' },
-		{ num: '94%', lbl: 'aderência média' }
+		{ num: '1.324', lbl: 'exercícios com vídeo demonstrativo' },
+		{ num: '2.040', lbl: 'trechos de diretrizes ACSM/AHA indexados' },
+		{ num: '23', lbl: 'regras de validação clínica automática' }
 	];
 
 	function fieldStyle(key: string) {
@@ -59,7 +62,7 @@
 			</div>
 		</div>
 
-		<div class="eyebrow" style="position:relative">v3.2.1 · São Paulo · CONFEF parceiro</div>
+		<div class="eyebrow" style="position:relative">v3.2.1 · São Paulo · Conformidade LGPD</div>
 	</div>
 
 	<!-- Direita — formulário -->
@@ -141,6 +144,20 @@
 					/>
 				</div>
 
+				{#if mode === 'signup'}
+					<!-- Consent LGPD explícito — obrigatório pra criar conta.
+					     Server-side valida `accept_terms` na action signup. -->
+					<label class="consent-row">
+						<input type="checkbox" name="accept_terms" bind:checked={acceptedTerms} required />
+						<span>
+							Li e concordo com os
+							<a href="/legal/termos" target="_blank" rel="noopener">Termos de Uso</a>
+							e a
+							<a href="/legal/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.
+						</span>
+					</label>
+				{/if}
+
 				{#if form?.error}
 					<div
 						style="padding:10px 12px;border-radius:var(--r-2);background:var(--danger-dim);border:1px solid var(--danger);color:var(--danger);font:var(--body-sm)"
@@ -153,7 +170,12 @@
 					</div>
 				{/if}
 
-				<Button size="lg" type="submit" disabled={submitting} style="width:100%;justify-content:center;margin-top:10px">
+				<Button
+					size="lg"
+					type="submit"
+					disabled={submitting || (mode === 'signup' && !acceptedTerms)}
+					style="width:100%;justify-content:center;margin-top:10px"
+				>
 					{#if submitting}
 						{mode === 'login' ? 'Entrando…' : 'Criando…'}
 					{:else}
@@ -162,20 +184,12 @@
 				</Button>
 			</form>
 
-			<div style="display:flex;align-items:center;gap:12px;margin:28px 0">
-				<div style="flex:1;height:1px;background:var(--ink-line)"></div>
-				<span class="eyebrow">OU</span>
-				<div style="flex:1;height:1px;background:var(--ink-line)"></div>
-			</div>
-
-			<div style="display:flex;flex-direction:column;gap:10px">
-				<Button variant="secondary" size="lg" style="width:100%;justify-content:center">Continuar com Google</Button>
-				<Button variant="secondary" size="lg" style="width:100%;justify-content:center">Continuar com Apple</Button>
-			</div>
+			<!-- OAuth (Google/Apple) removido: botões eram decorativos, sem provider
+			     configurado no Supabase. Reintroduzir só quando o fluxo funcionar. -->
 
 			<div class="login-trust">
 				<span style="color:var(--accent)">◆</span>
-				<span style="font:var(--body-sm);color:var(--ink-1)">Validado pelo CONFEF · Conformidade LGPD</span>
+				<span style="font:var(--body-sm);color:var(--ink-1)">Dados na região BR · Conformidade LGPD</span>
 			</div>
 		</div>
 	</div>
@@ -259,6 +273,26 @@
 	.login-tabs button.on {
 		background: var(--bg-4);
 		color: var(--ink-0);
+	}
+	.consent-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 10px 12px;
+		background: var(--bg-2);
+		border: 1px solid var(--ink-line-2);
+		border-radius: var(--r-2);
+		font: 400 12.5px/1.5 var(--font-sans);
+		color: var(--ink-1);
+		cursor: pointer;
+	}
+	.consent-row input {
+		margin-top: 2px;
+		accent-color: var(--accent);
+		flex-shrink: 0;
+	}
+	.consent-row a {
+		color: var(--accent-2);
 	}
 	.login-trust {
 		margin-top: 28px;

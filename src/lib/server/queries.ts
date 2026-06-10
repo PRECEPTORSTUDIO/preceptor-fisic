@@ -1420,41 +1420,63 @@ export type ThreadListItem = {
 };
 
 export async function getConversationThreads(professionalId: string): Promise<ThreadListItem[]> {
+	// Última mensagem via correlated subquery — 1 round-trip pro Postgres.
+	// Antes era N+1 (uma query por conversa; 50 alunos = 51 queries).
 	const rows = await db
 		.select({
 			id: conversations.id,
 			studentId: conversations.studentId,
 			studentName: students.name,
 			lastAt: conversations.lastMessageAt,
-			unread: conversations.unreadCount
+			unread: conversations.unreadCount,
+			lastBody: sql<string | null>`(
+				SELECT m.body FROM messages m
+				WHERE m.conversation_id = ${conversations.id}
+				ORDER BY m.created_at DESC LIMIT 1
+			)`
 		})
 		.from(conversations)
 		.leftJoin(students, eq(students.id, conversations.studentId))
 		.where(eq(conversations.professionalId, professionalId))
 		.orderBy(desc(conversations.lastMessageAt));
 
-	const result: ThreadListItem[] = [];
-	for (const r of rows) {
-		const [lastMsg] = await db
-			.select({ body: messages.body })
-			.from(messages)
-			.where(eq(messages.conversationId, r.id))
-			.orderBy(desc(messages.createdAt))
-			.limit(1);
-		result.push({
-			id: r.id,
-			studentId: r.studentId,
-			studentName: r.studentName ?? '—',
-			last: lastMsg?.body.slice(0, 80) ?? null,
-			lastAt: r.lastAt,
-			unread: r.unread,
-			online: Math.random() > 0.5 // mock
-		});
-	}
-	return result;
+	return rows.map((r) => ({
+		id: r.id,
+		studentId: r.studentId,
+		studentName: r.studentName ?? '—',
+		last: r.lastBody?.slice(0, 80) ?? null,
+		lastAt: r.lastAt,
+		unread: r.unread,
+		// Não rastreamos presença — era Math.random() (status fake pro user).
+		// Sempre false até existir presence channel de verdade.
+		online: false
+	}));
 }
 
-export async function getMessagesForThread(conversationId: string): Promise<Message[]> {
+/**
+ * Verifica que a conversation pertence ao professional. Toda leitura/escrita
+ * de mensagem DEVE passar por aqui — sem isso, qualquer profissional logado
+ * lia/escrevia em threads de outros só trocando o conversationId da URL/form.
+ */
+export async function conversationBelongsTo(
+	conversationId: string,
+	professionalId: string
+): Promise<boolean> {
+	const [c] = await db
+		.select({ id: conversations.id })
+		.from(conversations)
+		.where(
+			and(eq(conversations.id, conversationId), eq(conversations.professionalId, professionalId))
+		)
+		.limit(1);
+	return Boolean(c);
+}
+
+export async function getMessagesForThread(
+	conversationId: string,
+	professionalId: string
+): Promise<Message[]> {
+	if (!(await conversationBelongsTo(conversationId, professionalId))) return [];
 	return db
 		.select()
 		.from(messages)
@@ -1465,8 +1487,15 @@ export async function getMessagesForThread(conversationId: string): Promise<Mess
 export async function postMessage(
 	conversationId: string,
 	body: string,
-	fromRole: 'professional' | 'student'
+	fromRole: 'professional' | 'student',
+	/** Obrigatório quando fromRole=professional — valida ownership da thread. */
+	professionalId?: string
 ): Promise<Message> {
+	if (fromRole === 'professional') {
+		if (!professionalId || !(await conversationBelongsTo(conversationId, professionalId))) {
+			throw new Error('Conversa não encontrada ou não pertence a este profissional.');
+		}
+	}
 	const [m] = await db
 		.insert(messages)
 		.values({ conversationId, body, fromRole })
@@ -1531,6 +1560,8 @@ export type AlunoAppData = {
 	/** Sessões concluídas na semana corrente (segunda → hoje). Alimenta o card "Esta semana". */
 	sessionsThisWeek: number;
 	streakDays: number;
+	/** Meta semanal de treinos — vem de training_preferences.weeklySessions. */
+	weeklyTarget: number;
 };
 
 export async function getAlunoAppData(studentId: string): Promise<AlunoAppData | null> {
@@ -1602,13 +1633,21 @@ export async function getAlunoAppData(studentId: string): Promise<AlunoAppData |
 			)
 		);
 
+	// Meta semanal real do aluno (era hardcoded 5 na UI)
+	const [prefRow] = await db
+		.select({ weeklySessions: trainingPreferences.weeklySessions })
+		.from(trainingPreferences)
+		.where(eq(trainingPreferences.studentId, studentId))
+		.limit(1);
+
 	return {
 		student: { id: s.id, name: s.name, weightKg: s.weightKg, heightCm: s.heightCm },
 		professional: { id: pro.id, name: pro.name, cref: pro.cref },
 		plan,
 		recentSessions: sessRows,
 		sessionsThisWeek: Number(weekCount?.n ?? 0),
-		streakDays
+		streakDays,
+		weeklyTarget: prefRow?.weeklySessions ?? 3
 	};
 }
 

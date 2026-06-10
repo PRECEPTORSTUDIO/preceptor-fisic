@@ -6,14 +6,20 @@
  * sessões que vão aparecendo em tempo real.
  */
 import { json, error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { trainingPlans } from '$lib/server/db/schema';
 import { failIfStale } from '$lib/server/ai/generator';
+import { getProfessionalByAuthId } from '$lib/server/queries';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) error(401);
+
+	// Ownership: sem este filtro, qualquer profissional logado podia pollar
+	// plano de OUTRO profissional só sabendo o UUID (vazava planData inteiro).
+	const professional = await getProfessionalByAuthId(locals.user.id);
+	if (!professional) error(401);
 
 	const [row] = await db
 		.select({
@@ -28,7 +34,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			updatedAt: trainingPlans.updatedAt
 		})
 		.from(trainingPlans)
-		.where(eq(trainingPlans.id, params.id!))
+		.where(
+			and(eq(trainingPlans.id, params.id!), eq(trainingPlans.professionalId, professional.id))
+		)
 		.limit(1);
 
 	if (!row) error(404, 'plano não encontrado');

@@ -52,6 +52,16 @@ export const actions: Actions = {
 		}
 
 		const fd = await request.formData();
+
+		// Consent LGPD art. 11 (dados de saúde exigem consentimento explícito
+		// do titular). O checkbox é do próprio aluno — diferente do fluxo
+		// "profissional cadastra", aqui o titular consente em primeira pessoa.
+		if (!fd.get('accept_privacy')) {
+			return fail(400, {
+				error: 'É preciso aceitar a Política de Privacidade pra continuar.'
+			});
+		}
+
 		const raw = {
 			birthDate: String(fd.get('birthDate') ?? '').trim() || null,
 			weightKg: fd.get('weightKg') ? Number(fd.get('weightKg')) : null,

@@ -59,7 +59,8 @@ export const actions: Actions = {
 		const email = String(data.get('email') ?? '');
 		const password = String(data.get('password') ?? '');
 		const name = String(data.get('name') ?? '');
-		const cref = String(data.get('cref') ?? '');
+		const cref = String(data.get('cref') ?? '').trim();
+		const acceptedTerms = data.get('accept_terms');
 
 		if (!locals.supabase) {
 			return fail(500, { email, error: 'Supabase não configurado. Verifique .env.local.' });
@@ -70,11 +71,30 @@ export const actions: Actions = {
 		if (password.length < 8) {
 			return fail(400, { email, error: 'Senha precisa ter pelo menos 8 caracteres.' });
 		}
+		// Consent LGPD explícito — checkbox do form. Sem ele não cria conta;
+		// o aceite (com timestamp) fica gravado no user_metadata pra auditoria.
+		if (!acceptedTerms) {
+			return fail(400, {
+				email,
+				error: 'É preciso aceitar os Termos de Uso e a Política de Privacidade.'
+			});
+		}
+		// Validação leve do registro profissional: aceita CREF/CREFITO/CRM com
+		// 4-6 dígitos + sufixo opcional. Não valida contra o conselho (não há
+		// API pública) — barra só lixo óbvio tipo "abc" ou "1".
+		if (cref && !/\d{4,6}/.test(cref)) {
+			return fail(400, {
+				email,
+				error: 'Registro profissional inválido — informe o número do CREF/CREFITO/CRM.'
+			});
+		}
 
 		const { data: authData, error } = await locals.supabase.auth.signUp({
 			email,
 			password,
-			options: { data: { name, cref } }
+			options: {
+				data: { name, cref, accepted_terms_at: new Date().toISOString() }
+			}
 		});
 		const fp = clientFingerprint(request, getClientAddress);
 		if (error) {

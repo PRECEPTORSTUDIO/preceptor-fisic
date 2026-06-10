@@ -110,7 +110,7 @@
 
 	// "Esta semana": usa contagem real da semana corrente (não as últimas 10
 	// sessões). weeklyTarget vem das preferências do plano quando disponível.
-	const weeklyTarget = 5; // TODO: ler de prefs.weeklySessions
+	const weeklyTarget = $derived(data.weeklyTarget ?? 3);
 	const sessionsThisWeek = $derived(data.sessionsThisWeek ?? 0);
 	const recentDone = $derived(Math.min(sessionsThisWeek, weeklyTarget));
 </script>
@@ -288,6 +288,14 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- LGPD: canal de direitos do titular (art. 18) — acesso, correção, exclusão -->
+	<div class="lgpd-foot">
+		Seus dados são tratados conforme a
+		<a href="/legal/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.
+		Pra corrigir ou excluir seus dados, fale com seu treinador ou escreva pra
+		<a href="mailto:dpo@preceptorfisic.com">dpo@preceptorfisic.com</a>.
+	</div>
 
 	<!-- Bottom tab bar -->
 	<nav class="tab-bar">
@@ -530,6 +538,16 @@
 		display: flex;
 		gap: 12px;
 		padding: 16px;
+	}
+	.lgpd-foot {
+		margin: 4px 16px 96px;
+		padding: 12px 14px;
+		font: 400 11px/1.6 var(--font-sans);
+		color: var(--ink-3);
+		text-align: center;
+	}
+	.lgpd-foot a {
+		color: var(--ink-2);
 	}
 	.tab-bar {
 		position: fixed;

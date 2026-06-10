@@ -14,6 +14,7 @@
 
 	let draft = $state('');
 	let activeFilter = $state('all');
+	let sending = $state(false);
 
 	// Realtime via Supabase channels — escuta INSERT em messages.
 	// Quando chega novo, invalida load function pra atualizar threads + msgs.
@@ -72,9 +73,9 @@
 	const quickReplies = ['Bora aumentar 10%', 'Mantém a carga', 'Vou ajustar o plano', 'Manda vídeo'];
 </script>
 
-<div style="display:grid;grid-template-columns:360px 1fr 320px;height:100vh;overflow:hidden">
+<div class="msg-grid" style="display:grid;grid-template-columns:360px 1fr 320px;height:100vh;overflow:hidden">
 	<!-- Inbox -->
-	<aside style="border-right:1px solid var(--ink-line);display:flex;flex-direction:column;overflow:hidden">
+	<aside class="msg-inbox" class:has-active={Boolean(cur)} style="border-right:1px solid var(--ink-line);display:flex;flex-direction:column;overflow:hidden">
 		<div style="padding:24px 20px 16px;border-bottom:1px solid var(--ink-line)">
 			<Eyebrow>Caixa de entrada · {totalUnread} não lidas</Eyebrow>
 			<h1 style="font:var(--display-md);margin:6px 0 14px;letter-spacing:-0.025em">Mensagens</h1>
@@ -147,7 +148,7 @@
 	</aside>
 
 	<!-- Thread -->
-	<section style="display:flex;flex-direction:column;overflow:hidden;background:var(--bg-0)">
+	<section class="msg-thread" class:has-active={Boolean(cur)} style="display:flex;flex-direction:column;overflow:hidden;background:var(--bg-0)">
 		{#if !cur}
 			<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink-2)">
 				Selecione uma conversa
@@ -156,19 +157,15 @@
 			<header
 				style="display:flex;align-items:center;gap:14px;padding:20px 28px;border-bottom:1px solid var(--ink-line);background:var(--bg-1)"
 			>
-				<div style="position:relative">
-					<Avatar name={cur.studentName} size={44} />
-					{#if cur.online}
-						<span
-							style="position:absolute;bottom:0;right:0;width:11px;height:11px;background:var(--success);border-radius:50%;border:2px solid var(--bg-1)"
-						></span>
-					{/if}
-				</div>
+				<!-- ?t=inbox não casa com nenhum thread → cur=undefined → inbox visível.
+				     Evita o auto-select do load (threads[0]) que prenderia o user na thread. -->
+				<button type="button" class="msg-back" onclick={() => goto('/mensagens?t=inbox', { replaceState: true })}>←</button>
+				<Avatar name={cur.studentName} size={44} />
 				<div style="flex:1">
 					<div style="font:600 16px var(--font-sans);color:var(--ink-0)">{cur.studentName}</div>
-					<div
-						style="font:var(--label-mono);color:{cur.online ? 'var(--success)' : 'var(--ink-3)'};margin-top:2px"
-					>{cur.online ? '● ONLINE' : '○ OFFLINE'}</div>
+					<div style="font:var(--label-mono);color:var(--ink-3);margin-top:2px">
+						{cur.lastAt ? `última mensagem ${timeFmt(cur.lastAt)}` : 'sem mensagens'}
+					</div>
 				</div>
 				<Button variant="secondary" size="sm" onclick={() => goto(`/alunos/${cur.studentId}`)}>Ver ficha →</Button>
 			</header>
@@ -207,8 +204,10 @@
 				method="POST"
 				action="?/send"
 				use:enhance={() => {
+					sending = true;
 					return async ({ update }) => {
 						await update();
+						sending = false;
 						draft = '';
 						await invalidateAll();
 					};
@@ -224,22 +223,23 @@
 				<div
 					style="display:flex;gap:10px;align-items:flex-end;padding:4px;background:var(--bg-2);border:1px solid var(--ink-line);border-radius:var(--r-2)"
 				>
-					<button type="button" style="padding:10px;background:transparent;border:0;color:var(--ink-2);cursor:pointer;font-size:16px">📎</button>
 					<textarea
 						name="body"
 						bind:value={draft}
 						placeholder="Escreva uma resposta…"
 						rows="1"
-						style="flex:1;padding:10px 4px;background:transparent;color:var(--ink-0);border:0;outline:none;resize:none;font:var(--body) var(--font-sans)"
+						style="flex:1;padding:10px 12px;background:transparent;color:var(--ink-0);border:0;outline:none;resize:none;font:var(--body) var(--font-sans)"
 					></textarea>
-					<Button type="submit">Enviar ↵</Button>
+					<Button type="submit" disabled={sending || !draft.trim()}>
+						{sending ? 'Enviando…' : 'Enviar ↵'}
+					</Button>
 				</div>
 			</form>
 		{/if}
 	</section>
 
 	<!-- Context panel -->
-	<aside style="border-left:1px solid var(--ink-line);overflow-y:auto;padding:24px;background:var(--bg-1)">
+	<aside class="msg-context" style="border-left:1px solid var(--ink-line);overflow-y:auto;padding:24px;background:var(--bg-1)">
 		{#if cur}
 			<Eyebrow>Contexto do aluno</Eyebrow>
 			<h3 style="font:600 18px var(--font-sans);margin:8px 0 16px;color:var(--ink-0)">{cur.studentName}</h3>
@@ -249,3 +249,42 @@
 		{/if}
 	</aside>
 </div>
+
+<style>
+	/* Botão "voltar" só existe no modo mobile single-pane */
+	.msg-back {
+		display: none;
+		background: var(--bg-3);
+		border: 1px solid var(--ink-line-2);
+		cursor: pointer;
+		width: 36px;
+		height: 36px;
+		border-radius: var(--r-1);
+		color: var(--ink-1);
+		font: 400 18px var(--font-sans);
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	/* Mobile/tablet: 3 colunas viram single-pane (inbox OU thread).
+	   O grid fixo 360+320px estourava o viewport abaixo de ~1100px. */
+	@media (max-width: 1100px) {
+		.msg-grid {
+			grid-template-columns: 1fr !important;
+		}
+		.msg-context {
+			display: none;
+		}
+		/* Com conversa ativa: mostra thread, esconde inbox. Sem: o inverso. */
+		.msg-inbox.has-active {
+			display: none !important;
+		}
+		.msg-thread:not(.has-active) {
+			display: none !important;
+		}
+		.msg-back {
+			display: flex;
+		}
+	}
+</style>

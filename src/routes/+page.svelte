@@ -284,7 +284,7 @@
 			<div class="hero-trust">
 				<div class="hero-trust-item">
 					<span class="trust-dot success"></span>
-					Validado pelo CONFEF
+					Conformidade LGPD · dados no Brasil
 				</div>
 				<div class="hero-trust-divider"></div>
 				<div class="hero-trust-item">

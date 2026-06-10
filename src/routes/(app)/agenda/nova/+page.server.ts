@@ -44,6 +44,20 @@ export const actions: Actions = {
 		if (Number.isNaN(startsAt.getTime())) return fail(400, { error: 'data inválida' });
 		if (duration < 15 || duration > 240) return fail(400, { error: 'duração inválida' });
 
+		// Ownership: studentId vem do form — valida que o aluno pertence a
+		// este profissional antes de criar o appointment (e antes de mandar
+		// email pro aluno, que vazaria o nome do profissional pra terceiros).
+		if (studentId) {
+			const [owned] = await db
+				.select({ professionalId: students.professionalId })
+				.from(students)
+				.where(eq(students.id, studentId))
+				.limit(1);
+			if (owned?.professionalId !== professional.id) {
+				return fail(403, { error: 'aluno não encontrado' });
+			}
+		}
+
 		await createAppointment({
 			professionalId: professional.id,
 			studentId,

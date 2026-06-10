@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button, Eyebrow } from '$lib/components/ui';
 	import { enhance } from '$app/forms';
-	import { onMount } from 'svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -9,21 +8,10 @@
 	let confirm = $state('');
 	let submitting = $state(false);
 
-	// Quando o user vem do email, Supabase coloca access_token no hash da URL.
-	// O Supabase client (no hooks.server) consome isso automaticamente no
-	// próximo render, mas no client a gente precisa garantir que a sessão
-	// está ativa antes de mostrar o form.
-	let hasRecoverySession = $state(true);
-
-	onMount(() => {
-		// Se chegou sem hash recovery, redireciona pro /recuperar
-		const hash = window.location.hash;
-		if (!hash || !hash.includes('type=recovery')) {
-			// Pode ser que já consumiu o hash em load anterior — tenta abrir mesmo assim,
-			// se updateUser falhar o action mostra erro.
-			hasRecoverySession = !!hash || true;
-		}
-	});
+	// Validação da sessão de recovery é server-side: se o user chegar aqui
+	// sem token válido (hash já consumido ou link expirado), a action
+	// updateUser falha e o erro aparece no banner — sem redirect prematuro
+	// que quebraria o fluxo legítimo onde o Supabase já consumiu o hash.
 </script>
 
 <div class="rec-shell">
