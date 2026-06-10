@@ -12,6 +12,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { generateObject, streamObject } from 'ai';
 import { randomUUID } from 'node:crypto';
 import { waitUntil } from '@vercel/functions';
+import { dev as isDev } from '$app/environment';
 import { google } from './provider';
 import { db } from '$lib/server/db';
 import { sendPlanReady } from '$lib/server/email';
@@ -42,11 +43,12 @@ import { validatePlan, violationToRestriction, deriveStudentCtxFromHealth } from
 const PRIMARY_MODEL = env.AI_MODEL_FAST ?? 'gemini-2.5-flash';
 const FALLBACK_MODEL = env.AI_MODEL_PRIMARY ?? 'gemini-2.5-pro';
 
-/** Teto da chamada de IA (ms). Abaixo dos 60s do maxDuration da função
- * pra sobrar tempo do catch persistir status=failed antes da função
- * morrer. 56s = 60s − ~3s de RAG/contexto/persistência − 1s de margem.
+/** Teto da chamada de IA (ms). Em produção (Vercel Hobby) fica abaixo dos
+ * 60s do maxDuration pra sobrar tempo do catch persistir status=failed.
+ * Em dev local (Node persistente, sem teto de função) damos 120s — o
+ * abort de 56s só serve pra simular prod, e atrapalha testes longos.
  * Override por env AI_GEN_TIMEOUT_MS. */
-const AI_GEN_TIMEOUT_MS = Number(env.AI_GEN_TIMEOUT_MS ?? '56000');
+const AI_GEN_TIMEOUT_MS = Number(env.AI_GEN_TIMEOUT_MS ?? (isDev ? '120000' : '56000'));
 
 function isQuotaError(err: unknown): boolean {
 	const msg = err instanceof Error ? err.message : String(err);
@@ -96,7 +98,7 @@ type StudentContext = {
 /** Cap de itens enviados pro prompt — mantém o contexto enxuto. 150
  * itens ≈ 12KB de prompt, ~3k tokens. Mais que isso acelera o LLM mas
  * sobrecarrega o budget de 60s da função serverless (Hobby). */
-const CATALOG_PROMPT_CAP = 150;
+const CATALOG_PROMPT_CAP = 100;
 /** Defaults quando o aluno não tem equipamento registrado (cenário home). */
 const DEFAULT_EQUIPMENT_FALLBACK = ['body weight', 'dumbbell', 'band'];
 
@@ -415,7 +417,7 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	};
 	const suggestedDays = DAY_DIST[N]?.join(', ') ?? 'seg, qua, sex';
 	lines.push(
-		`4. SESSÕES SEMANAIS: gere EXATAMENTE ${N} sessões — esse é o número que o aluno definiu na frequência alvo dele. OBRIGATÓRIO preencher \`day_of_week\` de CADA sessão (valores válidos: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom"). Distribua os treinos pela semana com descanso entre eles — sugestão de distribuição pra ${N} sessões: ${suggestedDays}. CONCISÃO: \`execution_notes\` de cada exercício em 1-2 frases curtas. monitoring_parameters: 2-3 itens. restrictions: só se houver red flag.`
+		`4. SESSÕES SEMANAIS: gere EXATAMENTE ${N} sessões — esse é o número que o aluno definiu na frequência alvo dele. OBRIGATÓRIO preencher \`day_of_week\` de CADA sessão (valores válidos: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom"). Distribua os treinos pela semana com descanso entre eles — sugestão de distribuição pra ${N} sessões: ${suggestedDays}. CONCISÃO EXTREMA (o tempo de geração é limitado): \`execution_notes\` = UMA frase de no máximo 12 palavras; \`summary\` = 2-3 frases; \`progression_strategy\` = 3-4 frases; monitoring_parameters: no máximo 3 itens; assessment_protocols: no máximo 2; restrictions: só red flag real; warmup: no máximo 2 exercícios; cooldown: no máximo 1.`
 	);
 	lines.push(
 		'5. RESPEITE a Dificuldade-alvo dos exercícios definida nas PREFERÊNCIAS. A escolha dos exercícios deve refletir esse nível de complexidade técnica, independente do nível de experiência informado.'
@@ -617,18 +619,38 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 				const msg = streamErr instanceof Error ? streamErr.message : String(streamErr);
 				const wasAbort = /aborted|timeout|AbortError/i.test(msg);
 				if (wasAbort && lastPartial) {
-					const parsed = trainingPlanSchema.safeParse(lastPartial);
-					if (parsed.success) {
-						log.warn(
-							{ sessions: parsed.data.weekly_sessions.length },
-							'plan.generate.salvaged_from_timeout'
-						);
-						return { object: parsed.data, usage: undefined };
+					// O abort quase sempre corta NO MEIO de uma sessão — a última
+					// fica com exercício incompleto e o schema rejeita o plano
+					// inteiro. Tenta validar versões truncadas: completo, depois
+					// sem a última sessão, depois sem as 2 últimas... Plano com
+					// 2 de 3 sessões é muito melhor que "failed" na cara do user.
+					const base = lastPartial as Record<string, unknown>;
+					const sessions = Array.isArray(base.weekly_sessions) ? base.weekly_sessions : [];
+					for (let keep = sessions.length; keep >= 1; keep--) {
+						const candidate = {
+							...base,
+							weekly_sessions: sessions.slice(0, keep),
+							monitoring_parameters: Array.isArray(base.monitoring_parameters)
+								? base.monitoring_parameters
+								: [],
+							assessment_protocols: Array.isArray(base.assessment_protocols)
+								? base.assessment_protocols
+								: [],
+							restrictions: Array.isArray(base.restrictions) ? base.restrictions : [],
+							aerobic_prescriptions: Array.isArray(base.aerobic_prescriptions)
+								? base.aerobic_prescriptions
+								: []
+						};
+						const parsed = trainingPlanSchema.safeParse(candidate);
+						if (parsed.success) {
+							log.warn(
+								{ kept: keep, of: sessions.length },
+								'plan.generate.salvaged_from_timeout'
+							);
+							return { object: parsed.data, usage: undefined };
+						}
 					}
-					log.warn(
-						{ msg: msg.slice(0, 150), parseIssues: parsed.error.issues.length },
-						'plan.generate.salvage_failed_partial_invalid'
-					);
+					log.warn({ msg: msg.slice(0, 150) }, 'plan.generate.salvage_failed_partial_invalid');
 				}
 				throw streamErr;
 			} finally {

@@ -1579,12 +1579,14 @@ export async function getAlunoAppData(studentId: string): Promise<AlunoAppData |
 		.limit(1);
 	if (!pro) return null;
 
+	// SÓ planos publicados. 'generated' ainda não passou pela revisão do
+	// profissional — red flags clínicas BLOQUEIAM a publicação exatamente
+	// pra o aluno não treinar um plano contraindicado. Incluir 'generated'
+	// aqui anulava esse gate (aluno via plano com restrições críticas).
 	const [planRow] = await db
 		.select()
 		.from(trainingPlans)
-		.where(
-			and(eq(trainingPlans.studentId, studentId), sql`status IN ('published', 'generated')`)
-		)
+		.where(and(eq(trainingPlans.studentId, studentId), eq(trainingPlans.status, 'published')))
 		.orderBy(desc(trainingPlans.publishedAt), desc(trainingPlans.createdAt))
 		.limit(1);
 

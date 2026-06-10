@@ -660,7 +660,7 @@
 					{#if !canPublish && redCount > 0}
 						<span
 							style="font:var(--label-mono);color:var(--danger);padding:6px 10px;border:1px solid var(--danger);border-radius:var(--r-pill);background:var(--danger-dim)"
-						>⚠ {redCount} restrição{redCount > 1 ? 'ões' : ''} crítica{redCount > 1 ? 's' : ''}</span>
+						>⚠ {redCount} {redCount > 1 ? 'restrições críticas' : 'restrição crítica'}</span>
 					{/if}
 					<Button type="submit" disabled={!canPublish || publishing}>
 						{publishing ? 'Publicando…' : '✓ Publicar para o aluno'}

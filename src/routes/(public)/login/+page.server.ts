@@ -115,6 +115,18 @@ export const actions: Actions = {
 			...fp
 		});
 
+		// Sem session = projeto Supabase exige confirmação de email. Redirecionar
+		// pro /dashboard aqui fazia o auth guard devolver pro /login SEM nenhuma
+		// mensagem — user achava que o cadastro falhou e tentava de novo.
+		if (!authData.session) {
+			return {
+				success: true,
+				confirmEmail: true,
+				email,
+				message: `Conta criada! Enviamos um link de confirmação pra ${email} — confirme pra entrar.`
+			};
+		}
+
 		redirect(303, '/dashboard');
 	}
 };

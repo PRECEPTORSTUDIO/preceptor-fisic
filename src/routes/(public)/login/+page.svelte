@@ -164,6 +164,12 @@
 					>{form.error}</div>
 				{/if}
 
+				{#if (form as any)?.confirmEmail}
+					<div
+						style="padding:12px 14px;border-radius:var(--r-2);background:var(--success-dim);border:1px solid var(--success);color:var(--success);font:var(--body-sm);line-height:1.5"
+					>✓ {(form as any).message}</div>
+				{/if}
+
 				{#if mode === 'login'}
 					<div style="margin-top:-2px;text-align:right">
 						<a href="/recuperar" style="font:500 13px var(--font-sans);color:var(--accent-2);text-decoration:none">Esqueci minha senha</a>
