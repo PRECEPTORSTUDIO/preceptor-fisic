@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button, Chip, Sparkline, LoadChart, Eyebrow, toast } from '$lib/components/ui';
 	import { goto } from '$app/navigation';
+	import { computeAcwr } from '$lib/training-metrics';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -14,6 +15,15 @@
 	const fillUrl = $derived(data.fillUrl);
 	const profilePending = $derived(!student.profileCompletedAt);
 	const loadEvolution = $derived(data.loadEvolution);
+	// Risco carga interna×externa (#3) — ACWR sobre a carga interna semanal.
+	const acwr = $derived(computeAcwr(loadEvolution.weeks));
+	const acwrColor: Record<string, string> = {
+		sem_dados: 'var(--ink-3)',
+		baixa: 'var(--info)',
+		otima: 'var(--success)',
+		atencao: 'var(--warn)',
+		alto_risco: 'var(--danger)'
+	};
 
 	let tab = $state<'dados' | 'plan' | 'prog'>('dados');
 
@@ -279,6 +289,19 @@
 						Trabalho feito (tonelagem) × esforço pago (PSE × duração)
 					</span>
 				</div>
+				{#if acwr.ratio !== null}
+					<div
+						style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border-radius:var(--r-2);background:var(--bg-2);border:1px solid var(--ink-line);border-left:3px solid {acwrColor[acwr.level]}"
+					>
+						<span style="font:600 12px var(--font-sans);color:{acwrColor[acwr.level]};text-transform:uppercase;letter-spacing:0.04em">
+							Risco: {acwr.label}
+						</span>
+						<span style="font:500 11px var(--font-mono);color:var(--ink-2);font-variant-numeric:tabular-nums">
+							ACWR {acwr.ratio.toFixed(2)} · aguda {acwr.acute} / crônica {acwr.chronic} UA
+						</span>
+						<span style="flex:1;min-width:140px;font:var(--body-sm);color:var(--ink-2)">{acwr.hint}</span>
+					</div>
+				{/if}
 				<LoadChart weeks={loadEvolution.weeks} externalMetric={loadEvolution.externalMetric} />
 			</div>
 		</div>

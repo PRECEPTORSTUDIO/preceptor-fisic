@@ -3,12 +3,16 @@
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { onDestroy } from 'svelte';
+	import { muscleGroupVolume } from '$lib/training-metrics';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const plan = $derived(data.plan);
 	const planData = $derived(plan.planData);
 	const sessions = $derived(planData.weekly_sessions ?? []);
+	// Volume semanal por grupo muscular (séries/grupo) — métrica de balanço do plano.
+	const muscleVolume = $derived(muscleGroupVolume(sessions));
+	const maxMuscleSets = $derived(Math.max(1, ...muscleVolume.map((m) => m.sets)));
 	const restrictions = $derived(planData.restrictions ?? []);
 	const dbRestrictions = $derived((data.plan as any).dbRestrictions ?? []);
 	const sourceMap = $derived(plan.sourceMap ?? {});
@@ -809,6 +813,33 @@
 						{/if}
 					</div>
 				{/each}
+			</div>
+		{/if}
+
+		<!-- Volume semanal por grupo muscular (#4) -->
+		{#if muscleVolume.length > 0}
+			<div style="font:500 18px var(--font-sans);color:var(--ink-0);margin:8px 0 14px">
+				Volume semanal por grupo muscular
+			</div>
+			<div class="card" style="padding:16px 18px;margin-bottom:18px">
+				<div style="display:flex;flex-direction:column;gap:10px">
+					{#each muscleVolume as m (m.group)}
+						<div style="display:flex;align-items:center;gap:12px">
+							<div style="flex:0 0 130px;font:500 12.5px var(--font-sans);color:var(--ink-1);text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+								{m.group}
+							</div>
+							<div style="flex:1;height:8px;background:var(--bg-3);border-radius:var(--r-pill);overflow:hidden">
+								<div style="height:100%;width:{Math.round((m.sets / maxMuscleSets) * 100)}%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:var(--r-pill)"></div>
+							</div>
+							<div style="flex:0 0 auto;font:500 11px var(--font-mono);color:var(--ink-2);font-variant-numeric:tabular-nums">
+								{m.sets} {m.sets === 1 ? 'série' : 'séries'} · {m.exercises} {m.exercises === 1 ? 'ex' : 'ex'}
+							</div>
+						</div>
+					{/each}
+				</div>
+				<div style="font:var(--label-mono);color:var(--ink-3);margin-top:12px">
+					Σ séries por grupo muscular ao longo da semana — referência de volume (hipertrofia: ~10–20 séries/grupo/semana).
+				</div>
 			</div>
 		{/if}
 
