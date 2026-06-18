@@ -6,7 +6,7 @@
 	type NavItem = {
 		id: string;
 		label: string;
-		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout';
+		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout' | 'feedback';
 		href: string;
 		count?: number;
 		badge?: number;
@@ -73,6 +73,7 @@
 		{ id: 'agenda', label: 'Agenda', icon: 'agenda', href: '/agenda' }
 	]);
 	const NAV_FOOTER: NavItem[] = [
+		{ id: 'feedback', label: 'Feedback', icon: 'feedback', href: '/feedback' },
 		{ id: 'config', label: 'Configurações', icon: 'config', href: '/configuracoes' },
 		{ id: 'logout', label: 'Sair', icon: 'logout', href: '/logout' }
 	];

@@ -20,6 +20,7 @@ import {
 	messages,
 	appointments,
 	leads,
+	feedback,
 	type Professional,
 	type Student,
 	type HealthProfile,
@@ -2489,4 +2490,74 @@ export async function syncLeadStageFromProfessional(
 		.update(leads)
 		.set({ stage: newStage, updatedAt: new Date() })
 		.where(eq(leads.subjectProfessionalId, professionalId));
+}
+
+/* ────────── FEEDBACK (beta testers) ────────── */
+
+export type FeedbackCategory = 'bug' | 'sugestao' | 'duvida' | 'elogio' | 'outro';
+
+export type FeedbackItem = {
+	id: string;
+	authorName: string | null;
+	authorEmail: string | null;
+	category: FeedbackCategory;
+	message: string;
+	page: string | null;
+	createdAt: Date;
+};
+
+export const FEEDBACK_CATEGORIES: { id: FeedbackCategory; label: string }[] = [
+	{ id: 'bug', label: 'Bug / erro' },
+	{ id: 'sugestao', label: 'Sugestão' },
+	{ id: 'duvida', label: 'Dúvida' },
+	{ id: 'elogio', label: 'Elogio' },
+	{ id: 'outro', label: 'Outro' }
+];
+
+export async function createFeedback(input: {
+	professionalId: string;
+	authorName?: string | null;
+	authorEmail?: string | null;
+	category: FeedbackCategory;
+	message: string;
+	page?: string | null;
+}): Promise<void> {
+	await db.insert(feedback).values({
+		professionalId: isUuid(input.professionalId) ? input.professionalId : null,
+		authorName: input.authorName ?? null,
+		authorEmail: input.authorEmail ?? null,
+		category: input.category,
+		message: input.message,
+		page: input.page ?? null
+	});
+}
+
+const FEEDBACK_COLS = {
+	id: feedback.id,
+	authorName: feedback.authorName,
+	authorEmail: feedback.authorEmail,
+	category: feedback.category,
+	message: feedback.message,
+	page: feedback.page,
+	createdAt: feedback.createdAt
+} as const;
+
+/** Feedback enviado pelo próprio profissional (beta tester). */
+export async function getMyFeedback(professionalId: string): Promise<FeedbackItem[]> {
+	if (!isUuid(professionalId)) return [];
+	const rows = await db
+		.select(FEEDBACK_COLS)
+		.from(feedback)
+		.where(eq(feedback.professionalId, professionalId))
+		.orderBy(desc(feedback.createdAt));
+	return rows as FeedbackItem[];
+}
+
+/** TODOS os feedbacks — só admin enxerga (filtragem no caller). */
+export async function getAllFeedback(): Promise<FeedbackItem[]> {
+	const rows = await db
+		.select(FEEDBACK_COLS)
+		.from(feedback)
+		.orderBy(desc(feedback.createdAt));
+	return rows as FeedbackItem[];
 }

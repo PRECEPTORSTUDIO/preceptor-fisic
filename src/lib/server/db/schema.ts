@@ -820,6 +820,36 @@ export const leads = pgTable(
 	]
 );
 
+/* ────────── feedback dos beta testers ────────── */
+
+export const feedbackCategoryEnum = pgEnum('feedback_category', [
+	'bug',
+	'sugestao',
+	'duvida',
+	'elogio',
+	'outro'
+]);
+
+export const feedback = pgTable(
+	'feedback',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		// Autor (profissional/beta tester). set null se a conta for removida.
+		professionalId: uuid('professional_id').references(() => professionals.id, {
+			onDelete: 'set null'
+		}),
+		// Snapshot do nome/email — preserva a autoria mesmo se o professional sumir.
+		authorName: text('author_name'),
+		authorEmail: text('author_email'),
+		category: feedbackCategoryEnum('category').default('outro').notNull(),
+		message: text('message').notNull(),
+		// Página/contexto opcional de onde o feedback foi enviado.
+		page: text('page'),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [index('feedback_created_idx').on(t.createdAt)]
+);
+
 /* Inferred types */
 export type ExerciseLibraryItem = typeof exerciseLibrary.$inferSelect;
 export type Conversation = typeof conversations.$inferSelect;
@@ -827,6 +857,8 @@ export type Message = typeof messages.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
+export type Feedback = typeof feedback.$inferSelect;
+export type NewFeedback = typeof feedback.$inferInsert;
 export type Professional = typeof professionals.$inferSelect;
 export type NewProfessional = typeof professionals.$inferInsert;
 export type Student = typeof students.$inferSelect;

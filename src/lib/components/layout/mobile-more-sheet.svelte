@@ -22,7 +22,7 @@
 		id: string;
 		label: string;
 		sub: string;
-		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout';
+		icon: 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout' | 'feedback';
 		href: string;
 		danger?: boolean;
 	};
@@ -42,6 +42,7 @@
 			: []),
 		{ id: 'exer', label: 'Exercícios', sub: 'Catálogo + cadastro', icon: 'exer', href: '/exercicios' },
 		{ id: 'msgs', label: 'Mensagens', sub: 'Conversas com alunos', icon: 'msgs', href: '/mensagens' },
+		{ id: 'feedback', label: 'Feedback', sub: 'Reporte bugs e ideias', icon: 'feedback', href: '/feedback' },
 		{ id: 'config', label: 'Configurações', sub: 'Perfil e preferências', icon: 'config', href: '/configuracoes' },
 		{ id: 'logout', label: 'Sair', sub: 'Encerrar sessão', icon: 'logout', href: '/logout', danger: true }
 	]);
