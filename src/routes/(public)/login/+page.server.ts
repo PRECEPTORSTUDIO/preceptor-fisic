@@ -115,16 +115,26 @@ export const actions: Actions = {
 			...fp
 		});
 
-		// Sem session = projeto Supabase exige confirmação de email. Redirecionar
-		// pro /dashboard aqui fazia o auth guard devolver pro /login SEM nenhuma
-		// mensagem — user achava que o cadastro falhou e tentava de novo.
+		// Confirmação de email REMOVIDA: o email é auto-confirmado por trigger no
+		// banco (auto_confirm_email). Mesmo assim o signUp não devolve sessão
+		// quando "Confirm email" está ligado no projeto — então logamos na hora
+		// com email+senha (já passa, pois o usuário está confirmado). Assim o
+		// cadastro entra direto, sem precisar clicar em link nenhum.
 		if (!authData.session) {
-			return {
-				success: true,
-				confirmEmail: true,
+			const { error: signInErr } = await locals.supabase.auth.signInWithPassword({
 				email,
-				message: `Conta criada! Enviamos um link de confirmação pra ${email} — confirme pra entrar.`
-			};
+				password
+			});
+			if (signInErr) {
+				// Fallback defensivo: se por algum motivo o login imediato falhar,
+				// orienta a entrar manualmente (sem mencionar confirmação).
+				return {
+					success: true,
+					confirmEmail: false,
+					email,
+					message: 'Conta criada! Faça login com seu email e senha.'
+				};
+			}
 		}
 
 		redirect(303, '/dashboard');
