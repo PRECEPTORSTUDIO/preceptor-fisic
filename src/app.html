@@ -16,33 +16,24 @@
 	<body data-sveltekit-preload-data="hover" data-sveltekit-preload-code="viewport">
 		<div style="display: contents">%sveltekit.body%</div>
 		<script>
-			// SW só em produção: em dev (localhost) o cache do SW conflita com
-			// HMR do Vite e pode servir o fallback "Offline · sem conexão.".
-			// Em localhost a gente ATIVAMENTE desregistra qualquer SW antigo
-			// que tenha sobrado de testes anteriores (limpa o lixo).
+			// Service worker DESATIVADO. O SW de cache anterior devolvia respostas
+			// redirecionadas nas navegações de auth, quebrando o site
+			// ("Response served by service worker has redirections" / ERR_FAILED).
+			// Aqui desregistramos qualquer SW remanescente e limpamos os caches
+			// em TODOS os ambientes — e não registramos nenhum novo. (O /sw.js
+			// virou um kill switch, então quem ainda tem o SW velho também é
+			// recuperado quando o navegador checa a atualização do script.)
 			if ('serviceWorker' in navigator) {
-				var __isDev =
-					location.hostname === 'localhost' ||
-					location.hostname === '127.0.0.1' ||
-					location.hostname.endsWith('.local');
-				if (__isDev) {
-					navigator.serviceWorker.getRegistrations().then(function (regs) {
-						regs.forEach(function (r) {
-							r.unregister();
-						});
+				navigator.serviceWorker.getRegistrations().then(function (regs) {
+					regs.forEach(function (r) {
+						r.unregister();
 					});
-					if (window.caches && caches.keys) {
-						caches.keys().then(function (keys) {
-							keys.forEach(function (k) {
-								caches.delete(k);
-							});
+				});
+				if (window.caches && caches.keys) {
+					caches.keys().then(function (keys) {
+						keys.forEach(function (k) {
+							caches.delete(k);
 						});
-					}
-				} else {
-					window.addEventListener('load', function () {
-						setTimeout(function () {
-							navigator.serviceWorker.register('/sw.js').catch(function () {});
-						}, 0);
 					});
 				}
 			}
