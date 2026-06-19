@@ -44,6 +44,17 @@
 	let activeEx = $state(0);
 	const recentLogs = $derived(data.recentLogs ?? []);
 
+	// #1 — último % da carga máxima que o aluno registrou neste exercício.
+	const lastIntensityUsed = $derived.by(() => {
+		const exName = exercises[activeEx]?.name;
+		if (!exName) return null;
+		for (const sessionLog of recentLogs) {
+			const found = sessionLog.exercisesDone.find((e) => e.name === exName);
+			if (found?.intensity_used != null) return found.intensity_used;
+		}
+		return null;
+	});
+
 	// Extrai cargas usadas pelo aluno na execução do exercício ativo,
 	// na ÚLTIMA sessão registrada. Em vez de hardcoded.
 	const log = $derived.by(() => {
@@ -178,6 +189,14 @@
 									{#if ex.load_guidance}
 										<span style="color:var(--ink-3)">·</span>
 										<span style="color:{intensityColorFromRPE(ex.load_guidance)}">{ex.load_guidance}</span>
+									{/if}
+									{#if ex.intensity}
+										<span style="color:var(--ink-3)">·</span>
+										<span style="color:var(--accent)">Intensidade {ex.intensity}</span>
+									{/if}
+									{#if lastIntensityUsed != null}
+										<span style="color:var(--ink-3)">·</span>
+										<span style="color:var(--ink-1)">aluno usou {lastIntensityUsed}%</span>
 									{/if}
 								</div>
 								{#if ex.muscle_groups && ex.muscle_groups.length > 0}

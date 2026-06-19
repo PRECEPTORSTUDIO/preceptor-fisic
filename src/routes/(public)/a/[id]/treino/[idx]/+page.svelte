@@ -35,6 +35,8 @@
 	let rpe = $state(7);
 	let observations = $state('');
 	let submitting = $state(false);
+	// #1 — % da carga máxima usada hoje, por exercício (opcional).
+	let intensityUsed = $state<Record<number, string>>({});
 
 	// Reps prescritas → número-base pra pré-preencher cada série.
 	// "8-12" vira "12" (alvo superior); "10" vira "10".
@@ -163,6 +165,7 @@
 			<input type="hidden" name="reps_{i}" value={exItem.reps ?? ''} />
 			<input type="hidden" name="setlogs_{i}" value={JSON.stringify(setLogs[i] ?? [])} />
 			<input type="hidden" name="completed_{i}" value={completed[i] ? 'on' : ''} />
+			<input type="hidden" name="pct_{i}" value={intensityUsed[i] ?? ''} />
 		{/each}
 
 		<!-- Detalhe do exercício ativo -->
@@ -183,6 +186,13 @@
 						<span style="color:{intensityColor(ex.load_guidance)}">{ex.load_guidance}</span>
 					{/if}
 				</div>
+
+				{#if ex.intensity}
+					<div class="intensity-rx">
+						<span class="intensity-rx-lbl">Intensidade prescrita</span>
+						<span class="intensity-rx-val">{ex.intensity}</span>
+					</div>
+				{/if}
 
 				{#if ex.muscle_groups?.length}
 					<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
@@ -267,6 +277,21 @@
 						{/each}
 					</div>
 					<div class="sets-hint">Peso corporal? Deixe o peso vazio — conta só as repetições.</div>
+
+					<div class="pct-used">
+						<span class="lbl">% da carga máxima usada hoje (opcional)</span>
+						<div class="pct-field">
+							<input
+								type="text"
+								inputmode="numeric"
+								bind:value={intensityUsed[activeIdx]}
+								placeholder={ex.intensity ? `prescrito: ${ex.intensity}` : 'ex: 80'}
+								class="set-input"
+								style="text-align:left"
+							/>
+							<span class="set-unit">%</span>
+						</div>
+					</div>
 				</div>
 
 				<!-- Botão concluir exercício -->
@@ -557,6 +582,46 @@
 		margin-top: 8px;
 		font: var(--label-mono);
 		color: var(--ink-3);
+	}
+	.intensity-rx {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 14px;
+		margin-bottom: 14px;
+		background: var(--accent-wash);
+		border: 1px solid var(--accent-dim);
+		border-radius: var(--r-2);
+	}
+	.intensity-rx-lbl {
+		font: var(--label-mono);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--ink-2);
+	}
+	.intensity-rx-val {
+		font: 600 16px var(--font-mono);
+		color: var(--accent);
+	}
+	.pct-used {
+		margin-top: 14px;
+	}
+	.pct-field {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		background: var(--bg-3);
+		border: 1px solid var(--ink-line-2);
+		border-radius: var(--r-2);
+		padding: 0 12px;
+		height: 48px;
+		max-width: 200px;
+		transition: border-color 140ms var(--ease);
+	}
+	.pct-field:focus-within {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px var(--accent-wash);
 	}
 	.done-btn {
 		width: 100%;

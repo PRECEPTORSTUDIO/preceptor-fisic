@@ -122,6 +122,12 @@ export const actions: Actions = {
 				: String(fd.get(`reps_${i}`) ?? ex.reps ?? '—');
 			const maxWeight = setLogs.reduce((m, s) => Math.max(m, s.weight), 0);
 
+			// #1 — % da carga máxima usada hoje (informado pelo aluno, opcional).
+			// Aceita só 1–100; fora disso ignora.
+			const pctRaw = Number(String(fd.get(`pct_${i}`) ?? '').replace(',', '.'));
+			const intensityUsed =
+				Number.isFinite(pctRaw) && pctRaw > 0 && pctRaw <= 100 ? Math.round(pctRaw) : undefined;
+
 			return {
 				exercise_id: `${data.plan!.id}-${idx}-${i}`,
 				name: ex.name,
@@ -129,6 +135,7 @@ export const actions: Actions = {
 				reps_done: repsSummary,
 				load_used: maxWeight > 0 ? `${maxWeight}kg` : undefined,
 				set_logs: setLogs.length ? setLogs : undefined,
+				intensity_used: intensityUsed,
 				notes: undefined,
 				completed: fd.get(`completed_${i}`) === 'on'
 			};

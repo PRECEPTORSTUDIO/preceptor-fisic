@@ -5,8 +5,10 @@ import {
 	getPlanDetail,
 	getProfessionalByAuthId,
 	publishPlan,
-	archivePlan
+	archivePlan,
+	type PlanData
 } from '$lib/server/queries';
+import { toIntInRange } from '$lib/server/validation';
 import { db } from '$lib/server/db';
 import { trainingPlans, students, healthProfiles, type Restriction } from '$lib/server/db/schema';
 import {
@@ -141,5 +143,59 @@ export const actions: Actions = {
 				rules: violations.map((v) => v.ruleCode)
 			}
 		};
+	},
+
+	// #5 — profissional edita um exercício gerado pela IA. Mutação cirúrgica
+	// em planData.weekly_sessions[sessionIdx][block][exerciseIdx].
+	editExercise: async ({ params, request, locals }) => {
+		if (!locals.user) return fail(401, { error: 'não autenticado' });
+		const professional = await getProfessionalByAuthId(locals.user.id);
+		if (!professional) return fail(401, { error: 'professional não encontrado' });
+
+		const plan = await getPlanDetail(params.id!, professional.id);
+		if (!plan) return fail(404, { error: 'plano não encontrado' });
+
+		const fd = await request.formData();
+		const sessionIdx = Number(fd.get('sessionIdx'));
+		const block = String(fd.get('block') ?? '');
+		const exerciseIdx = Number(fd.get('exerciseIdx'));
+		if (!['warmup', 'main', 'cooldown'].includes(block))
+			return fail(400, { error: 'bloco inválido' });
+		if (!Number.isInteger(sessionIdx) || !Number.isInteger(exerciseIdx))
+			return fail(400, { error: 'índice inválido' });
+
+		// Clona pra não mutar o objeto carregado; persiste o planData inteiro.
+		const planData = structuredClone(plan.planData) as PlanData;
+		const session = planData.weekly_sessions?.[sessionIdx];
+		const blockArr = session?.[block as 'warmup' | 'main' | 'cooldown'];
+		const ex = blockArr?.[exerciseIdx];
+		if (!ex) return fail(404, { error: 'exercício não encontrado' });
+
+		const name = String(fd.get('name') ?? '').trim();
+		if (name.length < 2) return fail(400, { error: 'Nome do exercício inválido.' });
+		const reps = String(fd.get('reps') ?? '').trim();
+		const loadGuidance = String(fd.get('load_guidance') ?? '').trim();
+		const intensity = String(fd.get('intensity') ?? '').trim();
+		const executionNotes = String(fd.get('execution_notes') ?? '').trim();
+		const setsRaw = fd.get('sets');
+		const restRaw = fd.get('rest_seconds');
+
+		ex.name = name;
+		if (reps) ex.reps = reps;
+		if (setsRaw != null && String(setsRaw).trim() !== '')
+			ex.sets = toIntInRange(setsRaw, { min: 1, max: 20, fallback: ex.sets ?? 3 });
+		if (restRaw != null && String(restRaw).trim() !== '')
+			ex.rest_seconds = toIntInRange(restRaw, { min: 0, max: 900, fallback: ex.rest_seconds ?? 60 });
+		// load_guidance / intensity / execution_notes: string vazia limpa o campo.
+		ex.load_guidance = loadGuidance || ex.load_guidance;
+		ex.intensity = intensity || undefined;
+		if (executionNotes) ex.execution_notes = executionNotes;
+
+		await db
+			.update(trainingPlans)
+			.set({ planData, updatedAt: new Date() })
+			.where(eq(trainingPlans.id, params.id!));
+
+		return { success: true, action: 'editExercise' };
 	}
 };

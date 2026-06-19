@@ -25,6 +25,13 @@
 		openVideoKey = openVideoKey === key ? null : key;
 	}
 
+	// #5 — edição de exercício pelo profissional (inline).
+	let editKey = $state<string | null>(null);
+	let savingEdit = $state(false);
+	function toggleEdit(key: string) {
+		editKey = editKey === key ? null : key;
+	}
+
 	type SrcRef = {
 		type?: string;
 		chunk_id?: string;
@@ -325,6 +332,27 @@
 	</div>
 
 	<style>
+		.edit-lbl {
+			display: block;
+			font: 500 11px var(--font-sans);
+			color: var(--ink-2);
+			margin-bottom: 4px;
+		}
+		.edit-in {
+			width: 100%;
+			box-sizing: border-box;
+			background: var(--bg-2);
+			border: 1px solid var(--ink-line);
+			border-radius: var(--r-1);
+			padding: 8px 10px;
+			font: 400 13px var(--font-sans);
+			color: var(--ink-0);
+			outline: none;
+			resize: vertical;
+		}
+		.edit-in:focus {
+			border-color: var(--accent);
+		}
 		.gen-shell {
 			flex: 1;
 			background: var(--bg-0);
@@ -870,11 +898,12 @@
 						{@const catEntry = ex.catalog_id ? catalogMap[ex.catalog_id] : null}
 						{@const videoKey = `${i}-main-${j}`}
 						{@const videoOpen = openVideoKey === videoKey}
+						{@const editOpen = editKey === videoKey}
 						<div
 							style="display:flex;flex-direction:column;{j ? 'border-top:1px solid var(--ink-line)' : ''}"
 						>
 							<div
-								style="padding:14px 20px;display:grid;grid-template-columns:32px 1fr auto auto auto auto;gap:14px;align-items:center"
+								style="padding:14px 20px;display:grid;grid-template-columns:32px 1fr auto auto auto auto auto;gap:14px;align-items:center"
 							>
 								<div class="num" style="font:500 13px var(--font-mono);color:var(--ink-3)">
 									{String(j + 1).padStart(2, '0')}
@@ -907,7 +936,79 @@
 								{:else}
 									<span></span>
 								{/if}
+								{#if !isArchived}
+									<button
+										type="button"
+										onclick={() => toggleEdit(videoKey)}
+										title="Editar exercício"
+										style="all:unset;cursor:pointer;font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 10px;border:1px solid var(--ink-line);border-radius:var(--r-pill);color:{editOpen ? 'var(--accent)' : 'var(--ink-1)'};background:{editOpen ? 'var(--accent-wash)' : 'transparent'}"
+										aria-expanded={editOpen}
+									>{editOpen ? '× fechar' : '✎ editar'}</button>
+								{:else}
+									<span></span>
+								{/if}
 							</div>
+
+							{#if editOpen}
+								<form
+									method="POST"
+									action="?/editExercise"
+									use:enhance={() => {
+										savingEdit = true;
+										return async ({ result, update }) => {
+											savingEdit = false;
+											if (result.type === 'success') {
+												toast.success('Exercício atualizado.');
+												editKey = null;
+												await invalidateAll();
+											} else if (result.type === 'failure') {
+												toast.error(String(result.data?.error ?? 'Não foi possível salvar.'));
+											} else {
+												await update();
+											}
+										};
+									}}
+									style="padding:4px 20px 18px 60px;display:flex;flex-direction:column;gap:10px;background:var(--bg-1)"
+								>
+									<input type="hidden" name="sessionIdx" value={i} />
+									<input type="hidden" name="block" value="main" />
+									<input type="hidden" name="exerciseIdx" value={j} />
+									<div>
+										<span class="edit-lbl">Nome do exercício</span>
+										<input class="edit-in" name="name" value={ex.name} required minlength="2" />
+									</div>
+									<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+										<div>
+											<span class="edit-lbl">Séries</span>
+											<input class="edit-in" name="sets" type="number" min="1" max="20" value={ex.sets ?? ''} />
+										</div>
+										<div>
+											<span class="edit-lbl">Repetições</span>
+											<input class="edit-in" name="reps" value={ex.reps ?? ''} placeholder="ex: 8-12" />
+										</div>
+										<div>
+											<span class="edit-lbl">Descanso (s)</span>
+											<input class="edit-in" name="rest_seconds" type="number" min="0" max="900" value={ex.rest_seconds ?? ''} />
+										</div>
+										<div>
+											<span class="edit-lbl">Intensidade (% força)</span>
+											<input class="edit-in" name="intensity" value={ex.intensity ?? ''} placeholder="ex: 80% 1RM" />
+										</div>
+									</div>
+									<div>
+										<span class="edit-lbl">Carga (orientação)</span>
+										<input class="edit-in" name="load_guidance" value={ex.load_guidance ?? ''} placeholder="ex: carga moderada / 20kg" />
+									</div>
+									<div>
+										<span class="edit-lbl">Observações de execução</span>
+										<textarea class="edit-in" name="execution_notes" rows="2">{ex.execution_notes ?? ''}</textarea>
+									</div>
+									<div style="display:flex;gap:8px;justify-content:flex-end">
+										<Button type="button" variant="ghost" size="sm" onclick={() => (editKey = null)}>Cancelar</Button>
+										<Button type="submit" size="sm" disabled={savingEdit}>{savingEdit ? 'Salvando…' : 'Salvar'}</Button>
+									</div>
+								</form>
+							{/if}
 							{#if catEntry?.videoUrl && videoOpen}
 								<div style="padding:0 20px 16px 60px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
 									<img

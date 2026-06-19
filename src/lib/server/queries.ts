@@ -1703,6 +1703,8 @@ export type LogSessionInput = {
 		reps_done: string;
 		load_used?: string;
 		set_logs?: { weight: number; reps: number }[];
+		/** % da carga máxima usada hoje (informado pelo aluno, #1). */
+		intensity_used?: number;
 		notes?: string;
 		completed: boolean;
 	}[];
@@ -1933,6 +1935,7 @@ export type SessionLogEntry = {
 		sets_done?: number;
 		reps_done?: string;
 		load_used?: string;
+		intensity_used?: number;
 		completed?: boolean;
 	}>;
 };
