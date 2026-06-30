@@ -84,7 +84,7 @@ export function loadInputHint(kind: ExerciseKind): {
 			return {
 				placeholder: '—',
 				unit: '',
-				help: 'Peso corporal — registra reps + RPE. Tonelagem estimada via peso do aluno.'
+				help: 'Peso corporal — registra reps + PSE. Tonelagem estimada via peso do aluno.'
 			};
 		case 'time':
 			return { placeholder: '45', unit: 's', help: 'Duração por série (segundos)' };

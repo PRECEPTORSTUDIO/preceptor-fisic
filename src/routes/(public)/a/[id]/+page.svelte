@@ -39,7 +39,7 @@
 		},
 		{
 			title: 'Aqui é seu treino do dia',
-			body: 'Toque no card "Treino de hoje" pra ver os exercícios. Ao terminar cada série, marca o peso usado e como foi a percepção (RPE).',
+			body: 'Toque no card "Treino de hoje" pra ver os exercícios. Ao terminar cada série, marca o peso usado e como foi a percepção (PSE).',
 			icon: '◐'
 		},
 		{

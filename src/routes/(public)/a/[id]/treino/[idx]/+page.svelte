@@ -103,7 +103,7 @@
 
 	function intensityColor(load: string | undefined) {
 		if (!load) return 'var(--ink-2)';
-		const m = load.match(/RPE\s*(\d+)/i);
+		const m = load.match(/(?:RPE|PSE)\s*(\d+)/i);
 		if (!m) return 'var(--info)';
 		const v = Number(m[1]);
 		return v >= 8 ? 'var(--danger)' : v >= 6 ? 'var(--warn)' : 'var(--success)';

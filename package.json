@@ -20,6 +20,7 @@
     "db:post-migrate": "tsx scripts/apply-post-migration.ts",
     "db:studio": "drizzle-kit studio",
     "migrate:v2": "tsx scripts/migrate-from-v2.ts",
+    "migrate:rpe-pse": "tsx scripts/migrate-rpe-to-pse.ts",
     "backup": "tsx scripts/backup.ts"
   },
   "dependencies": {

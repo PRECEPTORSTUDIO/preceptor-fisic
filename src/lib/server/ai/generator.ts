@@ -36,7 +36,11 @@ import { logger } from '$lib/server/logger';
 import { trainingPlanSchema, type TrainingPlanOutput } from '$lib/schemas/training-plan';
 import { retrieveRelevantChunks, formatContextForPrompt } from './rag';
 import { SYSTEM_PROMPT_PT_BR, SYSTEM_PROMPT_VERSION } from './system-prompt';
-import { validatePlan, violationToRestriction, deriveStudentCtxFromHealth } from '$lib/server/clinical/validator';
+import {
+	validatePlan,
+	violationToRestriction,
+	deriveStudentCtxFromHealth
+} from '$lib/server/clinical/validator';
 
 // Flash primário: 3x mais rápido que Pro, qualidade suficiente pro nosso schema.
 // Pro só é tentado se Flash falhar (pouco comum).
@@ -141,9 +145,7 @@ function filterCatalog(
 	experienceLevel: string | null | undefined,
 	prescribedDifficulty: string | null | undefined
 ): CatalogPromptItem[] {
-	const studentEq = (studentEquipment ?? [])
-		.map((s) => s.toLowerCase().trim())
-		.filter(Boolean);
+	const studentEq = (studentEquipment ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean);
 	const targetEq = studentEq.length > 0 ? studentEq : DEFAULT_EQUIPMENT_FALLBACK;
 
 	// Interseção (mais restritivo) entre experiência e dificuldade prescrita.
@@ -254,6 +256,53 @@ function deriveConditionTags(health: HealthProfile | null): string[] {
 	return Array.from(tags);
 }
 
+/**
+ * Padrões pra detectar, em texto livre da IA, menção a uma condição clínica.
+ * Espelha os regex de deriveConditionTags. `family` é um substring estável da(s)
+ * tag(s) correspondente(s) — usado pra checar se o aluno realmente tem a condição.
+ *
+ * Guard anti-alucinação (bug PreceptorFISIC): a IA gerava restrições de
+ * cardiomiopatia isquêmica pra alunos sem essa condição. Aqui, qualquer
+ * restriction/monitoring que cite uma condição cuja tag NÃO está no perfil é
+ * descartada antes de persistir.
+ */
+const CONDITION_TEXT_PATTERNS: { re: RegExp; family: string }[] = [
+	{ re: /hipertens|press[aã]o alta|\bhas\b/i, family: 'hipertensao' },
+	{ re: /diabet|\bdm\b|\bdm[12]\b/i, family: 'diabetes' },
+	{
+		re: /cardiopat|cardiomiopat|coronar|\biam\b|infarto|isqu[eê]mi|\bdac\b/i,
+		family: 'cardiopatia'
+	},
+	{ re: /insufici[eê]ncia card|\bicc\b/i, family: 'ic_' },
+	{ re: /dpoc|enfisema|bronquite|pulmonar/i, family: 'dpoc' },
+	{ re: /\bavc\b|acidente vascular/i, family: 'avc' },
+	{ re: /parkinson/i, family: 'parkinson' },
+	{ re: /esclerose m[uú]ltipla/i, family: 'esclerose' },
+	{ re: /gestante|gr[aá]vida|gravidez/i, family: 'gestante' },
+	{ re: /osteoartr|artrose/i, family: 'osteoartrite' },
+	{ re: /dor lombar|lombalgia/i, family: 'lombar' },
+	{ re: /obesidade/i, family: 'obesidade' },
+	{ re: /c[aâ]ncer|oncolog|quimioterap/i, family: 'cancer' },
+	{ re: /dislipidemia|colesterol/i, family: 'dislipidemia' },
+	{ re: /sarcopenia|fr[aá]gil/i, family: 'fragil' },
+	{ re: /\blca\b|ligamento cruzado/i, family: 'lca' }
+];
+
+/**
+ * Retorna o nome da primeira condição "órfã" citada no texto (presente no texto
+ * mas SEM tag correspondente no perfil do aluno), ou null se tudo confere.
+ */
+function mentionsAbsentCondition(text: string, conditionTags: string[]): string | null {
+	if (!text) return null;
+	for (const { re, family } of CONDITION_TEXT_PATTERNS) {
+		if (re.test(text)) {
+			const present = conditionTags.some((t) => t.includes(family));
+			if (!present) return family;
+		}
+	}
+	return null;
+}
+
 async function loadStudentContext(
 	studentId: string,
 	professionalId: string
@@ -323,7 +372,9 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	lines.push('## MEDICAMENTOS');
 	if (h && h.medications && h.medications.length > 0) {
 		for (const m of h.medications) {
-			lines.push(`- ${m.name}${m.dose ? ` ${m.dose}` : ''}${m.frequency ? ` · ${m.frequency}` : ''}`);
+			lines.push(
+				`- ${m.name}${m.dose ? ` ${m.dose}` : ''}${m.frequency ? ` · ${m.frequency}` : ''}`
+			);
 		}
 	} else {
 		lines.push('- (sem medicamentos em uso)');
@@ -349,6 +400,21 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	lines.push('## PREFERÊNCIAS DE TREINO');
 	if (p) {
 		lines.push(`- Experiência: ${p.experienceLevel}`);
+		// Lembrete de volume semanal por grupamento — amarra o nível do aluno à
+		// faixa definida em "== VOLUME SEMANAL POR GRUPAMENTO MUSCULAR ==" do
+		// system prompt, somando as séries de todas as sessões da semana.
+		const volumeGuide: Record<string, string> = {
+			iniciante:
+				'INICIANTE → volume semanal por grupamento (somando todas as sessões): GRANDES 6–10 séries, PEQUENOS 4–8 séries. Comece no piso da faixa.',
+			intermediario:
+				'INTERMEDIÁRIO → volume semanal por grupamento (somando todas as sessões): GRANDES 10–16 séries, PEQUENOS 8–12 séries.',
+			avancado:
+				'AVANÇADO → volume semanal por grupamento (somando todas as sessões): GRANDES 14–24 séries, PEQUENOS 10–18 séries.'
+		};
+		const lvl = p.experienceLevel ?? 'iniciante';
+		lines.push(
+			`- Volume-alvo: ${volumeGuide[lvl] ?? volumeGuide.iniciante} Distribua em 2–3 estímulos semanais por grupamento; não exceda o teto da faixa.`
+		);
 		const difficultyGuide: Record<string, string> = {
 			pequena:
 				'PEQUENA — priorizar exercícios de baixa complexidade técnica (máquinas guiadas, peso do corpo, movimentos uni-articulares simples), baixo risco de lesão e fácil execução. Evitar exercícios técnicos como agachamento livre, levantamento terra, arranco, ou movimentos olímpicos.',
@@ -357,14 +423,19 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 			alta: 'ALTA — pode prescrever exercícios complexos e desafiadores (peso livre, multi-articulares, variações avançadas, unilaterais instáveis) compatíveis com as restrições clínicas.'
 		};
 		const diff = p.prescribedDifficulty ?? 'media';
-		lines.push(`- Dificuldade-alvo dos exercícios: ${difficultyGuide[diff] ?? difficultyGuide.media}`);
+		lines.push(
+			`- Dificuldade-alvo dos exercícios: ${difficultyGuide[diff] ?? difficultyGuide.media}`
+		);
 		// Estrutura semanal — knob do profissional pra forçar divisão. "auto"
 		// deixa a IA decidir com base em frequência (regra abaixo).
 		const splitGuide: Record<string, string> = {
 			auto: `AUTOMÁTICA — escolha a divisão pela frequência: 1-3x/sem → FULL-BODY (todos os grupos em toda sessão); 4x → UPPER/LOWER (alterna superior e inferior); 5-6x → PUSH/PULL/LEGS.`,
-			full_body: 'FULL-BODY — cada sessão deve cobrir todos os grandes grupos (peito, costas, pernas, ombros, core). Não criar sessões "só de braço" ou "só de perna".',
-			upper_lower: 'UPPER/LOWER — alternar estritamente: sessões ímpares (1ª, 3ª…) = upper (peito, costas, ombros, braços, core superior); pares = lower (quadríceps, posteriores, glúteos, panturrilha, core inferior).',
-			push_pull_legs: 'PUSH/PULL/LEGS — sessão 1 = push (peito, ombros, tríceps); sessão 2 = pull (costas, bíceps, posteriores de braço); sessão 3 = legs (todas as pernas + glúteos). Pra 4+ sessões, repetir o ciclo.'
+			full_body:
+				'FULL-BODY — cada sessão deve cobrir todos os grandes grupos (peito, costas, pernas, ombros, core). Não criar sessões "só de braço" ou "só de perna".',
+			upper_lower:
+				'UPPER/LOWER — alternar estritamente: sessões ímpares (1ª, 3ª…) = upper (peito, costas, ombros, braços, core superior); pares = lower (quadríceps, posteriores, glúteos, panturrilha, core inferior).',
+			push_pull_legs:
+				'PUSH/PULL/LEGS — sessão 1 = push (peito, ombros, tríceps); sessão 2 = pull (costas, bíceps, posteriores de braço); sessão 3 = legs (todas as pernas + glúteos). Pra 4+ sessões, repetir o ciclo.'
 		};
 		const split = p.trainingSplit ?? 'auto';
 		lines.push(`- Estrutura do treino: ${splitGuide[split] ?? splitGuide.auto}`);
@@ -398,9 +469,7 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	lines.push(formatCatalogForPrompt(ctx.catalog));
 	lines.push('');
 	lines.push('## TAREFA');
-	lines.push(
-		'Gere um plano de treino semanal estruturado conforme o schema. Regras:'
-	);
+	lines.push('Gere um plano de treino semanal estruturado conforme o schema. Regras:');
 	lines.push(
 		'1. PREFERIR exercícios do CATÁLOGO acima sempre que possível — quando usar um, preencha `catalog_id` da exercise com o external_id (formato 4-5 dígitos, ex: "0001"). Mira em ≥80% dos exercícios do bloco principal vindos do catálogo. Para aquecimento/desaquecimento, pode usar exercícios livres se necessário.'
 	);
@@ -435,7 +504,7 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 		'5. RESPEITE a Dificuldade-alvo dos exercícios definida nas PREFERÊNCIAS. A escolha dos exercícios deve refletir esse nível de complexidade técnica, independente do nível de experiência informado.'
 	);
 	lines.push(
-		'6. FICHA DE PRESCRIÇÃO — para CADA exercício de força (warmup e main), preencha SEMPRE estes campos curtos, no padrão de prescrição brasileiro: `intensity` = intensidade em % (ex: "85%", "80/60% Máx", "50/75%"); `muscle_action` = um de "isotonica" | "isometrica" | "auxotonico" | "isocinetica" (isométrica p/ pranchas/isometrias); `cadence` = tempo de execução no formato fase/fase (ex: "2/2", "1/3"); `range_of_motion` = amplitude (ex: "90°", "Full", "90° de flexão do cotovelo"); `rest_label` = pausa em texto (ex: "1min", "40s", "40s/1min"). Mantenha também `sets`, `reps`, `rest_seconds` numéricos. Use `series_label` SÓ quando as séries forem um esquema (ex: "2/2").'
+		'6. FICHA DE PRESCRIÇÃO — para CADA exercício de força (warmup e main), preencha SEMPRE estes campos curtos, no padrão de prescrição brasileiro: `intensity` = % de 1RM no formato "% 1RM" (ex: "80% 1RM", "60-80% 1RM"; em peso corporal/isometria pode omitir); `load_guidance` = PSE (Percepção Subjetiva de Esforço) no formato "PSE x-y" (ex: "PSE 6-7") — NUNCA escreva "RPE". `intensity` (% 1RM) e `load_guidance` (PSE) são complementares e aparecem lado a lado na ficha. `muscle_action` = um de "isotonica" | "isometrica" | "auxotonico" | "isocinetica" (isométrica p/ pranchas/isometrias); `cadence` = tempo de execução no formato fase/fase (ex: "2/2", "1/3"); `range_of_motion` = amplitude (ex: "90°", "Full", "90° de flexão do cotovelo"); `rest_label` = pausa em texto (ex: "1min", "40s", "40s/1min"). Mantenha também `sets`, `reps`, `rest_seconds` numéricos. Use `series_label` SÓ quando as séries forem um esquema (ex: "2/2").'
 	);
 	lines.push(
 		'7. AERÓBIO — se o aluno tiver objetivo cardiovascular/emagrecimento ou modalidade aeróbia, gere `aerobic_prescriptions` (1 a 3 itens) no formato do modelo: `means` (ex: "Esteira", "Corrida na Rua"), `weekly_frequency` (ex: "2x semana"), `method` (ex: "Contínuo"), `pause` (ex: "-"), `intensity` (ex: "60-70%Fcmáx (150-167bpm)"), `volume` (ex: "50min"). Caso contrário, deixe a lista vazia.'
@@ -683,10 +752,7 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 			usage = r.usage;
 		} catch (primaryErr) {
 			if (!isQuotaError(primaryErr)) throw primaryErr;
-			log.warn(
-				{ err: String(primaryErr).slice(0, 200) },
-				'plan.generate.primary_quota_fallback'
-			);
+			log.warn({ err: String(primaryErr).slice(0, 200) }, 'plan.generate.primary_quota_fallback');
 			await db
 				.update(trainingPlans)
 				.set({
@@ -718,21 +784,48 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 			.set({ progressPct: 91, progressPhase: 'validando e persistindo' })
 			.where(eq(trainingPlans.id, planId));
 
-		// Restrições da IA
-		const aiRestrictions: Restriction[] = plan.restrictions.map((r) => ({
-			level: r.level,
-			title: r.title,
-			description: r.description,
-			affected_exercises: r.affected_exercises,
-			suggestion: r.suggestion,
-			source: {
-				type: r.source.type,
-				ref: r.source.note,
-				rule_code: r.source.rule_code,
-				chunk_id: r.source.chunk_id,
-				source_id: r.source.source_id
-			}
-		}));
+		// Guard anti-alucinação clínica. Dois filtros sobre as restrições da IA:
+		//   1) source.type='rule' é reservado ao engine de validação — a IA não
+		//      pode emitir; quando emite, está forjando autoridade (vetor do bug).
+		//   2) restrição que cita uma condição cuja tag NÃO está no perfil do aluno
+		//      é alucinação (ex.: cardiomiopatia isquêmica num aluno sem cardiopatia).
+		//      Greens (alinhamento com diretriz) passam — não imputam doença.
+		const droppedRestrictions: string[] = [];
+		const aiRestrictions: Restriction[] = plan.restrictions
+			.filter((r) => {
+				if (r.source.type === 'rule') {
+					droppedRestrictions.push(`${r.title} [source.type=rule forjado]`);
+					return false;
+				}
+				if (r.level !== 'green') {
+					const orphan = mentionsAbsentCondition(`${r.title} ${r.description}`, ctx.conditionTags);
+					if (orphan) {
+						droppedRestrictions.push(`${r.title} [condição ausente: ${orphan}]`);
+						return false;
+					}
+				}
+				return true;
+			})
+			.map((r) => ({
+				level: r.level,
+				title: r.title,
+				description: r.description,
+				affected_exercises: r.affected_exercises,
+				suggestion: r.suggestion,
+				source: {
+					type: r.source.type,
+					ref: r.source.note,
+					rule_code: r.source.rule_code,
+					chunk_id: r.source.chunk_id,
+					source_id: r.source.source_id
+				}
+			}));
+		if (droppedRestrictions.length > 0) {
+			log.warn(
+				{ dropped: droppedRestrictions, condition_tags: ctx.conditionTags },
+				'plan.guard.dropped_hallucinated_restrictions'
+			);
+		}
 
 		// Validação clínica via clinical_rules engine
 		await db
@@ -742,8 +835,7 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 
 		const age = ctx.student.birthDate
 			? Math.floor(
-					(Date.now() - new Date(ctx.student.birthDate).getTime()) /
-						(365.25 * 24 * 60 * 60 * 1000)
+					(Date.now() - new Date(ctx.student.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
 				)
 			: null;
 		const studentCtx = deriveStudentCtxFromHealth(ctx.conditionTags, age, ctx.health);
@@ -757,16 +849,37 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 			{ ai_restrictions: aiRestrictions.length, rule_violations: violations.length },
 			'plan.validate.done'
 		);
-		const monitoringNotes: MonitoringNote[] = plan.monitoring_parameters.map((m) => ({
-			parameter: m.parameter,
-			frequency: m.frequency,
-			alert_threshold: m.alert_threshold,
-			source_refs: m.source_refs.map((s) => s.chunk_id ?? s.source_id ?? s.note ?? '').filter(Boolean)
-		}));
+		// Mesmo guard nos monitoring_parameters — descarta monitoramento de
+		// patologia que o aluno não tem (ex.: "FC contínua por cardiopatia").
+		const monitoringNotes: MonitoringNote[] = plan.monitoring_parameters
+			.filter((m) => {
+				const orphan = mentionsAbsentCondition(
+					`${m.parameter} ${m.frequency} ${m.alert_threshold ?? ''}`,
+					ctx.conditionTags
+				);
+				if (orphan) {
+					log.warn(
+						{ parameter: m.parameter, condition: orphan, condition_tags: ctx.conditionTags },
+						'plan.guard.dropped_hallucinated_monitoring'
+					);
+					return false;
+				}
+				return true;
+			})
+			.map((m) => ({
+				parameter: m.parameter,
+				frequency: m.frequency,
+				alert_threshold: m.alert_threshold,
+				source_refs: m.source_refs
+					.map((s) => s.chunk_id ?? s.source_id ?? s.note ?? '')
+					.filter(Boolean)
+			}));
 		const assessmentProtocols: AssessmentProtocol[] = plan.assessment_protocols.map((a) => ({
 			test_name: a.test_name,
 			when: a.when,
-			source_refs: a.source_refs.map((s) => s.chunk_id ?? s.source_id ?? s.note ?? '').filter(Boolean)
+			source_refs: a.source_refs
+				.map((s) => s.chunk_id ?? s.source_id ?? s.note ?? '')
+				.filter(Boolean)
 		}));
 
 		const [aiRunRow] = await db
@@ -845,9 +958,7 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 					professionalName: prof.name,
 					studentName: ctx.student.name,
 					planId
-				}).catch((err) =>
-					log.error({ err: String(err).slice(0, 200) }, 'plan.ready.email.failed')
-				);
+				}).catch((err) => log.error({ err: String(err).slice(0, 200) }, 'plan.ready.email.failed'));
 			}
 		} catch (err) {
 			log.error({ err: String(err).slice(0, 200) }, 'plan.ready.email.lookup_failed');
@@ -934,8 +1045,7 @@ export async function failIfStale(
 	const updatedMs = plan.updatedAt ? new Date(plan.updatedAt).getTime() : 0;
 	if (Date.now() - updatedMs < STALE_PLAN_MS) return null;
 
-	const errorMessage =
-		'Geração interrompida — tempo limite excedido. Tente gerar novamente.';
+	const errorMessage = 'Geração interrompida — tempo limite excedido. Tente gerar novamente.';
 	await db
 		.update(trainingPlans)
 		.set({
@@ -946,10 +1056,7 @@ export async function failIfStale(
 			updatedAt: new Date()
 		})
 		.where(
-			and(
-				eq(trainingPlans.id, plan.id),
-				inArray(trainingPlans.status, ['pending', 'generating'])
-			)
+			and(eq(trainingPlans.id, plan.id), inArray(trainingPlans.status, ['pending', 'generating']))
 		);
 	logger.warn({ planId: plan.id }, 'plan.stale.reconciled');
 	return { status: 'failed', errorMessage };

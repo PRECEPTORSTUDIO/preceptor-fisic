@@ -84,8 +84,9 @@ function appliesTo(rule: ClinicalRuleRow, ctx: StudentCtx): boolean {
 
 function parseRpe(s: string | undefined): number | null {
 	if (!s) return null;
-	// "RPE 6-7" → 7 (max), "RPE 8" → 8
-	const m = s.match(/RPE\s*(\d+(?:[.,]\d+)?)\s*(?:[-–a]\s*(\d+(?:[.,]\d+)?))?/i);
+	// "PSE 6-7" → 7 (max), "PSE 8" → 8. Aceita RPE também (planos legados antes
+	// da troca de nomenclatura RPE→PSE e backfill).
+	const m = s.match(/(?:RPE|PSE)\s*(\d+(?:[.,]\d+)?)\s*(?:[-–a]\s*(\d+(?:[.,]\d+)?))?/i);
 	if (!m) return null;
 	const high = m[2] ?? m[1];
 	if (!high) return null;
@@ -191,7 +192,9 @@ export async function validatePlan(
 
 		// 1) forbid.exercise_patterns
 		if (dsl.forbid?.exercise_patterns?.length) {
-			const matched = exercises.filter((row) => matchesPatterns(row.ex, dsl.forbid!.exercise_patterns!));
+			const matched = exercises.filter((row) =>
+				matchesPatterns(row.ex, dsl.forbid!.exercise_patterns!)
+			);
 			if (matched.length > 0) {
 				violations.push({
 					ruleCode: rule.code,

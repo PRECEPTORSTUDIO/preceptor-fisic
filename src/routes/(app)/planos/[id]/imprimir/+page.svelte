@@ -101,7 +101,10 @@
 		return ex.series_label ?? (ex.sets != null ? String(ex.sets) : '-');
 	}
 	function fmtIntensity(ex: PlanExercise): string {
-		return ex.intensity || ex.load_guidance || '-';
+		// Mostra % de 1RM (intensity) e PSE (load_guidance) lado a lado quando
+		// ambos existem. Cada um sozinho aparece como fallback.
+		const parts = [ex.intensity, ex.load_guidance].map((p) => p?.trim()).filter(Boolean);
+		return parts.length > 0 ? parts.join(' · ') : '-';
 	}
 	function fmtCadence(ex: PlanExercise): string {
 		return ex.cadence || ex.tempo || '-';
@@ -555,8 +558,15 @@
 			gap: 0;
 		}
 		.page {
+			/* CRÍTICO: na visualização .page é flex-column (com signature em
+			   margin-top:auto). Mas um contêiner flex-column NÃO pagina o conteúdo
+			   que transborda entre folhas — o navegador CORTA no fim da 1ª página
+			   física. Era por isso que a impressão saía só com parte do Treino A.
+			   Em impressão voltamos pro fluxo de bloco normal, que pagina tabelas
+			   longas corretamente. */
+			display: block;
 			width: auto;
-			min-height: auto;
+			min-height: 0;
 			box-shadow: none;
 			padding: 12mm 12mm 10mm;
 		}
@@ -566,6 +576,19 @@
 		.break-before {
 			break-before: page;
 			page-break-before: always;
+		}
+		/* Sem flex, a assinatura volta ao fluxo normal logo após o conteúdo. */
+		.signature {
+			margin-top: 24px;
+		}
+		/* Tabela longa pode atravessar folhas, mas nunca quebrar no meio de uma
+		   linha; o cabeçalho se repete no topo de cada folha. */
+		.tbl tr {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.tbl thead {
+			display: table-header-group;
 		}
 		@page {
 			size: A4;

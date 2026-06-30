@@ -81,7 +81,7 @@
 
 	function intensityColorFromRPE(load: string | undefined) {
 		if (!load) return 'var(--ink-2)';
-		const m = load.match(/RPE\s*(\d+)/i);
+		const m = load.match(/(?:RPE|PSE)\s*(\d+)/i);
 		if (!m) return 'var(--info)';
 		const v = Number(m[1]);
 		return v >= 8 ? 'var(--danger)' : v >= 6 ? 'var(--warn)' : 'var(--success)';
@@ -323,7 +323,7 @@
 										>{done ? (i === 3 ? 8 : 10) : '—'}</div>
 									</div>
 									<div>
-										<div style="font:var(--label-mono);color:var(--ink-2);margin-bottom:4px">RPE</div>
+										<div style="font:var(--label-mono);color:var(--ink-2);margin-bottom:4px">PSE</div>
 										<div
 											class="num"
 											style="font:500 16px var(--font-mono);color:{done ? 'var(--ink-0)' : 'var(--ink-3)'}"

@@ -918,11 +918,21 @@
 								</div>
 								<span class="num" style="font:500 13px var(--font-mono);color:var(--ink-1)">{ex.sets ?? '—'}×{ex.reps ?? '—'}</span>
 								<span class="num" style="font:500 12px var(--font-mono);color:var(--ink-2)">↺ {ex.rest_seconds ?? '—'}s</span>
-								{#if ex.load_guidance}
-									<span
-										style="font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:var(--r-pill);color:var(--accent);background:var(--accent-wash)"
-										>{ex.load_guidance}</span
-									>
+								{#if ex.load_guidance || ex.intensity}
+									<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+										{#if ex.load_guidance}
+											<span
+												style="font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:var(--r-pill);color:var(--accent);background:var(--accent-wash)"
+												>{ex.load_guidance}</span
+											>
+										{/if}
+										{#if ex.intensity}
+											<span
+												style="font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 8px;border-radius:var(--r-pill);color:var(--ink-1);border:1px solid var(--ink-line)"
+												>{ex.intensity}</span
+											>
+										{/if}
+									</span>
 								{:else}
 									<span></span>
 								{/if}
