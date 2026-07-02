@@ -110,6 +110,13 @@
 		intermediate: 'intermediário',
 		advanced: 'avançado'
 	};
+	const PICKER_ITEM_BASE =
+		'all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;flex-direction:column;gap:2px;padding:9px 12px;border-bottom:1px solid var(--ink-line);text-align:left;';
+	function pickerItemStyle(selected: boolean) {
+		return selected
+			? PICKER_ITEM_BASE + 'background:var(--accent-wash);box-shadow:inset 3px 0 0 var(--accent)'
+			: PICKER_ITEM_BASE;
+	}
 
 	// Handler comum de resultado de swap/add/remove: toast + fecha + revalida UI.
 	function exerciseMutationHandler(closeAfter: () => void) {
@@ -515,79 +522,8 @@
 		.add-btn:hover {
 			background: var(--accent-wash);
 		}
-		/* Seletor de catálogo (trocar / adicionar) */
-		.picker {
-			padding: 12px 20px 16px 60px;
-			background: var(--bg-1);
-			display: flex;
-			flex-direction: column;
-			gap: 10px;
-		}
-		.keep-row {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-			font: 500 12px var(--font-sans);
-			color: var(--ink-1);
-			cursor: pointer;
-		}
-		.picker-empty {
-			font: 400 12.5px var(--font-sans);
-			color: var(--ink-3);
-			padding: 6px 2px;
-		}
-		.picker-results {
-			display: flex;
-			flex-direction: column;
-			max-height: 260px;
-			overflow-y: auto;
-			border: 1px solid var(--ink-line);
-			border-radius: var(--r-2);
-		}
-		.picker-item {
-			all: unset;
-			cursor: pointer;
-			box-sizing: border-box;
-			width: 100%;
-			padding: 9px 12px;
-			display: flex;
-			flex-direction: column;
-			gap: 2px;
-			border-bottom: 1px solid var(--ink-line);
-		}
-		.picker-item:last-child {
-			border-bottom: none;
-		}
-		.picker-item:hover {
-			background: var(--bg-2);
-		}
-		.picker-item.sel {
-			background: var(--accent-wash);
-			box-shadow: inset 2px 0 0 var(--accent);
-		}
-		.pi-name {
-			font: 500 13.5px var(--font-sans);
-			color: var(--ink-0);
-		}
-		.pi-meta {
-			font: var(--label-mono);
-			color: var(--ink-3);
-			text-transform: capitalize;
-		}
-		.picker-confirm {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 12px;
-			flex-wrap: wrap;
-			padding: 10px 12px;
-			background: var(--accent-wash);
-			border-radius: var(--r-2);
-		}
-		.pc-label {
-			font: 400 13px var(--font-sans);
-			color: var(--ink-0);
-		}
+		/* NB: os estilos do seletor de catálogo (trocar/adicionar) são inline no
+		   snippet exercisePicker — CSS scoped não alcança conteúdo de {@render}. */
 		.gen-shell {
 			flex: 1;
 			background: var(--bg-0);
@@ -1200,33 +1136,43 @@
 
 		<!-- Seletor de exercício do catálogo (trocar / adicionar) -->
 		{#snippet exercisePicker(i: number, blockKey: string, j: number, mode: 'swap' | 'add')}
-			<div class="picker">
+			<!-- Estilos inline de propósito: CSS scoped não chega no conteúdo
+			     renderizado via {@render} deste snippet, então a estrutura precisa
+			     ser inline pra não quebrar (busca virava texto corrido). -->
+			<div
+				style="padding:12px 20px 16px 60px;background:var(--bg-1);display:flex;flex-direction:column;gap:10px"
+			>
 				<input
-					class="edit-in"
+					style="width:100%;box-sizing:border-box;background:var(--bg-2);border:1px solid var(--ink-line-2);border-radius:var(--r-2);padding:8px 12px;font:400 13px var(--font-sans);color:var(--ink-0);outline:none"
 					placeholder="Buscar exercício no catálogo…"
 					bind:value={pickerQuery}
 					oninput={onPickerInput}
 				/>
 				{#if mode === 'swap'}
-					<label class="keep-row">
+					<label
+						style="display:flex;align-items:center;gap:8px;font:500 12px var(--font-sans);color:var(--ink-1);cursor:pointer"
+					>
 						<input type="checkbox" bind:checked={keepPrescription} /> manter séries · reps · descanso · intensidade
 					</label>
 				{/if}
 				{#if pickerLoading && pickerResults.length === 0}
-					<div class="picker-empty">Buscando…</div>
+					<div style="font:400 12.5px var(--font-sans);color:var(--ink-3);padding:6px 2px">Buscando…</div>
 				{:else if pickerResults.length === 0}
-					<div class="picker-empty">Nenhum exercício encontrado.</div>
+					<div style="font:400 12.5px var(--font-sans);color:var(--ink-3);padding:6px 2px">
+						Nenhum exercício encontrado.
+					</div>
 				{:else}
-					<div class="picker-results">
+					<div
+						style="display:flex;flex-direction:column;max-height:280px;overflow-y:auto;border:1px solid var(--ink-line);border-radius:var(--r-2)"
+					>
 						{#each pickerResults as c (c.id)}
 							<button
 								type="button"
-								class="picker-item"
-								class:sel={pickerSelected?.id === c.id}
 								onclick={() => (pickerSelected = c)}
+								style={pickerItemStyle(pickerSelected?.id === c.id)}
 							>
-								<span class="pi-name">{c.name}</span>
-								<span class="pi-meta"
+								<span style="font:500 13.5px var(--font-sans);color:var(--ink-0)">{c.name}</span>
+								<span style="font:var(--label-mono);color:var(--ink-3);text-transform:capitalize"
 									>{c.bodyPart}{c.equipment ? ' · ' + c.equipment : ''}{c.difficulty
 										? ' · ' + (DIFF_PT[c.difficulty] ?? c.difficulty)
 										: ''}{c.hasVideo ? ' · 🎬 vídeo' : ''}</span
@@ -1243,14 +1189,14 @@
 							swapping = true;
 							return exerciseMutationHandler(() => (pickerFor = null));
 						}}
-						class="picker-confirm"
+						style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;background:var(--accent-wash);border-radius:var(--r-2)"
 					>
 						<input type="hidden" name="sessionIdx" value={i} />
 						<input type="hidden" name="block" value={blockKey} />
 						{#if mode === 'swap'}<input type="hidden" name="exerciseIdx" value={j} />{/if}
 						{#if mode === 'swap' && keepPrescription}<input type="hidden" name="keepPrescription" value="on" />{/if}
 						<input type="hidden" name="catalogId" value={pickerSelected.id} />
-						<span class="pc-label"
+						<span style="font:400 13px var(--font-sans);color:var(--ink-0)"
 							>{mode === 'swap' ? 'Trocar por' : 'Adicionar'}: <strong>{pickerSelected.name}</strong></span
 						>
 						<div style="display:flex;gap:8px">
