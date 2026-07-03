@@ -964,6 +964,33 @@
 				</form>
 			{/if}
 			<Button variant="secondary" onclick={() => goto(`/planos/${plan.id}/imprimir`)}>⎙ Imprimir / PDF</Button>
+				{#if !isGenerating}
+					<!-- Excluir permanentemente — em qualquer estado (menos gerando). -->
+					<form
+						method="POST"
+						action="?/delete"
+						use:enhance={({ cancel }) => {
+							const msg = isPublished
+								? 'Excluir este plano? O aluno perde o acesso e o registro é apagado. Não dá pra desfazer.'
+								: 'Excluir este plano de treino? Não dá pra desfazer.';
+							if (!window.confirm(msg)) {
+								cancel();
+								return;
+							}
+							deleting = true;
+							return async ({ update, result }) => {
+								deleting = false;
+								if (result.type === 'failure')
+									toast.error(String((result.data as any)?.error ?? 'Não foi possível excluir.'));
+								await update();
+							};
+						}}
+					>
+						<Button variant="ghost" type="submit" disabled={deleting} title="Excluir plano">
+							{deleting ? 'Excluindo…' : '🗑 Excluir'}
+						</Button>
+					</form>
+				{/if}
 		</div>
 	</header>
 
@@ -1391,6 +1418,27 @@
 									<div>
 										<span class="edit-lbl">Carga (orientação)</span>
 										<input class="edit-in" name="load_guidance" value={ex.load_guidance ?? ''} placeholder="ex: carga moderada / 20kg" />
+									</div>
+									<!-- Campos da ficha impressa (a IA raramente preenche — controle aqui) -->
+									<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+										<div>
+											<span class="edit-lbl">Cadência</span>
+											<input class="edit-in" name="cadence" value={ex.cadence ?? ''} placeholder="ex: 2/2" />
+										</div>
+										<div>
+											<span class="edit-lbl">Amplitude</span>
+											<input class="edit-in" name="range_of_motion" value={ex.range_of_motion ?? ''} placeholder="ex: 90° / Total" />
+										</div>
+										<div>
+											<span class="edit-lbl">Ação muscular</span>
+											<select class="edit-in" name="muscle_action" value={ex.muscle_action ?? ''}>
+												<option value="">—</option>
+												<option value="isotonica">Isotônica</option>
+												<option value="isometrica">Isométrica</option>
+												<option value="auxotonico">Auxotônico</option>
+												<option value="isocinetica">Isocinética</option>
+											</select>
+										</div>
 									</div>
 									<div>
 										<span class="edit-lbl">Observações de execução</span>

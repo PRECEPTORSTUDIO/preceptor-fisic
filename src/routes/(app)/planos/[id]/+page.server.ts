@@ -182,6 +182,12 @@ export const actions: Actions = {
 		const loadGuidance = String(fd.get('load_guidance') ?? '').trim();
 		const intensity = String(fd.get('intensity') ?? '').trim();
 		const executionNotes = String(fd.get('execution_notes') ?? '').trim();
+		// Campos da ficha de prescrição — a IA quase nunca preenche cadência/
+		// amplitude, então o personal controla aqui (aparecem no PDF).
+		const cadence = String(fd.get('cadence') ?? '').trim();
+		const rangeOfMotion = String(fd.get('range_of_motion') ?? '').trim();
+		const muscleActionRaw = String(fd.get('muscle_action') ?? '').trim();
+		const MUSCLE_ACTIONS = ['isotonica', 'isometrica', 'auxotonico', 'isocinetica'];
 		const setsRaw = fd.get('sets');
 		const restRaw = fd.get('rest_seconds');
 
@@ -199,6 +205,11 @@ export const actions: Actions = {
 		ex.load_guidance = loadGuidance || undefined;
 		ex.intensity = intensity || undefined;
 		ex.execution_notes = executionNotes || undefined;
+		ex.cadence = cadence || undefined;
+		ex.range_of_motion = rangeOfMotion || undefined;
+		ex.muscle_action = MUSCLE_ACTIONS.includes(muscleActionRaw)
+			? (muscleActionRaw as typeof ex.muscle_action)
+			: undefined;
 
 		// Revalidação clínica automática pós-edição (#C04) — persiste o planData
 		// editado + restrictions atualizadas num único update.
@@ -469,18 +480,14 @@ export const actions: Actions = {
 
 		const plan = await getPlanDetail(params.id!, professional.id);
 		if (!plan) return fail(404, { error: 'plano não encontrado' });
-		if (plan.status !== 'failed')
-			return fail(400, { error: 'só planos com falha de geração podem ser excluídos' });
+		// Exclui em qualquer estado, MENOS enquanto está gerando (evita apagar um
+		// registro que o job em background ainda está escrevendo).
+		if (plan.status === 'pending' || plan.status === 'generating')
+			return fail(400, { error: 'aguarde a geração terminar antes de excluir' });
 
 		const res = await db
 			.delete(trainingPlans)
-			.where(
-				and(
-					eq(trainingPlans.id, params.id!),
-					eq(trainingPlans.professionalId, professional.id),
-					eq(trainingPlans.status, 'failed')
-				)
-			)
+			.where(and(eq(trainingPlans.id, params.id!), eq(trainingPlans.professionalId, professional.id)))
 			.returning({ id: trainingPlans.id });
 		if (res.length === 0) return fail(400, { error: 'não foi possível excluir o plano' });
 

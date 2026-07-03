@@ -247,6 +247,16 @@
 			{#if s.focus}<div class="train-focus">{s.focus}</div>{/if}
 
 			<table class="tbl strength">
+				<colgroup>
+					<col style="width:23%" />
+					<col style="width:13%" />
+					<col style="width:7%" />
+					<col style="width:10%" />
+					<col style="width:8%" />
+					<col style="width:13%" />
+					<col style="width:10%" />
+					<col style="width:16%" />
+				</colgroup>
 				<thead>
 					<tr>
 						<th class="col-ex">Exercício</th>
@@ -256,7 +266,7 @@
 						<th>Pausa</th>
 						<th>Ação muscular</th>
 						<th>Cadência</th>
-						<th>Amplitude de movimento</th>
+						<th>Amplitude</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -464,6 +474,12 @@
 		margin-top: 0;
 		font-size: 10.5px;
 	}
+	/* table-layout fixed + colgroup: 8 colunas cabem na largura do A4 e o texto
+	   quebra em vez de estourar pra fora da folha (o que cortava Cadência e
+	   Amplitude no PDF). */
+	.strength {
+		table-layout: fixed;
+	}
 	.tbl th {
 		background: var(--accent);
 		color: #fff;
@@ -478,6 +494,8 @@
 		padding: 7px 6px;
 		text-align: center;
 		vertical-align: middle;
+		word-break: break-word;
+		overflow-wrap: anywhere;
 	}
 	.tbl tbody tr:nth-child(even) td {
 		background: var(--zebra);
@@ -485,7 +503,7 @@
 	.strength .col-ex,
 	.tbl .col-ex {
 		text-align: left;
-		width: 26%;
+		/* largura vem do <colgroup> (table-layout:fixed) */
 	}
 	.ex-name {
 		font-weight: 600;
