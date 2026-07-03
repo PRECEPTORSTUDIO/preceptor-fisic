@@ -2400,7 +2400,13 @@ export async function searchExerciseCatalog(opts: {
 	if (opts.bodyPart) conds.push(sql`body_part = ${opts.bodyPart}`);
 	if (opts.equipment) conds.push(sql`equipment = ${opts.equipment}`);
 	if (opts.difficulty) conds.push(sql`difficulty = ${opts.difficulty}`);
-	if (pat) conds.push(sql`(name ILIKE ${pat} OR name_en ILIKE ${pat})`);
+	// unaccent (schema extensions): buscar "biceps"/"quadriceps" sem acento
+	// acha "Bíceps"/"Quadríceps". Sem isso, o seed de grupo muscular sem acento
+	// (ou o personal digitando sem acento) devolvia poucos ou zero resultados.
+	if (pat)
+		conds.push(
+			sql`(extensions.unaccent(name) ILIKE extensions.unaccent(${pat}) OR extensions.unaccent(name_en) ILIKE extensions.unaccent(${pat}))`
+		);
 	const where = sql.join(conds, sql` AND `);
 
 	const [itemsResult, countResult] = await Promise.all([

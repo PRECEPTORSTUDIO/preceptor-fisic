@@ -41,6 +41,7 @@
 	}
 
 	// Trocar / adicionar exercício do catálogo (seletor com busca).
+	type PlanExercisePartial = { name?: string; muscle_groups?: string[] | null };
 	type CatalogHit = {
 		id: string;
 		externalId: string;
@@ -73,14 +74,25 @@
 			pickerFor?.mode === mode
 		);
 	}
-	function openPicker(i: number, block: string, j: number, mode: 'swap' | 'add') {
+	// Termo inicial da busca ao abrir o seletor. No "trocar", já filtra pelo
+	// grupo muscular do exercício atual — sem isso a busca vazia devolvia o
+	// catálogo em ordem alfabética (só "abdominal…") independente do exercício.
+	function seedFor(mode: 'swap' | 'add', ex?: PlanExercisePartial): string {
+		if (mode !== 'swap' || !ex) return '';
+		const mg = (ex.muscle_groups ?? []).map((s) => String(s).trim()).filter(Boolean);
+		// 1º token do 1º grupo muscular (ex.: "bíceps braquial" → "bíceps").
+		if (mg.length > 0) return mg[0]?.split(/[\s,/]+/)[0] ?? '';
+		// Sem grupo: 1ª palavra significativa do nome (ex.: "Rosca bíceps" → "Rosca").
+		return (ex.name ?? '').trim().split(/[\s,]+/)[0] ?? '';
+	}
+	function openPicker(i: number, block: string, j: number, mode: 'swap' | 'add', ex?: PlanExercisePartial) {
 		if (isPickerOpen(i, block, j, mode)) {
 			pickerFor = null;
 			return;
 		}
 		editKey = null;
 		pickerFor = { i, block, j, mode };
-		pickerQuery = '';
+		pickerQuery = seedFor(mode, ex);
 		pickerResults = [];
 		pickerSelected = null;
 		keepPrescription = true;
@@ -1297,7 +1309,7 @@
 									{@const swapOpen = isPickerOpen(i, blockKey, j, 'swap')}
 									<button
 										type="button"
-										onclick={() => openPicker(i, blockKey, j, 'swap')}
+										onclick={() => openPicker(i, blockKey, j, 'swap', ex)}
 										title="Trocar por outro exercício do catálogo"
 										style="all:unset;cursor:pointer;font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:3px 10px;border:1px solid var(--ink-line);border-radius:var(--r-pill);color:{swapOpen ? 'var(--accent)' : 'var(--ink-1)'};background:{swapOpen ? 'var(--accent-wash)' : 'transparent'}"
 										aria-expanded={swapOpen}
