@@ -201,6 +201,24 @@
 		{ lbl: 'Risco CV', val: hp?.cardiovascularRisk ?? '—', unit: '', color: hp?.cardiovascularRisk === 'alto' || hp?.cardiovascularRisk === 'muito_alto' ? 'var(--danger)' : 'var(--success)', spark: undefined, delta: undefined, trend: undefined }
 	]);
 
+	// ── Estratificação de risco cardiovascular (sugerir + confirmar) ──────────
+	const cvRisk = $derived(data.cvRisk);
+	const currentRisk = $derived(data.currentRisk);
+	type RiskLevel = 'baixo' | 'moderado' | 'alto' | 'muito_alto';
+	const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string }> = {
+		baixo: { label: 'Baixo', color: 'var(--success)', bg: 'var(--success-dim)' },
+		moderado: { label: 'Moderado', color: 'var(--warn)', bg: 'var(--warn-dim)' },
+		alto: { label: 'Alto', color: 'var(--danger)', bg: 'var(--danger-dim)' },
+		muito_alto: { label: 'Muito alto', color: 'var(--danger)', bg: 'var(--danger-dim)' }
+	};
+	// Valor do <select> — inicia na sugestão; o profissional confirma ou troca.
+	let selectedRisk = $state<RiskLevel>('baixo');
+	$effect(() => {
+		selectedRisk = cvRisk.level;
+	});
+	let savingRisk = $state(false);
+	const riskDiverges = $derived(currentRisk !== null && currentRisk !== cvRisk.level);
+
 	const trendIcon = (t: string | undefined) => (t === 'down' ? '↘' : t === 'up' ? '↗' : '→');
 	const trendColor = (t: string | undefined) =>
 		t === 'down' ? 'var(--success)' : t === 'up' ? 'var(--warn)' : 'var(--ink-2)';
@@ -422,6 +440,86 @@
 										{d.label}{d.severity ? ' · ' + d.severity : ''}
 									</span>
 								{/each}
+							</div>
+						{/if}
+					</div>
+
+					<!-- Estratificação de risco cardiovascular (automática, ACSM adaptado) -->
+					<div class="card" style="padding:24px">
+						<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
+							<div style="display:flex;align-items:center;gap:10px">
+								<div style="width:32px;height:32px;border-radius:var(--r-1);background:{RISK_META[cvRisk.level].bg};display:flex;align-items:center;justify-content:center;color:{RISK_META[cvRisk.level].color};font:600 15px var(--font-sans)">♥</div>
+								<div style="font:500 16px var(--font-sans);color:var(--ink-0)">Risco cardiovascular</div>
+							</div>
+							<span
+								style="padding:4px 10px;border-radius:var(--r-pill);font:600 12px var(--font-sans);background:{RISK_META[cvRisk.level].bg};color:{RISK_META[cvRisk.level].color}"
+							>
+								Sugerido: {RISK_META[cvRisk.level].label}
+							</span>
+						</div>
+
+						<div style="font:var(--label-mono);color:var(--ink-2);margin-bottom:10px">
+							Estratificação automática · confiança {cvRisk.confidence}
+						</div>
+
+						<!-- Por quê -->
+						<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+							{#each cvRisk.reasons as r, i (r + i)}
+								<div style="font:var(--body-sm);color:var(--ink-1)">• {r}</div>
+							{/each}
+						</div>
+
+						<!-- Fatores de risco contados -->
+						{#if cvRisk.factors.length > 0}
+							<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+								{#each cvRisk.factors as f (f.code)}
+									<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--r-pill);font:500 11px var(--font-sans);background:var(--bg-3);color:var(--ink-1);border:1px solid var(--ink-line-2)">
+										{f.label}{f.detail ? ' · ' + f.detail : ''}
+									</span>
+								{/each}
+							</div>
+						{/if}
+
+						{#if riskDiverges}
+							<div style="font:var(--body-sm);color:var(--warn);margin-bottom:12px">
+								⚠ Valor atual no perfil: {RISK_META[currentRisk as RiskLevel]?.label ?? currentRisk}. Confirme ou ajuste abaixo.
+							</div>
+						{/if}
+
+						<!-- Confirmar / sobrescrever -->
+						<form
+							method="POST"
+							action="?/applyCvRisk"
+							use:enhance={() => {
+								savingRisk = true;
+								return async ({ result, update }) => {
+									savingRisk = false;
+									if (result.type === 'success') toast.success('Risco cardiovascular atualizado');
+									else if (result.type === 'failure')
+										toast.error(String(result.data?.error ?? 'Falha ao salvar'));
+									await update({ reset: false });
+								};
+							}}
+							style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"
+						>
+							<select
+								name="level"
+								bind:value={selectedRisk}
+								style="flex:1;min-width:140px;padding:9px 12px;border-radius:var(--r-2);background:var(--bg-3);color:var(--ink-0);border:1px solid var(--ink-line-2);font:var(--body-sm)"
+							>
+								<option value="baixo">Baixo</option>
+								<option value="moderado">Moderado</option>
+								<option value="alto">Alto</option>
+								<option value="muito_alto">Muito alto</option>
+							</select>
+							<Button type="submit" size="sm" disabled={savingRisk}>
+								{savingRisk ? 'Salvando…' : 'Confirmar'}
+							</Button>
+						</form>
+
+						{#if cvRisk.dataGaps.length > 0}
+							<div style="margin-top:12px;font:var(--body-sm);color:var(--ink-2)">
+								Dados que melhorariam a precisão: {cvRisk.dataGaps.join(' · ')}
 							</div>
 						{/if}
 					</div>

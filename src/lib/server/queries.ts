@@ -2089,10 +2089,7 @@ export async function getRecentTrainingSessions(
 		})
 		.from(trainingSessions)
 		.where(
-			and(
-				eq(trainingSessions.studentId, studentId),
-				eq(trainingSessions.loggedBy, professionalId)
-			)
+			and(eq(trainingSessions.studentId, studentId), eq(trainingSessions.loggedBy, professionalId))
 		)
 		.orderBy(desc(trainingSessions.sessionDate))
 		.limit(limit);
@@ -2786,4 +2783,23 @@ export async function getMyFeedback(professionalId: string): Promise<FeedbackIte
 export async function getAllFeedback(): Promise<FeedbackItem[]> {
 	const rows = await db.select(FEEDBACK_COLS).from(feedback).orderBy(desc(feedback.createdAt));
 	return rows as FeedbackItem[];
+}
+
+/**
+ * Persiste o risco cardiovascular CONFIRMADO pelo profissional (fluxo
+ * sugerir+confirmar da estratificação automática). Upsert: cria o perfil de
+ * saúde mínimo se ainda não existir. Ver [[projeto-preceptor-fisic]].
+ */
+export async function setCardiovascularRisk(
+	studentId: string,
+	level: 'baixo' | 'moderado' | 'alto' | 'muito_alto'
+): Promise<void> {
+	if (!isUuid(studentId)) throw new Error('studentId inválido');
+	await db
+		.insert(healthProfiles)
+		.values({ studentId, cardiovascularRisk: level })
+		.onConflictDoUpdate({
+			target: healthProfiles.studentId,
+			set: { cardiovascularRisk: level, updatedAt: new Date() }
+		});
 }

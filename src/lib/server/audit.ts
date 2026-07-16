@@ -39,7 +39,8 @@ export type AuditAction =
 	| 'appointment.create'
 	| 'appointment.update'
 	| 'appointment.cancel'
-	| 'assessment.create';
+	| 'assessment.create'
+	| 'health.cv_risk_updated';
 
 export type AuditOpts = {
 	action: AuditAction;

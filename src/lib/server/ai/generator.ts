@@ -8,7 +8,7 @@
  *   4. generateObject (Gemini 2.5 Pro) com schema Zod
  *   5. Persiste em training_plans + ai_runs com auditoria completa
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, desc } from 'drizzle-orm';
 import { generateObject, streamObject } from 'ai';
 import { randomUUID } from 'node:crypto';
 import { waitUntil } from '@vercel/functions';
@@ -22,6 +22,7 @@ import {
 	healthProfiles,
 	trainingPreferences,
 	trainingPlans,
+	physicalAssessments,
 	aiRuns,
 	exerciseCatalog,
 	type Student,
@@ -95,6 +96,8 @@ type StudentContext = {
 	student: Student;
 	health: HealthProfile | null;
 	preferences: typeof trainingPreferences.$inferSelect | null;
+	/** Avaliação física mais recente (PA, FC, composição, testes). null = sem avaliação. */
+	assessment: typeof physicalAssessments.$inferSelect | null;
 	conditionTags: string[];
 	/** Subset do exercise_catalog filtrado pelo equipamento do aluno. */
 	catalog: CatalogPromptItem[];
@@ -403,6 +406,12 @@ async function loadStudentContext(
 		.from(trainingPreferences)
 		.where(eq(trainingPreferences.studentId, studentId))
 		.limit(1);
+	const [assessment] = await db
+		.select()
+		.from(physicalAssessments)
+		.where(eq(physicalAssessments.studentId, studentId))
+		.orderBy(desc(physicalAssessments.assessedAt))
+		.limit(1);
 
 	const catalog = await fetchCatalogSubset(
 		(preferences?.equipmentAvailable as string[] | null) ?? null,
@@ -414,6 +423,7 @@ async function loadStudentContext(
 		student,
 		health: health ?? null,
 		preferences: preferences ?? null,
+		assessment: assessment ?? null,
 		conditionTags: deriveConditionTags(health ?? null),
 		catalog
 	};
@@ -440,6 +450,33 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 	if (s.heightCm) lines.push(`- Altura: ${s.heightCm} cm`);
 	if (bmi !== null) lines.push(`- IMC: ${bmi}`);
 	lines.push('');
+
+	// AVALIAÇÃO FÍSICA — dados objetivos medidos (PA, FC, composição, testes).
+	// Antes ausentes no prompt: a IA prescrevia sem ver PA/FC/gordura. Guiam
+	// intensidade e monitoramento junto do risco CV.
+	const a = ctx.assessment;
+	if (a) {
+		const assessedAt = a.assessedAt ? new Date(a.assessedAt).toISOString().slice(0, 10) : null;
+		lines.push(`## AVALIAÇÃO FÍSICA${assessedAt ? ` (medida em ${assessedAt})` : ''}`);
+		if (a.bloodPressureSystolic != null && a.bloodPressureDiastolic != null)
+			lines.push(
+				`- Pressão arterial de repouso: ${a.bloodPressureSystolic}/${a.bloodPressureDiastolic} mmHg`
+			);
+		if (a.restingHr != null) lines.push(`- FC de repouso: ${a.restingHr} bpm`);
+		if (a.bmi != null) lines.push(`- IMC (avaliação): ${a.bmi}`);
+		if (a.bodyFatPct != null) lines.push(`- % de gordura: ${a.bodyFatPct}%`);
+		if (a.leanMassKg != null) lines.push(`- Massa magra: ${a.leanMassKg} kg`);
+		const tests =
+			(a.fitnessTests as Array<{ name: string; value: number; unit: string }> | null) ?? [];
+		for (const t of tests) lines.push(`- ${t.name}: ${t.value} ${t.unit}`);
+		if (a.notes) lines.push(`- Observações da avaliação: ${a.notes}`);
+		lines.push('');
+	} else {
+		lines.push('## AVALIAÇÃO FÍSICA');
+		lines.push('- (nenhuma avaliação física registrada — prescreva de forma conservadora)');
+		lines.push('');
+	}
+
 	lines.push('## DIAGNÓSTICOS');
 	if (h && h.diagnoses && h.diagnoses.length > 0) {
 		for (const d of h.diagnoses) {

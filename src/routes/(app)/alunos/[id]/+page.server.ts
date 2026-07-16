@@ -5,8 +5,10 @@ import {
 	getStudentDetail,
 	getProfessionalByAuthId,
 	getStudentLoadEvolution,
-	getRecentTrainingSessions
+	getRecentTrainingSessions,
+	setCardiovascularRisk
 } from '$lib/server/queries';
+import { computeCvRisk } from '$lib/server/clinical/cv-risk-service';
 import { db } from '$lib/server/db';
 import { trainingPlans } from '$lib/server/db/schema';
 import { signStudentToken } from '$lib/server/aluno-token';
@@ -50,10 +52,58 @@ export const load = (async ({ params, parent, url }) => {
 	const alunoUrl = `${base}/a/${params.id}?t=${token}`;
 	const fillUrl = `${base}/a/${params.id}/completar?t=${token}`;
 
-	return { detail: { ...detail, plans }, alunoUrl, fillUrl, loadEvolution, recentSessions };
+	// Estratificação de risco CV sugerida (ACSM adaptado) — o profissional
+	// confirma/sobrescreve. `currentRisk` = valor já gravado no perfil.
+	const cvRisk = computeCvRisk(detail);
+	const currentRisk = detail.healthProfile?.cardiovascularRisk ?? null;
+
+	return {
+		detail: { ...detail, plans },
+		alunoUrl,
+		fillUrl,
+		loadEvolution,
+		recentSessions,
+		cvRisk,
+		currentRisk
+	};
 }) satisfies PageServerLoad;
 
+const RISK_LEVELS = ['baixo', 'moderado', 'alto', 'muito_alto'] as const;
+
 export const actions: Actions = {
+	// Confirma (ou sobrescreve) o risco CV sugerido pela estratificação
+	// automática. A decisão final é sempre humana — só grava o que o
+	// profissional escolheu no card.
+	applyCvRisk: async ({ params, locals, request }) => {
+		if (!locals.user) return fail(401, { error: 'não autenticado' });
+		const professional = await getProfessionalByAuthId(locals.user.id);
+		if (!professional) return fail(401, { error: 'professional não encontrado' });
+
+		// Garante que o aluno pertence a este profissional antes de escrever.
+		const detail = await getStudentDetail(params.id!, professional.id);
+		if (!detail) return fail(404, { error: 'aluno não encontrado' });
+
+		const fd = await request.formData();
+		const level = String(fd.get('level') ?? '');
+		if (!(RISK_LEVELS as readonly string[]).includes(level)) {
+			return fail(400, { error: 'nível de risco inválido' });
+		}
+
+		const previous = detail.healthProfile?.cardiovascularRisk ?? null;
+		await setCardiovascularRisk(params.id!, level as (typeof RISK_LEVELS)[number]);
+
+		// Risco clínico é dado sensível — registra quem mudou, de quê pra quê.
+		audit({
+			action: 'health.cv_risk_updated',
+			professionalId: professional.id,
+			entityType: 'student',
+			entityId: params.id,
+			payload: { from: previous, to: level }
+		});
+
+		return { cvRiskSaved: true, level };
+	},
+
 	resendMagicLink: async ({ params, locals, url }) => {
 		if (!locals.user) return fail(401, { error: 'não autenticado' });
 		const professional = await getProfessionalByAuthId(locals.user.id);
