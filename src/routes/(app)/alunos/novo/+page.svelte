@@ -2,13 +2,7 @@
 	import { Button, Eyebrow, toast } from '$lib/components/ui';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import {
-		stratifyCardiovascularRisk,
-		extractWaistCm,
-		type CvRiskLevel,
-		type Sex
-	} from '$lib/clinical/cv-risk';
-	import { deriveTagsFromDiagnosisLabels } from '$lib/clinical/condition-tags';
+	import SbcRiskCalculator from '$lib/components/SbcRiskCalculator.svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -28,9 +22,8 @@
 	let goals = $state<string[]>(v.goals ?? []);
 	let submitting = $state(false);
 
-	// ── Estratificação de risco CV ao vivo (mesmo motor da ficha) ─────────────
-	// Campos reativos: conforme o profissional preenche, o risco recalcula.
-	// Sem PA/PAR-Q ainda (só vêm na avaliação física) → confiança menor aqui.
+	// Campos reativos do perfil clínico (bind:value). birthDate/sex alimentam a
+	// calculadora de risco CV da SBC embutida no formulário.
 	let birthDate = $state<string>(v.birthDate ?? '');
 	let sex = $state<string>(v.sex ?? 'nao_informado');
 	let weightKg = $state<string>(v.weightKg ?? '');
@@ -38,53 +31,9 @@
 	let diagnoses = $state<string>(v.diagnoses ?? '');
 	let medications = $state<string>(v.medications ?? '');
 
-	const toNum = (s: string) => {
-		const n = parseFloat(String(s).replace(',', '.'));
-		return Number.isFinite(n) ? n : null;
-	};
-	const splitList = (s: string) =>
-		s
-			.split(/[,\n]/)
-			.map((x) => x.trim())
-			.filter(Boolean);
-
-	const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
-	const cvRisk = $derived.by(() => {
-		const w = toNum(weightKg);
-		const h = toNum(heightCm);
-		const bmi = w && h ? Math.round((w / Math.pow(h / 100, 2)) * 10) / 10 : null;
-		const age = birthDate ? Math.floor((Date.now() - new Date(birthDate).getTime()) / YEAR_MS) : null;
-		const diagLabels = splitList(diagnoses);
-		return stratifyCardiovascularRisk({
-			sex: sex as Sex,
-			ageYears: age,
-			bmi,
-			systolicBp: null,
-			diastolicBp: null,
-			restingHr: null,
-			waistCm: extractWaistCm(diagLabels),
-			conditionTags: deriveTagsFromDiagnosisLabels(diagLabels),
-			diagnoses: diagLabels.map((label) => ({ label })),
-			medications: splitList(medications).map((name) => ({ name })),
-			parqPositive: null
-		});
-	});
-
-	const RISK_META: Record<CvRiskLevel, { label: string; color: string; bg: string }> = {
-		baixo: { label: 'Baixo', color: 'var(--success)', bg: 'var(--success-dim)' },
-		moderado: { label: 'Moderado', color: 'var(--warn)', bg: 'var(--warn-dim)' },
-		alto: { label: 'Alto', color: 'var(--danger)', bg: 'var(--danger-dim)' },
-		muito_alto: { label: 'Muito alto', color: 'var(--danger)', bg: 'var(--danger-dim)' }
-	};
-
-	// Valor submetido (name="cardiovascularRisk"). Segue a sugestão até o
-	// profissional escolher manualmente (aí respeita a escolha dele).
-	let selectedRisk = $state<CvRiskLevel>('baixo');
-	let riskTouched = $state(false);
-	$effect(() => {
-		const suggested = cvRisk.level;
-		if (!riskTouched) selectedRisk = suggested;
-	});
+	const cadAge = $derived(
+		birthDate ? Math.floor((Date.now() - new Date(birthDate).getTime()) / (365.25 * 86400000)) : null
+	);
 
 	// Resultado do modo "link": URL gerada pro aluno preencher.
 	const fillUrl = $derived((form as any)?.fillUrl as string | undefined);
@@ -301,70 +250,7 @@
 								style="resize:vertical">{v.limitations ?? ''}</textarea>
 							<div class="hint">Articulações, regiões com dor, restrições de amplitude — vai pro contexto da IA na hora de gerar o plano.</div>
 						</div>
-						<div>
-							<label class="lbl">Risco cardiovascular *</label>
-							<div
-								style="border:1px solid {RISK_META[cvRisk.level].color};background:{RISK_META[cvRisk.level].bg};border-radius:var(--r-2);padding:14px 16px"
-							>
-								<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
-									<span style="font:600 13px var(--font-sans);color:{RISK_META[cvRisk.level].color}">
-										Calculado: {RISK_META[cvRisk.level].label}
-									</span>
-									<span style="font:var(--label-mono);color:var(--ink-2)">confiança {cvRisk.confidence}</span>
-								</div>
-
-								{#if cvRisk.reasons.length > 0}
-									<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px">
-										{#each cvRisk.reasons as r, i (r + i)}
-											<div style="font:var(--body-sm);color:var(--ink-1)">• {r}</div>
-										{/each}
-									</div>
-								{/if}
-
-								{#if cvRisk.factors.length > 0}
-									<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-										{#each cvRisk.factors as f (f.code)}
-											<span style="display:inline-flex;padding:3px 9px;border-radius:var(--r-pill);font:500 11px var(--font-sans);background:var(--bg-3);color:var(--ink-1);border:1px solid var(--ink-line-2)">
-												{f.label}{f.detail ? ' · ' + f.detail : ''}
-											</span>
-										{/each}
-									</div>
-								{/if}
-
-								<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-									<span style="font:var(--body-sm);color:var(--ink-2)">Confirmar ou ajustar:</span>
-									<select
-										class="inp"
-										name="cardiovascularRisk"
-										required
-										bind:value={selectedRisk}
-										onchange={() => (riskTouched = true)}
-										style="width:auto;flex:1;min-width:130px"
-									>
-										<option value="baixo">Baixo</option>
-										<option value="moderado">Moderado</option>
-										<option value="alto">Alto</option>
-										<option value="muito_alto">Muito alto</option>
-									</select>
-									{#if riskTouched && selectedRisk !== cvRisk.level}
-										<button
-											type="button"
-											onclick={() => {
-												riskTouched = false;
-												selectedRisk = cvRisk.level;
-											}}
-											style="all:unset;cursor:pointer;font:var(--body-sm);color:var(--accent)"
-										>
-											usar cálculo
-										</button>
-									{/if}
-								</div>
-								<div style="margin-top:8px;font:var(--body-sm);color:var(--ink-2)">
-									Estimado dos dados clínicos. PA e PAR-Q entram na avaliação física e refinam a
-									classificação na ficha.
-								</div>
-							</div>
-						</div>
+						<SbcRiskCalculator age={cadAge} sex={sex} submitName="cardiovascularRisk" />
 					</div>
 				</div>
 

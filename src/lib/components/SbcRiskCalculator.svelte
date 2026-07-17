@@ -10,11 +10,21 @@
 	} from '$lib/clinical/sbc-risk';
 
 	// age/sex vêm do aluno; systolicBp pode vir da última avaliação física.
+	// `submitName`: quando definido, o componente NÃO tem botão próprio de aplicar
+	// — em vez disso emite o nível calculado num <input hidden name={submitName}>,
+	// pra entrar no formulário que o contém (ex.: cadastro do aluno). Sem ele,
+	// mostra o botão "Aplicar ao perfil" (ficha, via action applyCvRisk).
 	let {
 		age,
 		sex,
-		initialSystolicBp = null
-	}: { age: number | null; sex: string; initialSystolicBp?: number | null } = $props();
+		initialSystolicBp = null,
+		submitName = undefined
+	}: {
+		age: number | null;
+		sex: string;
+		initialSystolicBp?: number | null;
+		submitName?: string;
+	} = $props();
 
 	const isBioSex = (s: string): s is ErgSex => s === 'masculino' || s === 'feminino';
 
@@ -138,25 +148,36 @@
 				<div style="font:var(--body-sm);color:var(--ink-2);margin-bottom:6px">• {n}</div>
 			{/each}
 
-			<form
-				method="POST"
-				action="?/applyCvRisk"
-				use:enhance={() => {
-					saving = true;
-					return async ({ result: r, update }) => {
-						saving = false;
-						if (r.type === 'success') toast.success('Risco aplicado ao perfil do aluno');
-						else if (r.type === 'failure') toast.error('Falha ao salvar');
-						await update({ reset: false });
-					};
-				}}
-				style="margin-top:8px"
-			>
-				<input type="hidden" name="level" value={result.level} />
-				<Button type="submit" size="sm" disabled={saving}>
-					{saving ? 'Salvando…' : `Aplicar ao perfil (${sbcCategoryLabel(result.category)})`}
-				</Button>
-			</form>
+			{#if submitName}
+				<!-- Modo campo: emite o nível pro formulário que contém a calculadora. -->
+				<input type="hidden" name={submitName} value={result.level} />
+			{:else}
+				<form
+					method="POST"
+					action="?/applyCvRisk"
+					use:enhance={() => {
+						saving = true;
+						return async ({ result: r, update }) => {
+							saving = false;
+							if (r.type === 'success') toast.success('Risco aplicado ao perfil do aluno');
+							else if (r.type === 'failure') toast.error('Falha ao salvar');
+							await update({ reset: false });
+						};
+					}}
+					style="margin-top:8px"
+				>
+					<input type="hidden" name="level" value={result.level} />
+					<Button type="submit" size="sm" disabled={saving}>
+						{saving ? 'Salvando…' : `Aplicar ao perfil (${sbcCategoryLabel(result.category)})`}
+					</Button>
+				</form>
+			{/if}
+		{:else if submitName}
+			<!-- Sem exames ainda: submete 'baixo' como padrão (pode calcular na ficha). -->
+			<input type="hidden" name={submitName} value="baixo" />
+			<div style="font:var(--body-sm);color:var(--ink-2)">
+				Preencha colesterol total, HDL e PA sistólica para calcular (ou deixe para a ficha do aluno).
+			</div>
 		{:else}
 			<div style="font:var(--body-sm);color:var(--ink-2)">
 				Preencha colesterol total, HDL e PA sistólica para calcular.
