@@ -36,7 +36,9 @@ import { env } from '$env/dynamic/private';
 import { logger } from '$lib/server/logger';
 import { trainingPlanSchema, type TrainingPlanOutput } from '$lib/schemas/training-plan';
 import { retrieveRelevantChunks, formatContextForPrompt, type RetrievedChunk } from './rag';
-import { deriveTagsFromDiagnosisLabels } from './condition-tags';
+import { deriveTagsFromDiagnosisLabels } from '$lib/clinical/condition-tags';
+import { maxCvRisk } from '$lib/clinical/cv-risk';
+import { computeCvRiskFromParts } from '$lib/server/clinical/cv-risk-service';
 import { SYSTEM_PROMPT_PT_BR, SYSTEM_PROMPT_VERSION } from './system-prompt';
 import {
 	validatePlan,
@@ -511,7 +513,15 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 		lines.push('- (nenhuma limitação reportada)');
 	}
 	lines.push('');
-	lines.push(`## RISCO CARDIOVASCULAR: ${h?.cardiovascularRisk ?? 'baixo'}`);
+	// Risco CV: usa a estratificação automática (ACSM adaptado) a partir dos
+	// dados. Um override manual do profissional só é respeitado se for MAIS
+	// grave — nunca esconde um risco alto que o motor detectou.
+	const cvComputed = computeCvRiskFromParts(s, h, ctx.assessment);
+	const cvEffective = maxCvRisk(cvComputed.level, h?.cardiovascularRisk ?? 'baixo');
+	lines.push(`## RISCO CARDIOVASCULAR: ${cvEffective}`);
+	if (cvComputed.reasons.length > 0) lines.push(`- Base: ${cvComputed.reasons.join('; ')}`);
+	if (cvComputed.factors.length > 0)
+		lines.push(`- Fatores: ${cvComputed.factors.map((f) => f.label).join(', ')}`);
 	lines.push('');
 	lines.push('## TAGS DE CONDIÇÃO (canônicas, derivadas dos diagnósticos)');
 	lines.push(`- ${ctx.conditionTags.join(', ')}`);

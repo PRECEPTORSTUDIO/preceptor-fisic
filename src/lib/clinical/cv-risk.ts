@@ -240,3 +240,19 @@ const LEVEL_LABEL: Record<CvRiskLevel, string> = {
 export function cvRiskLabel(level: CvRiskLevel): string {
 	return LEVEL_LABEL[level];
 }
+
+const RISK_ORDER: Record<CvRiskLevel, number> = {
+	baixo: 0,
+	moderado: 1,
+	alto: 2,
+	muito_alto: 3
+};
+
+/**
+ * Risco EFETIVO = o mais grave entre o calculado e um override manual do
+ * profissional. Assim um override só pode subir a classificação (mais
+ * conservador) — nunca mascarar um risco alto que o motor detectou.
+ */
+export function maxCvRisk(a: CvRiskLevel, b: CvRiskLevel): CvRiskLevel {
+	return RISK_ORDER[a] >= RISK_ORDER[b] ? a : b;
+}

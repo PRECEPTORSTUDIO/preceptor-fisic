@@ -185,6 +185,14 @@
 	};
 	const primaryGoal = $derived(goalsList[0] ? (GOAL_LABELS[goalsList[0]] ?? goalsList[0]) : 'sem objetivo');
 
+	type RiskLevel = 'baixo' | 'moderado' | 'alto' | 'muito_alto';
+	const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string }> = {
+		baixo: { label: 'Baixo', color: 'var(--success)', bg: 'var(--success-dim)' },
+		moderado: { label: 'Moderado', color: 'var(--warn)', bg: 'var(--warn-dim)' },
+		alto: { label: 'Alto', color: 'var(--danger)', bg: 'var(--danger-dim)' },
+		muito_alto: { label: 'Muito alto', color: 'var(--danger)', bg: 'var(--danger-dim)' }
+	};
+
 	const heroStats = $derived([
 		{
 			lbl: 'Peso',
@@ -198,19 +206,12 @@
 		{ lbl: 'Altura', val: height || '—', unit: 'cm', color: 'var(--ink-0)', spark: undefined, delta: undefined, trend: undefined },
 		{ lbl: 'IMC', val: bmi, unit: bmiCat, color: bmiColor, spark: undefined, delta: undefined, trend: undefined },
 		{ lbl: 'Sexo', val: student.sex.charAt(0).toUpperCase() + student.sex.slice(1).replace('_', ' '), unit: '', color: 'var(--ink-0)', spark: undefined, delta: undefined, trend: undefined },
-		{ lbl: 'Risco CV', val: hp?.cardiovascularRisk ?? '—', unit: '', color: hp?.cardiovascularRisk === 'alto' || hp?.cardiovascularRisk === 'muito_alto' ? 'var(--danger)' : 'var(--success)', spark: undefined, delta: undefined, trend: undefined }
+		{ lbl: 'Risco CV', val: RISK_META[data.effectiveRisk].label, unit: '', color: RISK_META[data.effectiveRisk].color, spark: undefined, delta: undefined, trend: undefined }
 	]);
 
 	// ── Estratificação de risco cardiovascular (sugerir + confirmar) ──────────
 	const cvRisk = $derived(data.cvRisk);
 	const currentRisk = $derived(data.currentRisk);
-	type RiskLevel = 'baixo' | 'moderado' | 'alto' | 'muito_alto';
-	const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string }> = {
-		baixo: { label: 'Baixo', color: 'var(--success)', bg: 'var(--success-dim)' },
-		moderado: { label: 'Moderado', color: 'var(--warn)', bg: 'var(--warn-dim)' },
-		alto: { label: 'Alto', color: 'var(--danger)', bg: 'var(--danger-dim)' },
-		muito_alto: { label: 'Muito alto', color: 'var(--danger)', bg: 'var(--danger-dim)' }
-	};
 	// Valor do <select> — inicia na sugestão; o profissional confirma ou troca.
 	let selectedRisk = $state<RiskLevel>('baixo');
 	$effect(() => {

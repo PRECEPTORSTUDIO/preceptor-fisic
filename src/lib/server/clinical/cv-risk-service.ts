@@ -1,50 +1,64 @@
 /**
- * Adaptador server: monta o input do motor de risco CV a partir do
- * StudentDetail (aluno + perfil de saúde + avaliações) e devolve a sugestão.
+ * Adaptador server: monta o input do motor de risco CV a partir dos dados do
+ * aluno (student + perfil de saúde + avaliação física) e devolve a sugestão.
  *
  * Mantém o motor (`$lib/clinical/cv-risk`) puro e agnóstico de DB — aqui só
  * traduzimos os tipos do Drizzle pro contrato do motor. Usa a MESMA derivação
- * de tags canônicas do generator (fonte única em ai/condition-tags).
+ * de tags canônicas do generator (fonte única em `$lib/clinical/condition-tags`).
+ *
+ * `computeCvRiskFromParts` é o núcleo — consumido tanto pela ficha (via
+ * StudentDetail) quanto pelo generator da IA (que tem os pedaços soltos).
  */
 import {
 	stratifyCardiovascularRisk,
 	type CvRiskAssessment,
 	type CvRiskInput
 } from '$lib/clinical/cv-risk';
-import { deriveTagsFromDiagnosisLabels } from '$lib/server/ai/condition-tags';
+import { deriveTagsFromDiagnosisLabels } from '$lib/clinical/condition-tags';
 import type { StudentDetail } from '$lib/server/queries';
+import type { Student, HealthProfile, physicalAssessments } from '$lib/server/db/schema';
 
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
-export function computeCvRisk(detail: StudentDetail): CvRiskAssessment {
-	const s = detail.student;
-	const hp = detail.healthProfile;
-	const latest = detail.assessments[0] ?? null;
+type Assessment = typeof physicalAssessments.$inferSelect;
 
-	const ageYears = s.birthDate
-		? Math.floor((Date.now() - new Date(s.birthDate).getTime()) / YEAR_MS)
+export function computeCvRiskFromParts(
+	student: Pick<Student, 'sex' | 'birthDate' | 'weightKg' | 'heightCm'>,
+	health: HealthProfile | null,
+	latestAssessment: Assessment | null
+): CvRiskAssessment {
+	const ageYears = student.birthDate
+		? Math.floor((Date.now() - new Date(student.birthDate).getTime()) / YEAR_MS)
 		: null;
 	const computedBmi =
-		s.weightKg && s.heightCm
-			? Math.round((s.weightKg / Math.pow(s.heightCm / 100, 2)) * 10) / 10
+		student.weightKg && student.heightCm
+			? Math.round((student.weightKg / Math.pow(student.heightCm / 100, 2)) * 10) / 10
 			: null;
 
-	const diagnoses = hp?.diagnoses ?? [];
-	const parq = hp?.parqResult ?? null;
+	const diagnoses = health?.diagnoses ?? [];
+	const parq = health?.parqResult ?? null;
 	const parqPositive = parq ? Object.values(parq.answers ?? {}).some(Boolean) : null;
 
 	const input: CvRiskInput = {
-		sex: s.sex,
+		sex: student.sex,
 		ageYears,
-		bmi: latest?.bmi ?? computedBmi,
-		systolicBp: latest?.bloodPressureSystolic ?? null,
-		diastolicBp: latest?.bloodPressureDiastolic ?? null,
-		restingHr: latest?.restingHr ?? null,
+		bmi: latestAssessment?.bmi ?? computedBmi,
+		systolicBp: latestAssessment?.bloodPressureSystolic ?? null,
+		diastolicBp: latestAssessment?.bloodPressureDiastolic ?? null,
+		restingHr: latestAssessment?.restingHr ?? null,
 		conditionTags: deriveTagsFromDiagnosisLabels(diagnoses.map((d) => d.label)),
 		diagnoses: diagnoses.map((d) => ({ label: d.label, severity: d.severity })),
-		medications: hp?.medications ?? [],
+		medications: health?.medications ?? [],
 		parqPositive
 	};
 
 	return stratifyCardiovascularRisk(input);
+}
+
+export function computeCvRisk(detail: StudentDetail): CvRiskAssessment {
+	return computeCvRiskFromParts(
+		detail.student,
+		detail.healthProfile,
+		detail.assessments[0] ?? null
+	);
 }

@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { audit, clientFingerprint } from '$lib/server/audit';
-import { deriveTagsFromDiagnosisLabels } from '$lib/server/ai/condition-tags';
+import { deriveTagsFromDiagnosisLabels } from '$lib/clinical/condition-tags';
 import {
 	getPlanDetail,
 	getProfessionalByAuthId,

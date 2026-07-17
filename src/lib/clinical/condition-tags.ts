@@ -2,7 +2,9 @@
  * Derivação de tags de condição canônicas a partir de labels de diagnóstico.
  *
  * Fonte ÚNICA dos regexes de derivação — consumida pelo generator
- * (deriveConditionTags) e pela revalidação em planos/[id]/+page.server.ts.
+ * (deriveConditionTags), pela revalidação em planos/[id]/+page.server.ts, pelo
+ * motor de risco CV e pelo cálculo ao vivo no cadastro de aluno. Função PURA e
+ * client-safe (sem imports de $lib/server) — por isso vive em $lib/clinical.
  * CONTRATO estável: deriveTagsFromDiagnosisLabels(labels: string[]): string[].
  * Retorna SÓ as tags derivadas (pode ser vazio) — default populacao_geral é
  * responsabilidade do chamador.
