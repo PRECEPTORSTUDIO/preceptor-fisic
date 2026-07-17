@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { stratifyCardiovascularRisk, cvRiskLabel, type CvRiskInput } from './cv-risk';
+import {
+	stratifyCardiovascularRisk,
+	cvRiskLabel,
+	maxCvRisk,
+	extractWaistCm,
+	type CvRiskInput
+} from './cv-risk';
 
 const base: CvRiskInput = {
 	sex: 'masculino',
@@ -8,6 +14,7 @@ const base: CvRiskInput = {
 	systolicBp: 118,
 	diastolicBp: 76,
 	restingHr: 64,
+	waistCm: null,
 	conditionTags: [],
 	diagnoses: [],
 	medications: [],
@@ -116,6 +123,48 @@ describe('stratifyCardiovascularRisk', () => {
 		expect(r.confidence).toBe('baixa');
 		expect(r.dataGaps.some((g) => /PAR-Q/.test(g))).toBe(true);
 		expect(r.dataGaps.some((g) => /Press[aã]o/.test(g))).toBe(true);
+	});
+
+	it('obesidade central por cintura conta mesmo com IMC normal', () => {
+		// Homem, IMC 24 (não obeso), cintura 106 (>102) → fator obesidade
+		const r = stratifyCardiovascularRisk({ ...base, bmi: 24, waistCm: 106 });
+		const ob = r.factors.find((f) => f.code === 'obesidade');
+		expect(ob).toBeTruthy();
+		expect(ob?.label).toBe('Obesidade central');
+		expect(ob?.detail).toContain('106');
+	});
+
+	it('cintura no limiar por sexo: ♀88 conta, ♀85 não', () => {
+		expect(
+			stratifyCardiovascularRisk({ ...base, sex: 'feminino', bmi: 22, waistCm: 90 }).factors.some(
+				(f) => f.code === 'obesidade'
+			)
+		).toBe(true);
+		expect(
+			stratifyCardiovascularRisk({ ...base, sex: 'feminino', bmi: 22, waistCm: 85 }).factors.some(
+				(f) => f.code === 'obesidade'
+			)
+		).toBe(false);
+	});
+
+	it('IMC≥30 continua contando como obesidade (não "central")', () => {
+		const ob = stratifyCardiovascularRisk({ ...base, bmi: 31 }).factors.find(
+			(f) => f.code === 'obesidade'
+		);
+		expect(ob?.label).toBe('Obesidade');
+	});
+
+	it('maxCvRisk devolve o mais grave (override só sobe)', () => {
+		expect(maxCvRisk('alto', 'baixo')).toBe('alto');
+		expect(maxCvRisk('moderado', 'muito_alto')).toBe('muito_alto');
+		expect(maxCvRisk('baixo', 'baixo')).toBe('baixo');
+	});
+
+	it('extractWaistCm lê cintura de texto livre', () => {
+		expect(extractWaistCm(['circunferencia abdominal de 100 cm'])).toBe(100);
+		expect(extractWaistCm(['cintura 95cm'])).toBe(95);
+		expect(extractWaistCm(['diabetes', 'hipertensão'])).toBeNull();
+		expect(extractWaistCm(['CA 102 cm'])).toBe(102);
 	});
 
 	it('cvRiskLabel traduz as faixas', () => {

@@ -11,6 +11,7 @@
  */
 import {
 	stratifyCardiovascularRisk,
+	extractWaistCm,
 	type CvRiskAssessment,
 	type CvRiskInput
 } from '$lib/clinical/cv-risk';
@@ -39,6 +40,10 @@ export function computeCvRiskFromParts(
 	const parq = health?.parqResult ?? null;
 	const parqPositive = parq ? Object.values(parq.answers ?? {}).some(Boolean) : null;
 
+	// Cintura não tem campo estruturado — best-effort do texto (diagnósticos +
+	// observações da avaliação).
+	const waistCm = extractWaistCm([...diagnoses.map((d) => d.label), latestAssessment?.notes ?? '']);
+
 	const input: CvRiskInput = {
 		sex: student.sex,
 		ageYears,
@@ -46,6 +51,7 @@ export function computeCvRiskFromParts(
 		systolicBp: latestAssessment?.bloodPressureSystolic ?? null,
 		diastolicBp: latestAssessment?.bloodPressureDiastolic ?? null,
 		restingHr: latestAssessment?.restingHr ?? null,
+		waistCm,
 		conditionTags: deriveTagsFromDiagnosisLabels(diagnoses.map((d) => d.label)),
 		diagnoses: diagnoses.map((d) => ({ label: d.label, severity: d.severity })),
 		medications: health?.medications ?? [],

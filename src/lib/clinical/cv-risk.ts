@@ -36,6 +36,9 @@ export type CvRiskInput = {
 	systolicBp: number | null;
 	diastolicBp: number | null;
 	restingHr: number | null;
+	/** Circunferência abdominal (cm). Obesidade central é fator de risco ACSM
+	 *  independente do IMC (>102 ♂ / >88 ♀). null = não medida. */
+	waistCm: number | null;
 	/** Tags canônicas derivadas dos diagnósticos (deriveTagsFromDiagnosisLabels). */
 	conditionTags: string[];
 	diagnoses: Array<{ label: string; severity?: 'leve' | 'moderada' | 'grave' }>;
@@ -64,6 +67,8 @@ export type CvRiskAssessment = {
 const AGE_MALE = 45; // homem ≥45 anos = fator de risco
 const AGE_FEMALE = 55; // mulher ≥55 anos = fator de risco
 const OBESITY_BMI = 30; // IMC ≥30 = obesidade (fator)
+const WAIST_MALE = 102; // cintura ♂ >102 cm = obesidade central (fator)
+const WAIST_FEMALE = 88; // cintura ♀ >88 cm = obesidade central (fator)
 const HTN_SYS = 130; // PA sistólica ≥130 (fator hipertensão) — corte AHA/ACC
 const HTN_DIA = 80; // PA diastólica ≥80 (fator hipertensão)
 const CRISIS_SYS = 180; // PA ≥180/110 = faixa de crise ⇒ empurra p/ muito_alto
@@ -132,14 +137,22 @@ export function stratifyCardiovascularRisk(input: CvRiskInput): CvRiskAssessment
 	}
 	if (!bpKnown) dataGaps.push('Pressão arterial não medida na avaliação física');
 
-	// 3. Obesidade (IMC ≥30)
-	if (input.bmi !== null) {
-		if (input.bmi >= OBESITY_BMI) {
-			factors.push({ code: 'obesidade', label: 'Obesidade', detail: `IMC ${input.bmi}` });
-		}
-	} else {
-		dataGaps.push('IMC indisponível (peso/altura ausentes)');
+	// 3. Obesidade — por IMC (≥30) OU obesidade central (cintura por sexo).
+	const obeseByBmi = input.bmi !== null && input.bmi >= OBESITY_BMI;
+	const waistThreshold =
+		input.sex === 'masculino' ? WAIST_MALE : input.sex === 'feminino' ? WAIST_FEMALE : null;
+	const centralObesity =
+		input.waistCm !== null && waistThreshold !== null && input.waistCm >= waistThreshold;
+	if (obeseByBmi || centralObesity) {
+		factors.push({
+			code: 'obesidade',
+			label: obeseByBmi ? 'Obesidade' : 'Obesidade central',
+			detail: obeseByBmi ? `IMC ${input.bmi}` : `cintura ${input.waistCm} cm`
+		});
 	}
+	if (input.bmi === null) dataGaps.push('IMC indisponível (peso/altura ausentes)');
+	if (input.waistCm === null && waistThreshold !== null)
+		dataGaps.push('Circunferência abdominal não medida');
 
 	// 4. Dislipidemia — por tag ou uso de hipolipemiante
 	if (tags.includes('dislipidemia') || hasAny(STATIN_RE, meds)) {
@@ -255,4 +268,22 @@ const RISK_ORDER: Record<CvRiskLevel, number> = {
  */
 export function maxCvRisk(a: CvRiskLevel, b: CvRiskLevel): CvRiskLevel {
 	return RISK_ORDER[a] >= RISK_ORDER[b] ? a : b;
+}
+
+/**
+ * Extrai circunferência abdominal (cm) de textos livres (diagnósticos/notas).
+ * Best-effort — casa "circunferência abdominal de 100 cm", "cintura 95cm",
+ * "CA 102 cm". Retorna o primeiro valor plausível (40–200 cm) ou null. Sem
+ * campo estruturado no schema hoje; parsear aqui é o ganho imediato possível.
+ */
+export function extractWaistCm(texts: string[]): number | null {
+	const re = /(?:circunfer[êe]ncia\s+abdominal|cintura|abdominal|\bca\b)[^\d]{0,12}(\d{2,3})\s*cm/i;
+	for (const raw of texts) {
+		const m = (raw ?? '').match(re);
+		if (m) {
+			const n = Number(m[1]);
+			if (n >= 40 && n <= 200) return n;
+		}
+	}
+	return null;
 }

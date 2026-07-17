@@ -2,7 +2,12 @@
 	import { Button, Eyebrow, toast } from '$lib/components/ui';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import { stratifyCardiovascularRisk, type CvRiskLevel, type Sex } from '$lib/clinical/cv-risk';
+	import {
+		stratifyCardiovascularRisk,
+		extractWaistCm,
+		type CvRiskLevel,
+		type Sex
+	} from '$lib/clinical/cv-risk';
 	import { deriveTagsFromDiagnosisLabels } from '$lib/clinical/condition-tags';
 	import type { ActionData } from './$types';
 
@@ -57,6 +62,7 @@
 			systolicBp: null,
 			diastolicBp: null,
 			restingHr: null,
+			waistCm: extractWaistCm(diagLabels),
 			conditionTags: deriveTagsFromDiagnosisLabels(diagLabels),
 			diagnoses: diagLabels.map((label) => ({ label })),
 			medications: splitList(medications).map((name) => ({ name })),

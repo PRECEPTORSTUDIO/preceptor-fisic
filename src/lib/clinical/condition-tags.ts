@@ -19,8 +19,11 @@ export function deriveTagsFromDiagnosisLabels(labels: string[]): string[] {
 		if (!label) continue;
 		if (/hipertens|press[aã]o alta|\bhas\b/.test(label)) {
 			// Severidade pode vir embutida no label (o generator anexa "(grave)").
+			// Estágio 2 = "estágio 2/II" OU "grau 2/II" (fraseado comum no Brasil).
 			tags.add(
-				/\bgrave\b|est[aá]gio 2/.test(label) ? 'hipertensao_estagio_2' : 'hipertensao_estagio_1'
+				/\bgrave\b|est[aá]gio\s*(2|ii)\b|grau\s*(2|ii)\b/.test(label)
+					? 'hipertensao_estagio_2'
+					: 'hipertensao_estagio_1'
 			);
 		}
 		// Um label genérico "diabetes" casava nas DUAS regras → marcava o aluno
