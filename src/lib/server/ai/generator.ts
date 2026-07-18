@@ -46,8 +46,12 @@ import {
 
 // Flash primário: 3x mais rápido que Pro, qualidade suficiente pro nosso schema.
 // Pro só é tentado se Flash falhar (pouco comum).
-const PRIMARY_MODEL = env.AI_MODEL_FAST ?? 'gemini-2.5-flash';
-const FALLBACK_MODEL = env.AI_MODEL_PRIMARY ?? 'gemini-2.5-pro';
+// Usamos os aliases `-latest` (não versões fixas como gemini-2.5-flash): o
+// Google BLOQUEIA snapshots antigos pra projetos/chaves novos ("no longer
+// available to new users") e os descontinua com o tempo. O alias resolve sempre
+// pro estável atual, funcionando pra qualquer chave. Override por env se preciso.
+const PRIMARY_MODEL = env.AI_MODEL_FAST ?? 'gemini-flash-latest';
+const FALLBACK_MODEL = env.AI_MODEL_PRIMARY ?? 'gemini-pro-latest';
 
 /** Teto da chamada de IA (ms). Fica ABAIXO do maxDuration da função (300s no
  * Pro) pra sobrar tempo de validar + persistir o plano (ou marcar failed).
