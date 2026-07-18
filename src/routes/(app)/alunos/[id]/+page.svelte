@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button, Chip, Sparkline, LoadChart, Eyebrow, toast } from '$lib/components/ui';
-	import SbcRiskCalculator from '$lib/components/SbcRiskCalculator.svelte';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { computeAcwr } from '$lib/training-metrics';
@@ -207,13 +206,9 @@
 		{ lbl: 'Altura', val: height || '—', unit: 'cm', color: 'var(--ink-0)', spark: undefined, delta: undefined, trend: undefined },
 		{ lbl: 'IMC', val: bmi, unit: bmiCat, color: bmiColor, spark: undefined, delta: undefined, trend: undefined },
 		{ lbl: 'Sexo', val: student.sex.charAt(0).toUpperCase() + student.sex.slice(1).replace('_', ' '), unit: '', color: 'var(--ink-0)', spark: undefined, delta: undefined, trend: undefined },
-		{ lbl: 'Risco CV', val: RISK_META[data.effectiveRisk].label, unit: '', color: RISK_META[data.effectiveRisk].color, spark: undefined, delta: undefined, trend: undefined }
+		{ lbl: 'Risco CV', val: RISK_META[hp?.cardiovascularRisk ?? 'baixo'].label, unit: '', color: RISK_META[hp?.cardiovascularRisk ?? 'baixo'].color, spark: undefined, delta: undefined, trend: undefined }
 	]);
 
-	// ── Risco cardiovascular (calculadora SBC) ────────────────────────────────
-	// Reusa `age`; a PA da última avaliação pré-preenche o escore. O profissional
-	// entra com os exames na própria calculadora e aplica o resultado ao perfil.
-	const sbcSystolicBp = $derived(detail.assessments?.[0]?.bloodPressureSystolic ?? null);
 
 	const trendIcon = (t: string | undefined) => (t === 'down' ? '↘' : t === 'up' ? '↗' : '→');
 	const trendColor = (t: string | undefined) =>
@@ -439,9 +434,6 @@
 							</div>
 						{/if}
 					</div>
-
-					<!-- Risco cardiovascular — calculadora SBC (Escore de Risco Global) -->
-					<SbcRiskCalculator {age} sex={student.sex} initialSystolicBp={sbcSystolicBp} />
 
 					<!-- Medicações -->
 					<div class="card" style="padding:24px">

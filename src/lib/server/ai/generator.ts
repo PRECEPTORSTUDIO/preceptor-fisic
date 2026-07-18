@@ -37,8 +37,6 @@ import { logger } from '$lib/server/logger';
 import { trainingPlanSchema, type TrainingPlanOutput } from '$lib/schemas/training-plan';
 import { retrieveRelevantChunks, formatContextForPrompt, type RetrievedChunk } from './rag';
 import { deriveTagsFromDiagnosisLabels } from '$lib/clinical/condition-tags';
-import { maxCvRisk } from '$lib/clinical/cv-risk';
-import { computeCvRiskFromParts } from '$lib/server/clinical/cv-risk-service';
 import { SYSTEM_PROMPT_PT_BR, SYSTEM_PROMPT_VERSION } from './system-prompt';
 import {
 	validatePlan,
@@ -513,15 +511,13 @@ function buildUserPrompt(ctx: StudentContext, ragContext: string, notes?: string
 		lines.push('- (nenhuma limitação reportada)');
 	}
 	lines.push('');
-	// Risco CV: usa a estratificação automática (ACSM adaptado) a partir dos
-	// dados. Um override manual do profissional só é respeitado se for MAIS
-	// grave — nunca esconde um risco alto que o motor detectou.
-	const cvComputed = computeCvRiskFromParts(s, h, ctx.assessment);
-	const cvEffective = maxCvRisk(cvComputed.level, h?.cardiovascularRisk ?? 'baixo');
-	lines.push(`## RISCO CARDIOVASCULAR: ${cvEffective}`);
-	if (cvComputed.reasons.length > 0) lines.push(`- Base: ${cvComputed.reasons.join('; ')}`);
-	if (cvComputed.factors.length > 0)
-		lines.push(`- Fatores: ${cvComputed.factors.map((f) => f.label).join(', ')}`);
+	// Risco CV definido no cadastro (calculadora SBC — Escore de Risco Global) e
+	// gravado no perfil. É entrada OBRIGATÓRIA da prescrição.
+	const cvRisk = h?.cardiovascularRisk ?? 'baixo';
+	lines.push(`## RISCO CARDIOVASCULAR (SBC): ${cvRisk}`);
+	lines.push(
+		'- Module a prescrição por este risco: quanto maior, mais conservadora a intensidade inicial, progressão mais gradual, e mais parâmetros de monitoramento/necessidade de liberação médica. Muito alto exige cautela máxima.'
+	);
 	lines.push('');
 	lines.push('## TAGS DE CONDIÇÃO (canônicas, derivadas dos diagnósticos)');
 	lines.push(`- ${ctx.conditionTags.join(', ')}`);

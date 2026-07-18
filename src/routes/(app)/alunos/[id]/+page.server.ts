@@ -8,8 +8,6 @@ import {
 	getRecentTrainingSessions,
 	setCardiovascularRisk
 } from '$lib/server/queries';
-import { computeCvRisk } from '$lib/server/clinical/cv-risk-service';
-import { maxCvRisk } from '$lib/clinical/cv-risk';
 import { db } from '$lib/server/db';
 import { trainingPlans } from '$lib/server/db/schema';
 import { signStudentToken } from '$lib/server/aluno-token';
@@ -53,22 +51,13 @@ export const load = (async ({ params, parent, url }) => {
 	const alunoUrl = `${base}/a/${params.id}?t=${token}`;
 	const fillUrl = `${base}/a/${params.id}/completar?t=${token}`;
 
-	// Estratificação de risco CV (ACSM adaptado). `currentRisk` = override
-	// manual gravado. `effectiveRisk` = o mais grave entre calculado e override
-	// — é o que a ficha exibe e o que a IA usa (override só sobe, nunca esconde).
-	const cvRisk = computeCvRisk(detail);
-	const currentRisk = detail.healthProfile?.cardiovascularRisk ?? null;
-	const effectiveRisk = maxCvRisk(cvRisk.level, currentRisk ?? 'baixo');
-
+	// Risco CV é definido no CADASTRO (calculadora SBC) e apenas exibido aqui.
 	return {
 		detail: { ...detail, plans },
 		alunoUrl,
 		fillUrl,
 		loadEvolution,
-		recentSessions,
-		cvRisk,
-		currentRisk,
-		effectiveRisk
+		recentSessions
 	};
 }) satisfies PageServerLoad;
 
