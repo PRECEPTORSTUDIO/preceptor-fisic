@@ -100,7 +100,9 @@ export const actions: Actions = {
 
 		try {
 			const { text } = await generateText({
-				model: google('gemini-2.5-flash'),
+				// Alias `-latest`, não snapshot fixo: o Google bloqueia versões
+				// antigas pra chaves novas ("no longer available to new users").
+				model: google('gemini-flash-latest'),
 				system:
 					'Você é um analista de produto sênior. Resuma feedbacks de beta testers de um app de prescrição de treino clínico (Preceptor FISIC) para a equipe fundadora. Seja objetivo, honesto e acionável. Responda em português do Brasil, em markdown.',
 				prompt: `Abaixo estão ${all.length} feedbacks dos beta testers. Gere um resumo executivo curto com estas seções:\n\n1. **Temas principais** — agrupe feedbacks parecidos e diga quantos mencionaram cada tema.\n2. **Bugs reportados** — lista priorizada por gravidade/frequência.\n3. **Sugestões mais pedidas**.\n4. **Top 3 ações recomendadas** pra próxima sprint.\n\nNão invente nada que não esteja nos feedbacks.\n\nFEEDBACKS:\n${corpus}`,
