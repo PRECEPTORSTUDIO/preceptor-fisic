@@ -425,7 +425,7 @@
 	}
 	.prog-dot.active {
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-color: var(--accent);
 		box-shadow: var(--glow-accent);
 	}
@@ -436,7 +436,7 @@
 	}
 	.prog-dot.done.active {
 		background: var(--success);
-		color: #0a0a0a;
+		color: var(--on-accent);
 	}
 	.ex-card {
 		padding: 20px 16px 12px;
@@ -493,7 +493,7 @@
 		height: 56px;
 		border-radius: 50%;
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -661,7 +661,7 @@
 	}
 	.nav-btn.primary {
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-color: var(--accent);
 	}
 	.nav-btn:disabled {
@@ -691,7 +691,7 @@
 	}
 	.rpe-btn.on {
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-color: var(--accent);
 		box-shadow: var(--glow-accent);
 	}
@@ -713,7 +713,7 @@
 		height: 52px;
 		margin-top: 16px;
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border: 0;
 		border-radius: var(--r-2);
 		font: 500 16px var(--font-sans);

@@ -702,7 +702,7 @@
 		height: 32px;
 		border-radius: 8px;
 		background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-		color: #0a0a0a;
+		color: var(--on-accent);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -771,7 +771,7 @@
 	}
 	.lp-btn--primary {
 		background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-		color: #0a0a0a;
+		color: var(--on-accent);
 		font-weight: 600;
 		box-shadow: var(--glow-accent), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 	}
@@ -1481,7 +1481,7 @@
 		left: 24px;
 		padding: 3px 10px;
 		background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-radius: var(--r-pill);
 		font: 600 10.5px var(--font-mono);
 		text-transform: uppercase;

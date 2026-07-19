@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Avatar, Chip, Sparkline, Eyebrow, toast } from '$lib/components/ui';
+	import { Avatar, Chip, Sparkline, Eyebrow, ThemeToggle, toast } from '$lib/components/ui';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
@@ -152,7 +152,10 @@
 					Olá, {student.name.split(' ')[0]}
 				</div>
 			</div>
-			<Avatar name={student.name} size={40} />
+			<div style="display:flex;align-items:center;gap:10px">
+				<ThemeToggle />
+				<Avatar name={student.name} size={40} />
+			</div>
 		</div>
 	</header>
 
@@ -420,7 +423,7 @@
 		width: 100%;
 		height: 50px;
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border: 0;
 		border-radius: var(--r-2);
 		cursor: pointer;
@@ -570,7 +573,7 @@
 	}
 	.session-letter.today {
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 	}
 	.msg-card {
 		display: flex;
@@ -724,7 +727,7 @@
 		cursor: pointer;
 		padding: 12px 24px;
 		background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-		color: #0a0a0a;
+		color: var(--on-accent);
 		font: 600 14px var(--font-sans);
 		border-radius: var(--r-pill);
 		box-shadow: var(--glow-accent);

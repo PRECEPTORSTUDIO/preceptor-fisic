@@ -705,7 +705,7 @@
 		flex: 1;
 		padding: 7px 10px;
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border: 0;
 		border-radius: var(--r-1);
 		cursor: pointer;

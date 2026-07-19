@@ -82,7 +82,7 @@
 
 	.pf-btn--primary {
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-color: var(--accent);
 	}
 	.pf-btn--primary.is-hover:not(:disabled) {

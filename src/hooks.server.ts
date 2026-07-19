@@ -115,9 +115,36 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+/** Tema claro/escuro.
+ *
+ * O cookie guarda a PREFERÊNCIA ('light' | 'dark' | 'system'), não o tema
+ * final. 'system' só o cliente resolve — o servidor não enxerga
+ * prefers-color-scheme —, então mandamos data-theme vazio e o script inline
+ * do app.html preenche antes do primeiro paint (sem flash).
+ *
+ * A landing (/) fica sempre escura: o dark faz parte da identidade da marca,
+ * e a decisão foi restringir o tema claro ao app do profissional e do aluno.
+ */
+const THEME_PREFS = new Set(['light', 'dark', 'system']);
+
+const theme: Handle = async ({ event, resolve }) => {
+	const cookie = event.cookies.get('theme');
+	let pref = cookie && THEME_PREFS.has(cookie) ? cookie : 'system';
+	let resolved = pref === 'system' ? '' : pref;
+
+	if (event.url.pathname === '/') {
+		pref = 'dark';
+		resolved = 'dark';
+	}
+
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%theme%', resolved).replace('%themePref%', pref)
+	});
+};
+
 export const handle: Handle = SENTRY_DSN
-	? sequence(Sentry.sentryHandle(), supabase, authGuard)
-	: sequence(supabase, authGuard);
+	? sequence(Sentry.sentryHandle(), theme, supabase, authGuard)
+	: sequence(theme, supabase, authGuard);
 
 export const handleError: HandleServerError = ({ error, event, status }) => {
 	// 4xx não vai pro Sentry (são erros esperados — auth, validation, etc)

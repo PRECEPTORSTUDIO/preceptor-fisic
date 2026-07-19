@@ -14,7 +14,7 @@
 	const bg = $derived(
 		src
 			? `url(${src}) center/cover`
-			: `linear-gradient(135deg, hsl(${hue}, 30%, 28%), hsl(${(hue + 40) % 360}, 25%, 18%))`
+			: `linear-gradient(135deg, hsl(${hue}, 30%, var(--avatar-l1)), hsl(${(hue + 40) % 360}, 25%, var(--avatar-l2)))`
 	);
 </script>
 

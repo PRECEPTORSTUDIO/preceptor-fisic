@@ -74,7 +74,7 @@
 		left: 0;
 		right: 0;
 		z-index: 50;
-		background: rgba(10, 10, 10, 0.92);
+		background: var(--bg-glass-strong);
 		backdrop-filter: saturate(140%) blur(16px);
 		-webkit-backdrop-filter: saturate(140%) blur(16px);
 		border-top: 1px solid var(--ink-line);

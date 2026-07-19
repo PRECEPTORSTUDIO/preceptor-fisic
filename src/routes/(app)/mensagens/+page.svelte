@@ -167,7 +167,7 @@
 							{#if t.unread > 0}
 								<span
 									class="num"
-									style="font:600 11px var(--font-mono);color:#0a0a0a;background:var(--accent);padding:2px 7px;border-radius:var(--r-pill);flex-shrink:0"
+									style="font:600 11px var(--font-mono);color: var(--on-accent);background:var(--accent);padding:2px 7px;border-radius:var(--r-pill);flex-shrink:0"
 								>{t.unread}</span>
 							{/if}
 						</div>

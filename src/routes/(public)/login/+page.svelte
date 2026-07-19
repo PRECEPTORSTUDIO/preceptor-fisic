@@ -281,7 +281,7 @@
 		align-items: center;
 		justify-content: center;
 		font: 700 18px var(--font-sans);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		box-shadow: var(--glow-accent);
 	}
 	.login-right {

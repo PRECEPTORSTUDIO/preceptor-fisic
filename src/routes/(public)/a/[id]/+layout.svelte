@@ -26,7 +26,7 @@
 <style>
 	.aluno-shell {
 		min-height: 100vh;
-		background: radial-gradient(ellipse at top, #1a1530 0%, var(--bg-0) 60%);
+		background: radial-gradient(ellipse at top, var(--bg-halo) 0%, var(--bg-0) 60%);
 		display: flex;
 		justify-content: center;
 		align-items: stretch;

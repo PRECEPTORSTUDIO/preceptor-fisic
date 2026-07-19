@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Avatar from '../ui/avatar.svelte';
+	import ThemeToggle from '../ui/theme-toggle.svelte';
 	import NavIcon from './nav-icon.svelte';
 
 	type NavItem = {
@@ -132,6 +133,7 @@
 				<span style="flex:1">{it.label}</span>
 			</a>
 		{/each}
+		<ThemeToggle variant="nav" />
 		<!-- Logout via POST (anti-CSRF) — GET /logout foi removido -->
 		<form method="POST" action="/logout" style="display:contents">
 			<button class="pf-navitem" type="submit" style="width:100%">
@@ -210,7 +212,7 @@
 	}
 	.pf-sidebar__logo.accent {
 		background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		box-shadow:
 			0 0 0 1px rgba(167, 139, 250, 0.25),
 			var(--glow-accent);

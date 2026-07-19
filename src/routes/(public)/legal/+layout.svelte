@@ -59,7 +59,7 @@
 		height: 32px;
 		border-radius: 8px;
 		background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-		color: #0a0a0a;
+		color: var(--on-accent);
 		display: flex;
 		align-items: center;
 		justify-content: center;

@@ -58,6 +58,9 @@
 }
 
 :root {
+	/* Escuro é o padrão do design system; o claro sobrescreve abaixo. */
+	color-scheme: dark;
+
 	/* Aliases CSS-vars (compat. com snippets que usam var(--accent) direto) */
 	--bg-0: #050505;
 	--bg-1: #0a0a0a;
@@ -76,6 +79,22 @@
 	--accent-dim: #6d5fa3;
 	--accent-glow: rgba(167, 139, 250, 0.18);
 	--accent-wash: rgba(167, 139, 250, 0.08);
+
+	/* Superfície translúcida (headers sticky com backdrop-filter). Precisa ser
+	   token: hardcoded, ficava preta no tema claro. */
+	--bg-glass: rgba(10, 10, 10, 0.85);
+	--bg-glass-strong: rgba(10, 10, 10, 0.92);
+	/* Halo do topo no app do aluno (radial-gradient) */
+	--bg-halo: #1a1530;
+	/* Avatar: luminosidade do gradiente gerado por hash do nome. O texto usa
+	   --ink-0, então o fundo precisa acompanhar o tema — senão vira escuro
+	   sobre escuro no claro. */
+	--avatar-l1: 28%;
+	--avatar-l2: 18%;
+	/* Texto sobre preenchimento vívido (accent/success/danger). No dark esses
+	   fills são claros → texto quase preto. No light são escuros → texto
+	   branco. Antes era #0a0a0a hardcoded em ~14 lugares. */
+	--on-accent: #0a0a0a;
 	--success: #34d399;
 	--success-dim: rgba(52, 211, 153, 0.15);
 	--warn: #fbbf24;
@@ -134,6 +153,95 @@
 	--num-lg: 500 36px/1 var(--font-mono);
 	--num-md: 500 24px/1.1 var(--font-mono);
 	--num-sm: 500 16px/1.2 var(--font-mono);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tema claro — sobrescreve SÓ a camada de cor.
+   Espaçamento, raios, tipografia e easing são agnósticos.
+
+   Aplicado por [data-theme='light'] no <html>. A resolução de
+   "system" → light/dark acontece no script inline do app.html,
+   antes do primeiro paint, então não há flash.
+
+   Contraste: o lavanda #a78bfa da marca dá só ~2.3:1 sobre
+   branco (reprova WCAG AA). No claro o accent vira violet-600
+   (~5.9:1) pra texto/links, e o lavanda original assume o papel
+   de --accent-dim. Semânticas idem: os tons vibrantes do dark
+   são ilegíveis sobre branco.
+   ───────────────────────────────────────────────────────────── */
+:root[data-theme='light'] {
+	color-scheme: light;
+
+	/* ── Tokens do @theme (utilitários Tailwind) ── */
+	--color-bg-0: #ffffff;
+	--color-bg-1: #fafafa;
+	--color-bg-2: #f5f5f6;
+	--color-bg-3: #ededef;
+	--color-bg-4: #e3e3e6;
+	--color-bg-5: #d6d6da;
+
+	--color-ink-0: #18181b;
+	--color-ink-1: #52525b;
+	--color-ink-2: #67676f;
+	--color-ink-3: #8e8e99;
+	--color-ink-line: #e4e4e7;
+	--color-ink-line-2: #d4d4d8;
+
+	--color-accent: #7c3aed;
+	--color-accent-2: #6d28d9;
+	--color-accent-dim: #a78bfa;
+
+	--color-success: #047857;
+	--color-warn: #b45309;
+	--color-danger: #b91c1c;
+	--color-info: #2563eb;
+
+	/* ── Aliases :root ── */
+	--bg-0: #ffffff;
+	--bg-1: #fafafa;
+	--bg-2: #f5f5f6;
+	--bg-3: #ededef;
+	--bg-4: #e3e3e6;
+	--bg-5: #d6d6da;
+
+	--ink-0: #18181b;
+	--ink-1: #52525b;
+	/* #71717a dava 4.44:1 sobre branco — reprovava AA por pouco. */
+	--ink-2: #67676f;
+	/* Tier "fraco". Não atinge AA (nem no dark), mas aqui fica em paridade
+	   com o dark (~3.2:1) em vez de 2.46:1. */
+	--ink-3: #8e8e99;
+	--ink-line: #e4e4e7;
+	--ink-line-2: #d4d4d8;
+
+	--accent: #7c3aed;
+	--accent-2: #6d28d9;
+	--accent-dim: #a78bfa;
+	--accent-glow: rgba(124, 58, 237, 0.22);
+	--accent-wash: rgba(124, 58, 237, 0.08);
+
+	--bg-glass: rgba(255, 255, 255, 0.85);
+	--bg-glass-strong: rgba(255, 255, 255, 0.92);
+	--bg-halo: #ede9fe;
+	--avatar-l1: 84%;
+	--avatar-l2: 74%;
+	--on-accent: #ffffff;
+
+	/* Tons -700: os -600 ficavam entre 3.9 e 4.4:1 sobre branco (reprovam AA). */
+	--success: #047857;
+	--success-dim: rgba(4, 120, 87, 0.12);
+	--warn: #b45309;
+	--warn-dim: rgba(180, 83, 9, 0.12);
+	--danger: #b91c1c;
+	--danger-dim: rgba(185, 28, 28, 0.1);
+	--info: #2563eb;
+	--info-dim: rgba(37, 99, 235, 0.1);
+
+	/* Sombras: no dark o realce é um inset branco sobre preto. No claro
+	   isso vira invisível — troca por sombra projetada suave. */
+	--shadow-card: 0 1px 2px rgba(16, 16, 20, 0.05), 0 8px 24px rgba(16, 16, 20, 0.07);
+	--shadow-pop: 0 2px 6px rgba(16, 16, 20, 0.08), 0 16px 40px rgba(16, 16, 20, 0.12);
+	--glow-accent: 0 0 0 1px rgba(124, 58, 237, 0.35), 0 0 24px rgba(124, 58, 237, 0.18);
 }
 
 html,

@@ -249,7 +249,7 @@
 			style="display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:flex-start;position:relative"
 		>
 			<div
-				style="width:96px;height:96px;border-radius:var(--r-3);background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);display:flex;align-items:center;justify-content:center;font:500 36px var(--font-sans);color:#0a0a0a;box-shadow:var(--glow-accent);letter-spacing:-0.02em"
+				style="width:96px;height:96px;border-radius:var(--r-3);background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);display:flex;align-items:center;justify-content:center;font:500 36px var(--font-sans);color: var(--on-accent);box-shadow:var(--glow-accent);letter-spacing:-0.02em"
 			>{initials}</div>
 
 			<div style="padding-top:6px">
@@ -901,7 +901,7 @@
 	}
 	.link-action.primary {
 		background: var(--accent);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-color: var(--accent);
 	}
 	.link-action.primary:hover {

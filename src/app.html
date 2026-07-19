@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR" data-theme="%theme%" data-theme-pref="%themePref%">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
@@ -11,6 +11,25 @@
 		     do aluno (start_url iria pro /dashboard do profissional). -->
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#050505" />
+		<!-- Anti-flash: quando a preferência é "system", só o cliente sabe qual
+		     tema aplicar (o servidor não enxerga prefers-color-scheme). Este
+		     script é síncrono e roda no <head>, ou seja, ANTES do primeiro
+		     paint — resolve o tema sem piscar. Preferência explícita já vem
+		     resolvida do servidor via cookie, e aqui é no-op. -->
+		<script>
+			(function () {
+				try {
+					var el = document.documentElement;
+					if (el.dataset.themePref === 'system' || !el.dataset.theme) {
+						el.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+							? 'dark'
+							: 'light';
+					}
+					var meta = document.querySelector('meta[name="theme-color"]');
+					if (meta) meta.setAttribute('content', el.dataset.theme === 'light' ? '#ffffff' : '#050505');
+				} catch (e) {}
+			})();
+		</script>
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="apple-mobile-web-app-title" content="Preceptor" />

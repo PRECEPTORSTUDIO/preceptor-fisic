@@ -476,7 +476,7 @@
 	}
 	.del-btn.confirm {
 		background: var(--danger);
-		color: #0a0a0a;
+		color: var(--on-accent);
 		border-color: var(--danger);
 	}
 	.del-btn.cancel {
