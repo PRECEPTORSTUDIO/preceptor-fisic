@@ -175,22 +175,12 @@
 
 	const PLANS = [
 		{
-			name: 'Grátis',
-			price: 'R$ 0',
-			period: 'para sempre',
-			desc: 'Para testar com seus primeiros alunos.',
-			items: ['Geração com PreceptorFISIC', 'Validação clínica automática', 'App do aluno via magic-link'],
-			cta: 'Começar grátis',
-			href: '/login?mode=signup',
-			featured: false
-		},
-		{
 			name: 'Essencial',
 			price: 'R$ 69,90',
 			period: '/mês',
 			desc: 'Para o profissional em crescimento.',
 			items: ['Mais alunos ativos', 'Histórico completo de planos', 'Suporte por e-mail'],
-			cta: 'Começar grátis',
+			cta: 'Começar agora',
 			href: '/login?mode=signup',
 			featured: false
 		},
@@ -200,7 +190,7 @@
 			period: '/mês',
 			desc: 'Para quem vive de prescrição clínica.',
 			items: ['Alunos ilimitados', 'Auditoria completa de cada plano', 'Prioridade na geração'],
-			cta: 'Começar grátis',
+			cta: 'Começar agora',
 			href: '/login?mode=signup',
 			featured: true
 		},
@@ -295,7 +285,7 @@
 		<div class="lp-cta">
 			<a href="/login" class="lp-btn lp-btn--ghost">Entrar</a>
 			<!-- CTAs de cadastro abrem /login já na aba "Criar conta" -->
-			<a href="/login?mode=signup" class="lp-btn lp-btn--primary">Começar grátis</a>
+			<a href="/login?mode=signup" class="lp-btn lp-btn--primary">Começar agora</a>
 		</div>
 	</header>
 
@@ -359,7 +349,7 @@
 
 			<div class="hero-actions">
 				<a href="/login?mode=signup" class="lp-btn lp-btn--primary lp-btn--lg">
-					Começar grátis
+					Começar agora
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M5 12h14M13 5l7 7-7 7" />
 					</svg>
@@ -552,7 +542,7 @@
 		<div class="section-head">
 			<div class="eyebrow">◆ Preços</div>
 			<h2>Planos para cada fase. <em>Mesma ciência em todos.</em></h2>
-			<p>Mesma qualidade científica em todos os planos: diretrizes ACSM, validação clínica e auditoria completa desde o Grátis.</p>
+			<p>Mesma qualidade científica em todos os planos: diretrizes ACSM, validação clínica e auditoria completa desde o Essencial.</p>
 		</div>
 		<div class="pricing-grid">
 			{#each PLANS as plan (plan.name)}
@@ -596,7 +586,7 @@
 				clínicas detectadas e citações reais.
 			</p>
 			<div class="cta-actions">
-				<a href="/login?mode=signup" class="lp-btn lp-btn--primary lp-btn--lg">Começar grátis →</a>
+				<a href="/login?mode=signup" class="lp-btn lp-btn--primary lp-btn--lg">Começar agora →</a>
 				<!-- Email real do time — preceptorfisic.com não está registrado (bounce) -->
 				<a href="mailto:castroomath7@gmail.com" class="lp-btn lp-btn--secondary lp-btn--lg">
 					Falar com um humano
@@ -1457,7 +1447,7 @@
 	}
 	.pricing-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(3, 1fr);
 		gap: 14px;
 		align-items: stretch;
 	}
