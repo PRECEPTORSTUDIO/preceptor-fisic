@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { BrandMark } from '$lib/components/ui';
 
 	// Dual video crossfade — elimina a travadinha do loop nativo.
 	// Quando A está nos últimos 500ms, B inicia do zero e crossfade visual
@@ -179,7 +180,7 @@
 			price: 'R$ 69,90',
 			period: '/mês',
 			desc: 'Para o profissional em crescimento.',
-			items: ['Mais alunos ativos', 'Histórico completo de planos', 'Suporte por e-mail'],
+			items: ['Até 60 alunos ativos', 'Histórico completo de planos', 'Suporte por e-mail'],
 			cta: 'Começar agora',
 			href: '/login?mode=signup',
 			featured: false
@@ -189,7 +190,7 @@
 			price: 'R$ 149,90',
 			period: '/mês',
 			desc: 'Para quem vive de prescrição clínica.',
-			items: ['Alunos ilimitados', 'Auditoria completa de cada plano', 'Prioridade na geração'],
+			items: ['Até 150 alunos ativos', 'Auditoria completa de cada plano', 'Prioridade na geração'],
 			cta: 'Começar agora',
 			href: '/login?mode=signup',
 			featured: true
@@ -269,7 +270,7 @@
 	<!-- Header -->
 	<header class="lp-header" class:scrolled>
 		<a href="/" class="lp-brand">
-			<div class="lp-logo">P</div>
+			<BrandMark size={30} />
 			<div>
 				<div class="lp-name">Preceptor Fisic</div>
 				<div class="lp-sub">PRO · v3.2</div>
@@ -609,7 +610,7 @@
 	<footer class="lp-footer">
 		<div class="footer-inner">
 			<div class="footer-brand">
-				<div class="lp-logo">P</div>
+				<BrandMark size={30} />
 				<div>
 					<div class="lp-name">Preceptor Fisic</div>
 					<div class="lp-sub">© 2026 · v3.2</div>
@@ -686,19 +687,6 @@
 		align-items: center;
 		gap: 11px;
 		text-decoration: none;
-	}
-	.lp-logo {
-		width: 32px;
-		height: 32px;
-		border-radius: 8px;
-		background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-		color: #0a0a0a;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font: 700 16px var(--font-sans);
-		box-shadow: var(--glow-accent);
-		flex-shrink: 0;
 	}
 	.lp-name {
 		font: 600 15px var(--font-sans);
