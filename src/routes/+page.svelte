@@ -106,8 +106,8 @@
 			eyebrow: '◆ PreceptorFISIC + RAG',
 			title: 'Geração com diretrizes',
 			body: 'PreceptorFISIC consulta as diretrizes ACSM, AHA, OMS e ESSA na hora de gerar. Citações reais, com página e organização: não invenção.',
-			metric: '2.040 chunks',
-			metricLabel: 'indexados'
+			metric: '2.040',
+			metricLabel: 'trechos de diretrizes'
 		},
 		{
 			eyebrow: '◇ Validação clínica',
@@ -445,39 +445,34 @@
 			</div>
 			<div class="diff-panel">
 				<details class="diff-details">
-					<summary>Ver detalhes técnicos</summary>
+					<summary>Ver as fontes por trás de uma recomendação</summary>
 					<div class="diff-card">
 						<div class="diff-card-head">
-							<span class="eyebrow">RAG context · top 8 chunks</span>
+							<span class="eyebrow">Exemplo real · prescrição para hipertenso</span>
 						</div>
 						<div class="diff-rows">
 							<div class="diff-row hi">
 								<span class="diff-tag acsm">★ ACSM</span>
 								<span class="diff-row-title">Position Stand on Hypertension and Exercise</span>
-								<span class="num diff-dist">0.142</span>
 							</div>
 							<div class="diff-row hi">
 								<span class="diff-tag acsm">★ ACSM</span>
 								<span class="diff-row-title">Guidelines for Exercise Testing and Prescription, 11ed</span>
-								<span class="num diff-dist">0.158</span>
 							</div>
 							<div class="diff-row">
 								<span class="diff-tag essa">◆ ESSA</span>
 								<span class="diff-row-title">Position Statement: Exercise and Type 2 Diabetes</span>
-								<span class="num diff-dist">0.171</span>
 							</div>
 							<div class="diff-row hi">
 								<span class="diff-tag acsm">★ ACSM</span>
 								<span class="diff-row-title">Pre-participation Cardiovascular Screening</span>
-								<span class="num diff-dist">0.183</span>
 							</div>
 							<div class="diff-row low">
 								<span class="diff-tag aha">○ AHA</span>
 								<span class="diff-row-title">Scientific Statement: Resistance Exercise</span>
-								<span class="num diff-dist">0.197</span>
 							</div>
 						</div>
-						<div class="diff-foot">org_distribution: <span class="num">acsm:3 · essa:1 · aha:1</span></div>
+						<div class="diff-foot">3 das 5 fontes desta recomendação são <span class="num">ACSM</span> ★</div>
 					</div>
 				</details>
 			</div>
@@ -1383,7 +1378,7 @@
 	}
 	.diff-row {
 		display: grid;
-		grid-template-columns: 80px 1fr 60px;
+		grid-template-columns: 80px 1fr;
 		gap: 12px;
 		align-items: center;
 		padding: 10px 12px;
@@ -1426,12 +1421,6 @@
 	}
 	.diff-row.hi .diff-row-title {
 		color: var(--ink-0);
-	}
-	.diff-dist {
-		font: 500 12px var(--font-mono);
-		color: var(--ink-3);
-		text-align: right;
-		font-variant-numeric: tabular-nums;
 	}
 	.diff-foot {
 		margin-top: 14px;
@@ -1761,7 +1750,7 @@
 			gap: 36px;
 		}
 		.diff-row {
-			grid-template-columns: 60px 1fr 50px;
+			grid-template-columns: 60px 1fr;
 			gap: 8px;
 			padding: 8px 10px;
 		}
