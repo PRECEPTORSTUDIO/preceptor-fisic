@@ -452,7 +452,7 @@
 								<span class="diff-tag acsm">★ ACSM</span>
 								<span class="diff-row-title">Pre-participation Cardiovascular Screening</span>
 							</div>
-							<div class="diff-row low">
+							<div class="diff-row">
 								<span class="diff-tag aha">○ AHA</span>
 								<span class="diff-row-title">Scientific Statement: Resistance Exercise</span>
 							</div>
@@ -1354,9 +1354,6 @@
 	.diff-row.hi {
 		background: rgba(167, 139, 250, 0.1);
 		border: 1px solid rgba(167, 139, 250, 0.25);
-	}
-	.diff-row.low {
-		opacity: 0.5;
 	}
 	.diff-tag {
 		font: 600 10px var(--font-mono);
