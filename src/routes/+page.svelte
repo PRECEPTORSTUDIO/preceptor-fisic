@@ -187,7 +187,7 @@
 			desc: 'Para clínicas, academias e equipes.',
 			items: ['Múltiplos profissionais', 'Onboarding dedicado', 'Contrato e faturamento'],
 			cta: 'Falar com o time',
-			href: 'mailto:castroomath7@gmail.com',
+			href: 'https://wa.me/553591481514?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20plano%20Institucional%20do%20PreceptorFISIC.',
 			featured: false
 		}
 	];
@@ -544,6 +544,8 @@
 					<a
 						href={plan.href}
 						class="lp-btn {plan.featured ? 'lp-btn--primary' : 'lp-btn--secondary'}"
+						target={plan.href.startsWith('http') ? '_blank' : null}
+						rel={plan.href.startsWith('http') ? 'noopener noreferrer' : null}
 					>
 						{plan.cta}
 					</a>
@@ -567,8 +569,13 @@
 			</p>
 			<div class="cta-actions">
 				<a href="/login?mode=signup" class="lp-btn lp-btn--primary lp-btn--lg">Começar agora →</a>
-				<!-- Email real do time — preceptorfisic.com não está registrado (bounce) -->
-				<a href="mailto:castroomath7@gmail.com" class="lp-btn lp-btn--secondary lp-btn--lg">
+				<!-- WhatsApp direto do time -->
+				<a
+					href="https://wa.me/553591481514?text=Ol%C3%A1%21%20Quero%20falar%20com%20algu%C3%A9m%20do%20time%20do%20PreceptorFISIC."
+					class="lp-btn lp-btn--secondary lp-btn--lg"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
 					Falar com um humano
 				</a>
 			</div>
