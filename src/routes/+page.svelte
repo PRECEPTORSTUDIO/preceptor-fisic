@@ -359,6 +359,21 @@
 					Citações científicas reais
 				</div>
 			</div>
+
+			<div class="hero-reviewed">
+				<div class="hero-reviewed-label">Revisado por</div>
+				<div class="hero-reviewed-list">
+					<div class="reviewer">
+						<span class="reviewer-name">José Jonas de Oliveira</span><span class="reviewer-sep"> · </span><span class="reviewer-title">Doutor em Ciência do Movimento Humano</span>
+					</div>
+					<div class="reviewer">
+						<span class="reviewer-name">Anna Gabriela Silva Vilela Ribeiro</span><span class="reviewer-sep"> · </span><span class="reviewer-title">Doutora em Ciência do Movimento Humano</span>
+					</div>
+					<div class="reviewer">
+						<span class="reviewer-name">Alexandre de Souza e Silva</span><span class="reviewer-sep"> · </span><span class="reviewer-title">Doutor em Ciências do Desporto</span>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<!-- Trust strip bottom -->
@@ -999,6 +1014,61 @@
 	.trust-dot.info {
 		background: var(--info);
 		box-shadow: 0 0 6px var(--info);
+	}
+
+	/* Revisado por — autoridade científica no hero */
+	.hero-reviewed {
+		margin-top: 18px;
+		padding-top: 16px;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		max-width: 640px;
+	}
+	.hero-reviewed-label {
+		font: 500 11px var(--font-mono);
+		color: var(--accent-2);
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		margin-bottom: 10px;
+		text-shadow: 0 1px 4px rgba(15, 8, 30, 0.7);
+	}
+	.hero-reviewed-list {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.reviewer {
+		font: 400 13px var(--font-sans);
+		color: var(--ink-1);
+		line-height: 1.4;
+		text-shadow: 0 1px 5px rgba(15, 8, 30, 0.85);
+	}
+	.reviewer-name {
+		color: var(--ink-0);
+		font-weight: 600;
+	}
+	.reviewer-sep {
+		color: var(--ink-3);
+	}
+	.reviewer-title {
+		color: var(--ink-1);
+	}
+	@media (max-width: 768px) {
+		.hero-reviewed {
+			margin-top: 14px;
+			padding-top: 14px;
+		}
+		.hero-reviewed-list {
+			gap: 10px;
+		}
+		.reviewer {
+			display: flex;
+			flex-direction: column;
+			gap: 1px;
+			font-size: 12.5px;
+		}
+		.reviewer-sep {
+			display: none;
+		}
 	}
 
 	/* Trust strip no rodapé do hero */
