@@ -165,7 +165,7 @@
 			price: 'R$ 69,90',
 			period: '/mês',
 			desc: 'Para o profissional em crescimento.',
-			items: ['Até 60 alunos ativos', 'Histórico completo de planos', 'Suporte por e-mail'],
+			items: ['Até 60 alunos ativos', 'Até 20 treinos gerados por IA/mês', 'Histórico completo de planos', 'Suporte por e-mail'],
 			cta: 'Começar agora',
 			href: 'https://www.asaas.com/c/5c8m1fhyd6c3tsaq',
 			featured: false
@@ -175,7 +175,7 @@
 			price: 'R$ 149,90',
 			period: '/mês',
 			desc: 'Para quem vive de prescrição clínica.',
-			items: ['Até 150 alunos ativos', 'Auditoria completa de cada plano', 'Prioridade na geração'],
+			items: ['Até 150 alunos ativos', 'Até 50 treinos gerados por IA/mês', 'Auditoria completa de cada plano', 'Prioridade na geração'],
 			cta: 'Começar agora',
 			href: 'https://www.asaas.com/c/qihvgcw48aajit37',
 			featured: true
@@ -185,7 +185,7 @@
 			price: 'R$ 499,90',
 			period: 'a partir de · /mês',
 			desc: 'Para clínicas, academias e equipes.',
-			items: ['Múltiplos profissionais', 'Onboarding dedicado', 'Contrato e faturamento'],
+			items: ['Múltiplos profissionais', 'Até 100 treinos gerados por IA/mês', 'Onboarding dedicado', 'Contrato e faturamento'],
 			cta: 'Falar com o time',
 			href: 'https://wa.me/553591481514?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20plano%20Institucional%20do%20PreceptorFISIC.',
 			featured: false
