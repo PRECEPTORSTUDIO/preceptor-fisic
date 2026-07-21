@@ -419,8 +419,8 @@
 	<!-- METRICS -->
 	<section class="metrics" id="metrics">
 		<div class="metrics-inner">
-			{#each METRICS as m, i (m.l)}
-				<div class="metric" class:divider={i > 0}>
+			{#each METRICS as m (m.l)}
+				<div class="metric">
 					<div class="num metric-v">{m.v}</div>
 					<div class="metric-l">{m.l}</div>
 				</div>
@@ -592,9 +592,6 @@
 				<a href="mailto:castroomath7@gmail.com" class="lp-btn lp-btn--secondary lp-btn--lg">
 					Falar com um humano
 				</a>
-			</div>
-			<div class="cta-fineprint">
-				Sem cartão de crédito · Sem app store · Dados em São Paulo · LGPD compliant
 			</div>
 			<!-- Oferta de baixo compromisso pra quem não quer criar conta ainda -->
 			<a
@@ -1050,10 +1047,6 @@
 		grid-template-columns: repeat(4, 1fr);
 		gap: 20px;
 	}
-	.metric.divider {
-		border-left: 1px solid var(--ink-line);
-		padding-left: 20px;
-	}
 	.metric-v {
 		font: 600 28px var(--font-mono);
 		color: var(--ink-0);
@@ -1074,11 +1067,11 @@
 		margin-bottom: 56px;
 	}
 	.section-head .eyebrow {
-		font: 500 11px var(--font-mono);
-		color: var(--accent-2);
+		font: 600 14px var(--font-mono);
+		color: var(--accent);
 		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		margin-bottom: 12px;
+		letter-spacing: 0.12em;
+		margin-bottom: 14px;
 	}
 	.section-head h2 {
 		font: 500 clamp(32px, 4.5vw, 52px)/1.1 var(--font-sans);
@@ -1118,10 +1111,10 @@
 		border-radius: var(--r-3);
 	}
 	.pain-card h3 {
-		font: 500 19px var(--font-sans);
+		font: 600 19px var(--font-sans);
 		letter-spacing: -0.015em;
 		margin: 0 0 8px;
-		color: var(--ink-0);
+		color: var(--accent);
 	}
 	.pain-card p {
 		font: 400 14px/1.55 var(--font-sans);
@@ -1129,10 +1122,10 @@
 		margin: 0;
 	}
 	.pain-bridge {
-		margin: 40px 0 0;
-		font: 400 clamp(18px, 2.2vw, 24px) var(--font-sans);
+		margin: 48px 0 0;
+		font: 500 clamp(26px, 3.6vw, 40px)/1.15 var(--font-sans);
 		font-style: italic;
-		letter-spacing: -0.015em;
+		letter-spacing: -0.02em;
 		color: var(--accent-2);
 	}
 
@@ -1573,13 +1566,6 @@
 		justify-content: center;
 		flex-wrap: wrap;
 	}
-	.cta-fineprint {
-		margin-top: 24px;
-		font: 500 11px var(--font-mono);
-		color: var(--ink-3);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-	}
 	.cta-soft {
 		display: inline-block;
 		margin-top: 18px;
@@ -1698,14 +1684,6 @@
 			grid-template-columns: repeat(2, 1fr);
 			gap: 18px 24px;
 			padding: 22px 18px;
-		}
-		.metric.divider {
-			border-left: none;
-			padding-left: 0;
-		}
-		.metric.divider:nth-child(odd) {
-			border-left: 1px solid var(--ink-line);
-			padding-left: 24px;
 		}
 		.metric-v {
 			font-size: 22px;
