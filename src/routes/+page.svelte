@@ -634,10 +634,25 @@
 	   Dark fit-tech · vídeo hero · contraste alto
 	   ───────────────────────────────────────────── */
 	.lp {
+		position: relative;
+		z-index: 0;
 		background: var(--bg-0);
 		color: var(--ink-0);
 		min-height: 100vh;
 		overflow-x: hidden;
+	}
+	/* Textura de pontos global — cobre a página inteira, sem emendas entre
+	   seções. z-index:-1 mantém os pontos atrás do conteúdo; painéis com fundo
+	   próprio (barra de métricas, cards) cobrem os pontos naturalmente. */
+	.lp::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background-image: radial-gradient(#363636 1.2px, transparent 1.4px);
+		background-size: 24px 24px;
+		opacity: 0.5;
+		pointer-events: none;
+		z-index: -1;
 	}
 	/* Âncoras do nav (#features/#how/#metrics) param abaixo do header fixo (~70px) */
 	section[id] {
@@ -1084,34 +1099,11 @@
 
 	/* PAIN */
 	.pain {
-		position: relative;
 		padding: 100px 32px 56px;
 		max-width: 1200px;
 		margin: 0 auto;
 		width: 100%;
 		box-sizing: border-box;
-	}
-	/* Textura de pontos sutil — dá vida à área logo abaixo do hero.
-	   Full-bleed (100vw) e com máscara radial pra sumir nas bordas. */
-	.pain::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		left: 50%;
-		width: 100vw;
-		transform: translateX(-50%);
-		background-image: radial-gradient(#3d3d3d 1.3px, transparent 1.4px);
-		background-size: 22px 22px;
-		-webkit-mask-image: radial-gradient(ellipse 82% 72% at 50% 45%, #000 30%, transparent 100%);
-		mask-image: radial-gradient(ellipse 82% 72% at 50% 45%, #000 30%, transparent 100%);
-		opacity: 0.8;
-		pointer-events: none;
-		z-index: 0;
-	}
-	.pain > * {
-		position: relative;
-		z-index: 1;
 	}
 	.pain-grid {
 		display: grid;
@@ -1528,20 +1520,6 @@
 		text-align: center;
 		overflow: hidden;
 		border-top: 1px solid var(--ink-line);
-		background: var(--bg-1);
-	}
-	/* Textura de pontos também na seção final, atrás do brilho */
-	.cta-final::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background-image: radial-gradient(#3d3d3d 1.3px, transparent 1.4px);
-		background-size: 22px 22px;
-		-webkit-mask-image: radial-gradient(ellipse 80% 78% at 50% 50%, #000 22%, transparent 100%);
-		mask-image: radial-gradient(ellipse 80% 78% at 50% 50%, #000 22%, transparent 100%);
-		opacity: 0.7;
-		pointer-events: none;
-		z-index: 0;
 	}
 	.cta-glow {
 		position: absolute;
