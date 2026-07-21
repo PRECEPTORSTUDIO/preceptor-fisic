@@ -100,7 +100,7 @@
 				{mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
 			</h2>
 			<p style="font:var(--body);color:var(--ink-2);margin:0 0 28px">
-				{mode === 'login' ? 'Acesse sua área de profissional' : 'Comece grátis · 14 dias'}
+				{mode === 'login' ? 'Acesse sua área de profissional' : 'Crie sua conta de profissional'}
 			</p>
 
 			<form
@@ -220,7 +220,7 @@
 					{#if submitting}
 						{mode === 'login' ? 'Entrando…' : 'Criando…'}
 					{:else}
-						{mode === 'login' ? 'Entrar →' : 'Criar conta grátis →'}
+						{mode === 'login' ? 'Entrar →' : 'Criar conta →'}
 					{/if}
 				</Button>
 			</form>

@@ -124,11 +124,11 @@
 			metricLabel: 'sem app store'
 		},
 		{
-			eyebrow: '⊕ Auditoria',
-			title: 'Cada decisão registrada',
-			body: 'Todo plano salva input prompt, chunks recuperados, modelo usado, tokens, latência e versão do system prompt. Drift de qualidade é mensurável.',
-			metric: 'ai_runs',
-			metricLabel: 'imutável'
+			eyebrow: '⊕ Rastreabilidade',
+			title: 'Cada decisão fica registrada',
+			body: 'Todo plano guarda a diretriz que o embasou, a data e a versão usada na geração. Se o aluno ou o médico dele questionar, você mostra exatamente em que a recomendação se apoiou.',
+			metric: 'Auditável',
+			metricLabel: 'plano por plano'
 		}
 	];
 
@@ -155,7 +155,6 @@
 		// Só métricas compriváveis — sem números de aderência/usuários fabricados
 		// (mesma política do /login; risco CDC/CONFEF)
 		{ v: '1.324', l: 'exercícios com vídeo' },
-		{ v: 'Brasil', l: 'servidores no país · LGPD' },
 		{ v: 'ACSM ★', l: 'prioridade nas fontes' }
 	];
 
@@ -1044,7 +1043,7 @@
 		margin: 0 auto;
 		padding: 28px 32px;
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(3, 1fr);
 		gap: 20px;
 	}
 	.metric-v {
@@ -1067,11 +1066,11 @@
 		margin-bottom: 56px;
 	}
 	.section-head .eyebrow {
-		font: 600 14px var(--font-mono);
+		font: 600 17px var(--font-mono);
 		color: var(--accent);
 		text-transform: uppercase;
-		letter-spacing: 0.12em;
-		margin-bottom: 14px;
+		letter-spacing: 0.14em;
+		margin-bottom: 16px;
 	}
 	.section-head h2 {
 		font: 500 clamp(32px, 4.5vw, 52px)/1.1 var(--font-sans);
@@ -1122,10 +1121,10 @@
 		margin: 0;
 	}
 	.pain-bridge {
-		margin: 48px 0 0;
-		font: 500 clamp(26px, 3.6vw, 40px)/1.15 var(--font-sans);
+		margin: 56px 0 0;
+		font: 600 clamp(34px, 5vw, 56px)/1.12 var(--font-sans);
 		font-style: italic;
-		letter-spacing: -0.02em;
+		letter-spacing: -0.025em;
 		color: var(--accent-2);
 	}
 
