@@ -849,6 +849,31 @@ export const feedback = pgTable(
 	(t) => [index('feedback_created_idx').on(t.createdAt)]
 );
 
+/**
+ * Inbox idempotente de webhooks do Asaas (billing).
+ * Entrega é at-least-once: o mesmo event id pode chegar 2x — o UNIQUE em
+ * asaas_event_id absorve a duplicata. Payload integral guardado pra
+ * auditoria/reprocesso. processedAt null = pendente; error preenchido =
+ * precisa de reconciliação manual (ex: pagador sem conta no app).
+ */
+export const asaasWebhookEvents = pgTable(
+	'asaas_webhook_events',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		asaasEventId: text('asaas_event_id').notNull().unique(),
+		event: text('event').notNull(),
+		paymentId: text('payment_id'),
+		payload: jsonb('payload').notNull(),
+		professionalId: uuid('professional_id').references(() => professionals.id, {
+			onDelete: 'set null'
+		}),
+		error: text('error'),
+		receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull(),
+		processedAt: timestamp('processed_at', { withTimezone: true })
+	},
+	(t) => [index('asaas_events_received_idx').on(t.receivedAt)]
+);
+
 /* Inferred types */
 export type ExerciseLibraryItem = typeof exerciseLibrary.$inferSelect;
 export type Conversation = typeof conversations.$inferSelect;

@@ -102,6 +102,8 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		event.url.pathname.startsWith('/onboarding') ||
 		event.url.pathname.startsWith('/recuperar') ||
 		event.url.pathname.startsWith('/legal') ||
+		// Webhooks de terceiros autenticam por token próprio, não por sessão
+		event.url.pathname.startsWith('/api/webhooks/') ||
 		event.url.pathname === '/sitemap.xml' ||
 		event.url.pathname === '/robots.txt' ||
 		event.url.pathname === '/';
