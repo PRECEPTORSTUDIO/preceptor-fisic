@@ -101,3 +101,80 @@ export async function getAsaasCustomerEmail(customerId: string): Promise<string 
 	const c = await asaasGet<{ email?: string | null }>(`/customers/${customerId}`);
 	return c.email?.trim().toLowerCase() || null;
 }
+
+async function asaasPost<T>(path: string, body: unknown): Promise<T> {
+	if (!env.ASAAS_API_KEY) throw new Error('ASAAS_API_KEY não configurada');
+	const res = await fetch(`${BASE_URL}${path}`, {
+		method: 'POST',
+		headers: {
+			'access_token': env.ASAAS_API_KEY,
+			'User-Agent': 'preceptor-fisic',
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(body),
+		signal: AbortSignal.timeout(20_000)
+	});
+	const data = (await res.json().catch(() => null)) as
+		| (T & { errors?: { description?: string }[] })
+		| null;
+	if (!res.ok || data?.errors?.length) {
+		const desc = data?.errors?.[0]?.description ?? `HTTP ${res.status}`;
+		throw new Error(`Asaas POST ${path}: ${desc}`);
+	}
+	return data as T;
+}
+
+/**
+ * Cria o customer no Asaas com os dados DA CONTA (email do cadastro, não o
+ * que a pessoa digitaria num checkout avulso) — é isso que torna o match do
+ * webhook determinístico. CPF é exigência do Asaas em produção.
+ */
+export async function createAsaasCustomer(input: {
+	name: string;
+	email: string;
+	cpfCnpj: string;
+	professionalId: string;
+}): Promise<string> {
+	const c = await asaasPost<{ id: string }>('/customers', {
+		name: input.name,
+		email: input.email,
+		cpfCnpj: input.cpfCnpj,
+		externalReference: input.professionalId
+	});
+	return c.id;
+}
+
+/**
+ * Cria a assinatura e devolve a URL da fatura hospedada da 1ª cobrança.
+ * billingType UNDEFINED = pagador escolhe Pix/cartão na fatura do Asaas
+ * (nenhum dado de cartão passa pelo nosso servidor — fora de escopo PCI).
+ * A cobrança da assinatura pode demorar alguns instantes pra materializar,
+ * por isso o retry curto no GET de payments.
+ */
+export async function createPlanSubscription(input: {
+	customerId: string;
+	planKey: keyof typeof PAYMENT_LINKS;
+	professionalId: string;
+}): Promise<{ subscriptionId: string; invoiceUrl: string | null }> {
+	const plan = PAYMENT_LINKS[input.planKey];
+	const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+	const sub = await asaasPost<{ id: string }>('/subscriptions', {
+		customer: input.customerId,
+		billingType: 'UNDEFINED',
+		value: plan.value,
+		cycle: plan.months === 12 ? 'YEARLY' : 'MONTHLY',
+		nextDueDate: today,
+		description: `PreceptorFISIC · plano ${plan.plan} ${plan.months === 12 ? 'anual' : 'mensal'}`,
+		externalReference: input.professionalId
+	});
+
+	let invoiceUrl: string | null = null;
+	for (let attempt = 0; attempt < 3 && !invoiceUrl; attempt++) {
+		if (attempt > 0) await new Promise((r) => setTimeout(r, 1200));
+		const payments = await asaasGet<{ data?: { invoiceUrl?: string }[] }>(
+			`/subscriptions/${sub.id}/payments?limit=1`
+		);
+		invoiceUrl = payments.data?.[0]?.invoiceUrl ?? null;
+	}
+	return { subscriptionId: sub.id, invoiceUrl };
+}

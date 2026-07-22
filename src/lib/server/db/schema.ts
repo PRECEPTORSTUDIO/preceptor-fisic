@@ -154,6 +154,9 @@ export const professionals = pgTable(
 		subscriptionStatus: subscriptionStatusEnum('subscription_status').default('trial').notNull(),
 		subscriptionPlan: text('subscription_plan'),
 		subscriptionExpiresAt: timestamp('subscription_expires_at', { withTimezone: true }),
+		/** Customer no Asaas (cus_...) — criado na 1ª assinatura de dentro do app.
+		 *  Permite match determinístico no webhook (não depende do email digitado). */
+		asaasCustomerId: text('asaas_customer_id').unique(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 	},

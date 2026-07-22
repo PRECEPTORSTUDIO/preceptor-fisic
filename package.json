@@ -24,6 +24,7 @@
     "backup": "tsx scripts/backup.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.100",
     "@ai-sdk/google": "^3.0.67",
     "@fontsource/geist-mono": "^5.1.0",
     "@fontsource/geist-sans": "^5.1.0",

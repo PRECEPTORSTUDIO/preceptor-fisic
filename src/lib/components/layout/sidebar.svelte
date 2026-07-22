@@ -73,6 +73,7 @@
 		{ id: 'agenda', label: 'Agenda', icon: 'agenda', href: '/agenda' }
 	]);
 	const NAV_FOOTER: NavItem[] = [
+		{ id: 'assinatura', label: 'Assinatura', icon: 'planos', href: '/assinatura' },
 		{ id: 'feedback', label: 'Feedback', icon: 'feedback', href: '/feedback' },
 		{ id: 'config', label: 'Configurações', icon: 'config', href: '/configuracoes' }
 	];

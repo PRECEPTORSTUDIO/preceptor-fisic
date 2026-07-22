@@ -1,11 +1,11 @@
 /**
- * Gerador de plano de treino — orquestra RAG + Gemini + persistência + auditoria.
+ * Gerador de plano de treino — orquestra RAG + Claude + persistência + auditoria.
  *
  * Pipeline:
  *   1. Carrega contexto do aluno (student + health + preferences)
  *   2. Deriva tags de condição
- *   3. RAG retrieval com ACSM > AHA preference
- *   4. generateObject (Gemini 2.5 Pro) com schema Zod
+ *   3. RAG retrieval com ACSM > AHA preference (embeddings continuam Gemini)
+ *   4. streamObject/generateObject (Claude Opus 4.8) com schema Zod
  *   5. Persiste em training_plans + ai_runs com auditoria completa
  */
 import { and, eq, inArray, desc } from 'drizzle-orm';
@@ -13,7 +13,7 @@ import { generateObject, streamObject } from 'ai';
 import { randomUUID } from 'node:crypto';
 import { waitUntil } from '@vercel/functions';
 import { dev as isDev } from '$app/environment';
-import { google } from './provider';
+import { anthropic } from './provider';
 import { db } from '$lib/server/db';
 import { sendPlanReady } from '$lib/server/email';
 import {
@@ -44,14 +44,12 @@ import {
 	deriveStudentCtxFromHealth
 } from '$lib/server/clinical/validator';
 
-// Flash primário: 3x mais rápido que Pro, qualidade suficiente pro nosso schema.
-// Pro só é tentado se Flash falhar (pouco comum).
-// Usamos os aliases `-latest` (não versões fixas como gemini-2.5-flash): o
-// Google BLOQUEIA snapshots antigos pra projetos/chaves novos ("no longer
-// available to new users") e os descontinua com o tempo. O alias resolve sempre
-// pro estável atual, funcionando pra qualquer chave. Override por env se preciso.
-const PRIMARY_MODEL = env.AI_MODEL_FAST ?? 'gemini-flash-latest';
-const FALLBACK_MODEL = env.AI_MODEL_PRIMARY ?? 'gemini-pro-latest';
+// Geração agora é Claude (Anthropic). Aliases sem sufixo de data: a Anthropic
+// mantém `claude-opus-4-8` etc. apontando pro snapshot estável atual.
+// Embeddings do RAG continuam no Gemini (ver provider.ts).
+// Override por env se preciso (ex: AI_MODEL_FAST=claude-haiku-4-5 pra baratear).
+const PRIMARY_MODEL = env.AI_MODEL_FAST ?? 'claude-opus-4-8';
+const FALLBACK_MODEL = env.AI_MODEL_PRIMARY ?? 'claude-opus-4-8';
 
 /** Teto da chamada de IA (ms). Fica ABAIXO do maxDuration da função (300s no
  * Pro) pra sobrar tempo de validar + persistir o plano (ou marcar failed).
@@ -763,7 +761,7 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 
 			try {
 				const result = streamObject({
-					model: google(model),
+					model: anthropic(model),
 					schema: trainingPlanSchema,
 					schemaName: 'TrainingPlan',
 					schemaDescription:
@@ -929,7 +927,7 @@ export async function generateTrainingPlan(opts: GenerateOptions): Promise<Gener
 			const fbTimer = startProgressTimer(58);
 			try {
 				const fallbackGen = await generateObject({
-					model: google(FALLBACK_MODEL),
+					model: anthropic(FALLBACK_MODEL),
 					schema: trainingPlanSchema,
 					schemaName: 'TrainingPlan',
 					schemaDescription:
