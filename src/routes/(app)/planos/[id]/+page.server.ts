@@ -378,6 +378,60 @@ export const actions: Actions = {
 	// #C02 — override clínico: profissional assume responsabilidade por uma
 	// restrição red e libera a publicação. Persiste resolved_* nas DUAS colunas
 	// (restrictions = gate do publishPlan; planData.restrictions = o que a UI lê).
+	/**
+	 * Move um exercício uma posição pra cima ou pra baixo DENTRO do próprio
+	 * bloco. A troca acontece no array do bloco (`warmup`/`main`/`cooldown`),
+	 * então é estruturalmente impossível um exercício de aquecimento trocar de
+	 * lugar com um do treino principal — não existe caminho no código pra isso.
+	 *
+	 * Não redispara a validação clínica, ao contrário de editar/trocar/remover:
+	 * mudar a ordem não cria nem remove contraindicação, e revalidar a cada
+	 * clique deixaria a lista lenta e piscando aviso à toa.
+	 */
+	reorderExercise: async ({ params, request, locals }) => {
+		if (!locals.user) return fail(401, { error: 'não autenticado' });
+		const professional = await getProfessionalByAuthId(locals.user.id);
+		if (!professional) return fail(401, { error: 'professional não encontrado' });
+
+		// Escopo por profissional: impede reordenar plano de outro.
+		const plan = await getPlanDetail(params.id!, professional.id);
+		if (!plan) return fail(404, { error: 'plano não encontrado' });
+
+		const fd = await request.formData();
+		const sessionIdx = Number(fd.get('sessionIdx'));
+		const block = String(fd.get('block') ?? '');
+		const exerciseIdx = Number(fd.get('exerciseIdx'));
+		const direction = String(fd.get('direction') ?? '');
+
+		if (!['warmup', 'main', 'cooldown'].includes(block))
+			return fail(400, { error: 'bloco inválido' });
+		if (!['up', 'down'].includes(direction))
+			return fail(400, { error: 'direção inválida' });
+		if (!Number.isInteger(sessionIdx) || !Number.isInteger(exerciseIdx))
+			return fail(400, { error: 'índice inválido' });
+
+		const planData = structuredClone(plan.planData) as PlanData;
+		const blockArr =
+			planData.weekly_sessions?.[sessionIdx]?.[block as 'warmup' | 'main' | 'cooldown'];
+		if (!blockArr || !blockArr[exerciseIdx])
+			return fail(404, { error: 'exercício não encontrado' });
+
+		const alvo = direction === 'up' ? exerciseIdx - 1 : exerciseIdx + 1;
+		// Fora do bloco: primeiro subindo ou último descendo. A UI já esconde a
+		// seta nesses casos; aqui é a rede de segurança contra request forjada.
+		if (alvo < 0 || alvo >= blockArr.length)
+			return fail(400, { error: 'movimento fora do bloco' });
+
+		[blockArr[exerciseIdx], blockArr[alvo]] = [blockArr[alvo]!, blockArr[exerciseIdx]!];
+
+		await db
+			.update(trainingPlans)
+			.set({ planData, updatedAt: new Date() })
+			.where(eq(trainingPlans.id, params.id!));
+
+		return { success: true, action: 'reorderExercise', validation: null };
+	},
+
 	resolveRestriction: async ({ params, request, locals, getClientAddress }) => {
 		if (!locals.user) return fail(401, { error: 'não autenticado' });
 		const professional = await getProfessionalByAuthId(locals.user.id);

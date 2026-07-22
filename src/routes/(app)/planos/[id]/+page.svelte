@@ -1265,14 +1265,52 @@
 						{@const videoKey = `${i}-${blockKey}-${j}`}
 						{@const videoOpen = openVideoKey === videoKey}
 						{@const editOpen = editKey === videoKey}
+						{@const blockLen = (s[blockKey] ?? []).length}
 						<div
 							style="display:flex;flex-direction:column;{j || blockKey !== firstBlock ? 'border-top:1px solid var(--ink-line)' : ''}"
 						>
 							<div
-								style="padding:14px 20px;display:grid;grid-template-columns:32px 1fr auto auto auto auto auto auto auto;gap:12px;align-items:center"
+								style="padding:14px 20px;display:grid;grid-template-columns:56px 1fr auto auto auto auto auto auto auto;gap:12px;align-items:center"
 							>
-								<div class="num" style="font:500 13px var(--font-mono);color:var(--ink-3)">
-									{String(j + 1).padStart(2, '0')}
+								<div style="display:flex;align-items:center;gap:6px">
+									{#if !isArchived && blockLen > 1}
+										<!-- Setas de ordem. Movem SÓ dentro do próprio bloco: a action
+										     recebe `block` e troca dentro daquele array, então aquecimento
+										     nunca troca de lugar com treino principal. -->
+										<div style="display:flex;flex-direction:column;gap:2px">
+											{#each [['up', '▲', j === 0], ['down', '▼', j === blockLen - 1]] as [dir, glyph, disabled] (dir)}
+												<form
+													method="POST"
+													action="?/reorderExercise"
+													use:enhance={() => {
+														savingEdit = true;
+														return exerciseMutationHandler(() => {});
+													}}
+												>
+													<input type="hidden" name="sessionIdx" value={i} />
+													<input type="hidden" name="block" value={blockKey} />
+													<input type="hidden" name="exerciseIdx" value={j} />
+													<input type="hidden" name="direction" value={dir} />
+													<button
+														type="submit"
+														disabled={Boolean(disabled)}
+														aria-label={dir === 'up'
+															? `Mover ${ex.name} uma posição para cima`
+															: `Mover ${ex.name} uma posição para baixo`}
+														title={dir === 'up' ? 'Mover para cima' : 'Mover para baixo'}
+														style="all:unset;display:block;line-height:1;cursor:{disabled
+															? 'default'
+															: 'pointer'};font:500 8px var(--font-mono);color:{disabled
+															? 'var(--ink-line-2)'
+															: 'var(--ink-3)'};padding:2px 3px;border-radius:3px"
+													>{glyph}</button>
+												</form>
+											{/each}
+										</div>
+									{/if}
+									<div class="num" style="font:500 13px var(--font-mono);color:var(--ink-3)">
+										{String(j + 1).padStart(2, '0')}
+									</div>
 								</div>
 								<div>
 									<div style="font:500 14px var(--font-sans);color:var(--ink-0)">
