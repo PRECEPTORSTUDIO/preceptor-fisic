@@ -72,7 +72,7 @@
 		</div>
 
 		<nav class="m-sheet__nav">
-			{#each ITEMS as it (it.id)}
+			{#each ITEMS as it, i (it.id)}
 				{@const on = isActive(it.href)}
 				<a
 					class="m-sheet__item"
@@ -80,6 +80,7 @@
 					class:danger={it.danger}
 					href={it.href}
 					onclick={onClose}
+					style="--stagger:{i}"
 				>
 					<span class="m-sheet__ico" class:on>
 						<NavIcon name={it.icon} size={20} />
@@ -224,7 +225,15 @@
 		text-decoration: none;
 		color: var(--ink-1);
 		border-radius: var(--r-2);
-		transition: background 140ms var(--ease);
+		transition:
+			background 140ms var(--ease),
+			transform 140ms var(--ease);
+		/* Cascata: itens entram logo após o slide do sheet */
+		animation: pf-fade-up 260ms var(--ease) backwards;
+		animation-delay: calc(80ms + var(--stagger, 0) * 35ms);
+	}
+	.m-sheet__item:active {
+		transform: scale(0.98);
 	}
 	.m-sheet__item:hover,
 	.m-sheet__item.on {

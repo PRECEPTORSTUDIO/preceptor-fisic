@@ -2,6 +2,7 @@
 	import { Button, Eyebrow, BrandMark } from '$lib/components/ui';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { slide } from 'svelte/transition';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -57,26 +58,27 @@
 		<div class="login-glow login-glow--top"></div>
 		<div class="login-glow login-glow--bottom"></div>
 
-		<div style="display:flex;align-items:center;gap:12px;position:relative">
+		<div class="enter" style="--d:0;display:flex;align-items:center;gap:12px;position:relative">
 			<BrandMark size={34} />
 			<div style="font:500 18px var(--font-sans);letter-spacing:-0.02em">Preceptor<span style="font-weight:700">FISIC</span></div>
 		</div>
 
 		<div style="flex:1;display:flex;align-items:center;position:relative">
 			<div style="max-width:460px">
-				<div class="eyebrow" style="margin-bottom:18px">◆ Plataforma para profissionais</div>
-				<h1 class="login-h1">
+				<div class="eyebrow enter" style="--d:1;margin-bottom:18px">◆ Plataforma para profissionais</div>
+				<h1 class="login-h1 enter" style="--d:2">
 					Prescreva treinos<br />
 					com <span class="login-accent">rigor clínico.</span>
 				</h1>
-				<p style="font:400 16px/1.5 var(--font-sans);color:var(--ink-1);margin-top:24px;max-width:420px">
+				<p class="enter" style="--d:3;font:400 16px/1.5 var(--font-sans);color:var(--ink-1);margin-top:24px;max-width:420px">
 					Plataforma para personal trainers, fisioterapeutas e clínicas que prescrevem exercícios para populações especiais.
 				</p>
 
 				<div style="margin-top:36px;display:flex;flex-direction:column;gap:14px">
 					{#each stats as s, i (s.lbl)}
 						<div
-							style="display:flex;align-items:baseline;gap:14px;padding:12px 0;{i ? 'border-top:1px solid var(--ink-line)' : ''}"
+							class="enter"
+							style="--d:{4 + i};display:flex;align-items:baseline;gap:14px;padding:12px 0;{i ? 'border-top:1px solid var(--ink-line)' : ''}"
 						>
 							<span class="num" style="font:var(--num-md);color:var(--ink-0);min-width:80px">{s.num}</span>
 							<span style="font:400 14px/1.45 var(--font-sans);color:var(--ink-1)">{s.lbl}</span>
@@ -91,18 +93,23 @@
 
 	<!-- Direita — formulário -->
 	<div class="login-right">
-		<div style="width:100%;max-width:380px">
-			<div class="login-tabs">
+		<div class="login-card enter" style="--d:2;width:100%;max-width:380px">
+			<div class="login-tabs" class:signup={mode === 'signup'}>
+				<span class="login-tabs__pill" aria-hidden="true"></span>
 				<button class:on={mode === 'login'} onclick={() => (mode = 'login')}>Entrar</button>
 				<button class:on={mode === 'signup'} onclick={() => (mode = 'signup')}>Criar conta</button>
 			</div>
 
-			<h2 style="font:500 28px var(--font-sans);letter-spacing:-0.02em;margin:0 0 8px">
-				{mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
-			</h2>
-			<p style="font:var(--body);color:var(--ink-2);margin:0 0 28px">
-				{mode === 'login' ? 'Acesse sua área de profissional' : 'Crie sua conta de profissional'}
-			</p>
+			{#key mode}
+				<div class="mode-swap">
+					<h2 style="font:500 28px var(--font-sans);letter-spacing:-0.02em;margin:0 0 8px">
+						{mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
+					</h2>
+					<p style="font:var(--body);color:var(--ink-2);margin:0 0 28px">
+						{mode === 'login' ? 'Acesse sua área de profissional' : 'Crie sua conta de profissional'}
+					</p>
+				</div>
+			{/key}
 
 			<form
 				method="POST"
@@ -120,7 +127,7 @@
 					<input type="hidden" name="next" value={next} />
 				{/if}
 				{#if mode === 'signup'}
-					<div>
+					<div transition:slide={{ duration: 240 }}>
 						<div class="eyebrow" style="margin-bottom:6px">Nome completo</div>
 						<input
 							name="name"
@@ -147,7 +154,7 @@
 					/>
 				</div>
 				{#if mode === 'signup'}
-					<div>
+					<div transition:slide={{ duration: 240 }}>
 						<div class="eyebrow" style="margin-bottom:6px">Registro profissional</div>
 						<input
 							name="cref"
@@ -177,7 +184,7 @@
 				{#if mode === 'signup'}
 					<!-- Consent LGPD explícito — obrigatório pra criar conta.
 					     Server-side valida `accept_terms` na action signup. -->
-					<label class="consent-row">
+					<label class="consent-row" transition:slide={{ duration: 240 }}>
 						<input type="checkbox" name="accept_terms" bind:checked={acceptedTerms} required />
 						<span>
 							Li e concordo com os
@@ -196,6 +203,7 @@
 
 				{#if form?.error}
 					<div
+						class="form-error"
 						style="padding:10px 12px;border-radius:var(--r-2);background:var(--danger-dim);border:1px solid var(--danger);color:var(--danger);font:var(--body-sm)"
 					>{form.error}</div>
 				{/if}
@@ -255,9 +263,39 @@
 		flex-direction: column;
 		border-right: 1px solid var(--ink-line);
 	}
+	/* Entrada em cascata — cada bloco chega 70ms depois do anterior */
+	.enter {
+		animation: pf-fade-up 480ms var(--ease) backwards;
+		animation-delay: calc(var(--d, 0) * 70ms);
+	}
+	.mode-swap {
+		animation: pf-fade-up 240ms var(--ease) backwards;
+	}
+	.form-error {
+		animation: login-shake 360ms var(--ease);
+	}
+	@keyframes login-shake {
+		0%,
+		100% {
+			transform: translateX(0);
+		}
+		20% {
+			transform: translateX(-5px);
+		}
+		40% {
+			transform: translateX(5px);
+		}
+		60% {
+			transform: translateX(-3px);
+		}
+		80% {
+			transform: translateX(3px);
+		}
+	}
 	.login-glow {
 		position: absolute;
 		pointer-events: none;
+		animation: pf-glow-drift 14s ease-in-out infinite;
 	}
 	.login-glow--top {
 		top: -100px;
@@ -295,6 +333,7 @@
 		background: var(--bg-0);
 	}
 	.login-tabs {
+		position: relative;
 		display: flex;
 		gap: 4px;
 		padding: 4px;
@@ -302,6 +341,21 @@
 		background: var(--bg-2);
 		border: 1px solid var(--ink-line);
 		margin-bottom: 32px;
+	}
+	/* Pill que desliza por baixo dos botões na troca de aba */
+	.login-tabs__pill {
+		position: absolute;
+		top: 4px;
+		bottom: 4px;
+		left: 4px;
+		width: calc(50% - 6px);
+		border-radius: var(--r-1);
+		background: var(--bg-4);
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+		transition: transform 260ms var(--ease-spring);
+	}
+	.login-tabs.signup .login-tabs__pill {
+		transform: translateX(calc(100% + 4px));
 	}
 	.login-tabs button {
 		flex: 1;
@@ -312,10 +366,10 @@
 		background: transparent;
 		color: var(--ink-2);
 		font: 500 13px var(--font-sans);
-		transition: all 140ms var(--ease);
+		transition: color 140ms var(--ease);
+		position: relative;
 	}
 	.login-tabs button.on {
-		background: var(--bg-4);
 		color: var(--ink-0);
 	}
 	.consent-row {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Sidebar, MobileTopbar, MobileTabbar, MobileMoreSheet } from '$lib/components/layout';
+	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 
@@ -30,7 +31,14 @@
 		<MobileTopbar {userName} />
 
 		<main class="pf-main">
-			{@render children()}
+			<!-- {#key pathname} remonta o conteúdo a cada troca de rota, re-disparando
+			     a animação CSS de entrada. Substituto leve das View Transitions
+			     (removidas — congelavam a main thread; ver +layout.svelte raiz). -->
+			{#key page.url.pathname}
+				<div class="page-enter">
+					{@render children()}
+				</div>
+			{/key}
 		</main>
 
 		<MobileTabbar onMore={() => (moreOpen = true)} />
@@ -72,7 +80,14 @@
 		min-width: 0;
 		min-height: 0;
 		overflow-y: auto;
-		view-transition-name: page-content;
+	}
+	.page-enter {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		animation: pf-fade-up var(--dur-2) var(--ease) both;
 	}
 	@media (max-width: 1023px) {
 		.pf-main {

@@ -102,9 +102,9 @@
 
 	<div class="pf-sidebar__section">Workspace</div>
 	<nav class="pf-sidebar__nav">
-		{#each NAV_PRO as it (it.id)}
+		{#each NAV_PRO as it, i (it.id)}
 			{@const on = isActive(it.href)}
-			<a class="pf-navitem" class:on href={it.href}>
+			<a class="pf-navitem" class:on href={it.href} style="--stagger:{i}">
 				<span class="pf-navitem__indicator" class:on></span>
 				<span class="pf-navitem__icon" class:on>
 					<NavIcon name={it.icon} size={18} />
@@ -235,6 +235,9 @@
 			background 140ms var(--ease),
 			color 140ms var(--ease);
 		text-decoration: none;
+		/* Entrada em cascata — cada item chega 30ms depois do anterior */
+		animation: pf-fade-up var(--dur-2) var(--ease) backwards;
+		animation-delay: calc(var(--stagger, 0) * 30ms);
 	}
 	.pf-sidebar.dense .pf-navitem {
 		padding: 8px 12px;
@@ -242,6 +245,13 @@
 	.pf-navitem:hover {
 		background: var(--bg-2);
 		color: var(--ink-0);
+	}
+	.pf-navitem:hover .pf-navitem__icon {
+		transform: translateX(2px) scale(1.08);
+		color: var(--ink-0);
+	}
+	.pf-navitem:active {
+		transform: scale(0.98);
 	}
 	.pf-navitem.on {
 		background: var(--bg-3);
@@ -257,7 +267,8 @@
 		height: 0;
 		background: var(--accent);
 		border-radius: 0 2px 2px 0;
-		transition: height 200ms var(--ease);
+		transition: height 260ms var(--ease-spring);
+		box-shadow: 0 0 8px var(--accent-glow);
 	}
 	.pf-navitem__indicator.on {
 		height: 18px;
@@ -265,6 +276,9 @@
 	.pf-navitem__icon {
 		color: var(--ink-2);
 		display: flex;
+		transition:
+			transform 200ms var(--ease-spring),
+			color 140ms var(--ease);
 	}
 	.pf-navitem__icon.on {
 		color: var(--accent);
@@ -283,6 +297,7 @@
 		border-radius: var(--r-pill);
 		font-variant-numeric: tabular-nums;
 		box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.18);
+		animation: pf-pop 320ms var(--ease-spring) both;
 	}
 	.pf-userpill {
 		display: flex;
