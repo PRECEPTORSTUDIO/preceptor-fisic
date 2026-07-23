@@ -58,3 +58,22 @@ describe('verifyStudentToken', () => {
 		expect(verifyStudentToken('id', same_length_wrong)).toBe(false);
 	});
 });
+
+describe('token versionado (revogação por aluno)', () => {
+	it('versão 1 mantém o formato legado (links já enviados seguem válidos)', () => {
+		const legacy = signStudentToken('student-123');
+		expect(signStudentToken('student-123', 1)).toBe(legacy);
+	});
+
+	it('incrementar a versão muda o token e invalida o anterior', () => {
+		const v1 = signStudentToken('student-123', 1);
+		const v2 = signStudentToken('student-123', 2);
+		expect(v2).not.toBe(v1);
+		expect(verifyStudentToken('student-123', v1, 2)).toBe(false);
+		expect(verifyStudentToken('student-123', v2, 2)).toBe(true);
+	});
+
+	it('versões diferentes não colidem entre alunos', () => {
+		expect(signStudentToken('student-A', 2)).not.toBe(signStudentToken('student-B', 2));
+	});
+});

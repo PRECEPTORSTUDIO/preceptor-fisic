@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
@@ -40,7 +41,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		logger.error('asaas-webhook: ASAAS_WEBHOOK_TOKEN não configurado');
 		return json({ error: 'not configured' }, { status: 503 });
 	}
-	if (request.headers.get('asaas-access-token') !== env.ASAAS_WEBHOOK_TOKEN) {
+	const gotToken = Buffer.from(request.headers.get('asaas-access-token') ?? '');
+	const wantToken = Buffer.from(env.ASAAS_WEBHOOK_TOKEN);
+	if (gotToken.length !== wantToken.length || !timingSafeEqual(gotToken, wantToken)) {
 		return json({ error: 'unauthorized' }, { status: 401 });
 	}
 

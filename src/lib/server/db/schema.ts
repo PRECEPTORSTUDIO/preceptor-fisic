@@ -186,6 +186,11 @@ export const students = pgTable(
 		 * auto-preenchimento e ainda não preencheu os próprios dados.
 		 */
 		profileCompletedAt: timestamp('profile_completed_at', { withTimezone: true }),
+		/**
+		 * Versão do magic-link do aluno (ver aluno-token.ts). Incrementar
+		 * revoga o link atual daquele aluno sem afetar os demais.
+		 */
+		linkTokenVersion: integer('link_token_version').default(1).notNull(),
 		deletedAt: timestamp('deleted_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()

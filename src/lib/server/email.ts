@@ -209,6 +209,7 @@ export async function sendAppointmentNotification(opts: {
 	type: string;
 	label?: string | null;
 	studentId: string;
+	linkTokenVersion?: number;
 	/** 'agendada' (default) | 'remarcada' | 'cancelada' — muda assunto e corpo. */
 	variant?: 'agendada' | 'remarcada' | 'cancelada';
 }): Promise<EmailResult> {
@@ -272,7 +273,7 @@ export async function sendAppointmentNotification(opts: {
 			`Sessão ${a.subj}.`,
 			body,
 			// Link do app do aluno é token-gated: sem ?t=, o /a/[id] responde 403.
-			`${APP_URL}/a/${opts.studentId}?t=${signStudentToken(opts.studentId)}`,
+			`${APP_URL}/a/${opts.studentId}?t=${signStudentToken(opts.studentId, opts.linkTokenVersion ?? 1)}`,
 			'Abrir meu app →'
 		),
 		tag: 'appointment.notification'

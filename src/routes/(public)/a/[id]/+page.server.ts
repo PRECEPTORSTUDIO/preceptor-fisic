@@ -3,14 +3,13 @@ import { inArray } from 'drizzle-orm';
 import { getAlunoAppData } from '$lib/server/queries';
 import { db } from '$lib/server/db';
 import { exerciseCatalog } from '$lib/server/db/schema';
-import { verifyStudentToken } from '$lib/server/aluno-token';
-import { dev } from '$app/environment';
+import { verifyStudentAccess, alunoDevBypass } from '$lib/server/aluno-token';
 import type { PageServerLoad } from './$types';
 
 export const load = (async ({ params, url }) => {
 	const token = url.searchParams.get('t');
-	const tokenValid = verifyStudentToken(params.id, token);
-	if (!tokenValid && !dev) {
+	const tokenValid = await verifyStudentAccess(params.id, token);
+	if (!tokenValid && !alunoDevBypass()) {
 		error(403, 'link inválido ou expirado — peça pro seu treinador um novo link.');
 	}
 

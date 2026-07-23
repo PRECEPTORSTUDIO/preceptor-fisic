@@ -6,6 +6,7 @@ import { localDateKey } from '$lib/server/tz';
 import { audit, clientFingerprint } from '$lib/server/audit';
 import { signStudentToken } from '$lib/server/aluno-token';
 import { sendStudentMagicLink, sendStudentFillLink } from '$lib/server/email';
+import { checkRateLimit } from '$lib/server/rate-limit';
 import { env as pubEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
 import { error } from '@sveltejs/kit';
@@ -148,7 +149,11 @@ export const actions: Actions = {
 			const fillUrl = `${appBaseUrl(url.origin)}/a/${id}/completar?t=${token}`;
 
 			// Dispara o e-mail com o link (best-effort, não bloqueia).
+			// Rate limit por professional: criar alunos em série não pode virar
+			// canal de spam com o domínio verificado do Resend.
+			const rl = checkRateLimit('email_send', `student-create:${professional.id}`);
 			try {
+				if (!rl.allowed) throw new Error('rate-limited');
 				await sendStudentFillLink({
 					to: parsed.data.email,
 					studentName: parsed.data.name,
@@ -267,8 +272,12 @@ export const actions: Actions = {
 		});
 
 		// Se o aluno tem email cadastrado, dispara o magic-link automaticamente.
+		// Mesmo rate limit do fluxo de fill-link: criação em série não pode
+		// virar canal de spam.
 		if (parsed.data.email) {
+			const rl = checkRateLimit('email_send', `student-create:${professional.id}`);
 			try {
+				if (!rl.allowed) throw new Error('rate-limited');
 				const token = signStudentToken(id);
 				const magicLinkUrl = `${appBaseUrl(url.origin)}/a/${id}?t=${token}`;
 				await sendStudentMagicLink({
