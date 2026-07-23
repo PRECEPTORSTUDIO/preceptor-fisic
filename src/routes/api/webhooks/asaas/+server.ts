@@ -12,6 +12,7 @@ import {
 	type AsaasPaymentPayload
 } from '$lib/server/asaas';
 import { sendEbookPurchaseAlert } from '$lib/server/email';
+import { syncLeadStageFromProfessional, upsertEbookBuyerLead } from '$lib/server/queries';
 import { logger } from '$lib/server/logger';
 
 /**
@@ -116,7 +117,16 @@ async function applyEvent(body: {
 			paymentId: payment.id ?? '(sem id)',
 			value: typeof payment.value === 'number' ? payment.value : null
 		});
-		return { skipped: `ebook vendido — alerta enviado (comprador: ${buyer.email ?? '?'})` };
+		// Comprador entra no CRM — é de lá que o time pega o email pra
+		// compartilhar o ebook no Drive (entrega manual).
+		if (buyer.email) {
+			await upsertEbookBuyerLead({
+				name: buyer.name,
+				email: buyer.email,
+				paymentId: payment.id ?? '(sem id)'
+			});
+		}
+		return { skipped: `ebook vendido — alerta + lead no CRM (${buyer.email ?? 'sem email'})` };
 	}
 
 	const plan = planFromPayment(payment);
@@ -187,6 +197,12 @@ async function applyEvent(body: {
 			.set({ subscriptionStatus: 'cancelled', updatedAt: sql`now()` })
 			.where(eq(professionals.id, prof.id));
 	}
+
+	// Espelha a mudança de assinatura no funil do CRM (pagante/cancelado/...).
+	// Best-effort: falha aqui não pode derrubar o processamento do pagamento.
+	await syncLeadStageFromProfessional(prof.id).catch((e) =>
+		logger.warn({ err: String(e).slice(0, 200) }, 'asaas-webhook.lead-sync.failed')
+	);
 
 	return { professionalId: prof.id };
 }

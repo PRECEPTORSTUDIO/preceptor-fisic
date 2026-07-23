@@ -2718,6 +2718,49 @@ export async function syncLeadStageFromProfessional(professionalId: string): Pro
 		.where(eq(leads.subjectProfessionalId, professionalId));
 }
 
+/**
+ * Comprador do EBOOK vira lead no CRM — é de lá que o Jonas pega o email
+ * pra compartilhar o Drive (entrega manual). Dedup por email (case-insensitive):
+ * se o lead já existe, só anexa a nota da compra; senão cria um novo.
+ * Se o email for de um usuário cadastrado, vincula via subjectProfessionalId.
+ */
+export async function upsertEbookBuyerLead(params: {
+	name: string | null;
+	email: string;
+	paymentId: string;
+}): Promise<void> {
+	const email = params.email.trim().toLowerCase();
+	const boughtAt = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+	const note = `[EBOOK] Comprou o Ebook ACSM (R$ 29,90) em ${boughtAt} — LIBERAR acesso no Drive pra este email. Cobrança Asaas: ${params.paymentId}.`;
+
+	const [existing] = await db
+		.select({ id: leads.id, notes: leads.notes })
+		.from(leads)
+		.where(sql`lower(${leads.email}) = ${email}`)
+		.limit(1);
+
+	if (existing) {
+		const notes = existing.notes ? `${existing.notes}\n${note}` : note;
+		await db.update(leads).set({ notes, updatedAt: new Date() }).where(eq(leads.id, existing.id));
+		return;
+	}
+
+	const [prof] = await db
+		.select({ id: professionals.id })
+		.from(professionals)
+		.where(sql`lower(${professionals.email}) = ${email}`)
+		.limit(1);
+
+	await db.insert(leads).values({
+		subjectProfessionalId: prof?.id ?? null,
+		name: params.name?.trim() || email,
+		email,
+		source: 'site',
+		stage: prof ? 'cadastrou' : 'visitante',
+		notes: note
+	});
+}
+
 /* ────────── FEEDBACK (beta testers) ────────── */
 
 export type FeedbackCategory = 'bug' | 'sugestao' | 'duvida' | 'elogio' | 'outro';
