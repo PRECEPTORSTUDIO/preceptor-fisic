@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Avatar from '../ui/avatar.svelte';
-	import ThemeToggle from '../ui/theme-toggle.svelte';
-	import NavIcon from './nav-icon.svelte';
+		import NavIcon from './nav-icon.svelte';
 	import { BrandMark } from '$lib/components/ui';
 
 	type NavItem = {
@@ -132,7 +131,9 @@
 				<span style="flex:1">{it.label}</span>
 			</a>
 		{/each}
-		<ThemeToggle variant="nav" />
+		<!-- Toggle de tema saiu daqui: a variante nav usava classes pf-navitem
+		     com escopo DESTE componente e renderizava sem estilo dentro do
+		     theme-toggle. Agora vive no canto superior direito do layout. -->
 		<!-- Logout via POST (anti-CSRF) — GET /logout foi removido -->
 		<form method="POST" action="/logout" style="display:contents">
 			<button class="pf-navitem" type="submit" style="width:100%">
