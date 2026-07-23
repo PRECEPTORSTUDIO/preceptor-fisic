@@ -132,7 +132,9 @@
 				<span style="flex:1">{it.label}</span>
 			</a>
 		{/each}
-		<ThemeToggle variant="nav" />
+		<!-- Toggle de tema saiu daqui: a variante nav usava classes pf-navitem
+		     com escopo DESTE componente e renderizava sem estilo dentro do
+		     theme-toggle. Agora vive no canto superior direito do layout. -->
 		<!-- Logout via POST (anti-CSRF) — GET /logout foi removido -->
 		<form method="POST" action="/logout" style="display:contents">
 			<button class="pf-navitem" type="submit" style="width:100%">
