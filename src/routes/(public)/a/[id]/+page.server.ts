@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { inArray } from 'drizzle-orm';
-import { getAlunoAppData } from '$lib/server/queries';
+import { getAlunoAppData, getAlunoUnreadCount } from '$lib/server/queries';
 import { db } from '$lib/server/db';
 import { exerciseCatalog } from '$lib/server/db/schema';
 import { verifyStudentAccess, alunoDevBypass } from '$lib/server/aluno-token';
@@ -43,5 +43,7 @@ export const load = (async ({ params, url }) => {
 		}
 	}
 
-	return { ...data, tokenValid, videoByCatalogId };
+	const unreadMessages = await getAlunoUnreadCount(params.id);
+
+	return { ...data, tokenValid, videoByCatalogId, unreadMessages };
 }) satisfies PageServerLoad;

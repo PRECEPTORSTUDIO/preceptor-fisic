@@ -1655,6 +1655,146 @@ export async function postMessage(
 	return m;
 }
 
+/* ────────── chat — lado do ALUNO (app /a/[id]) ────────── */
+
+export type AlunoThread = {
+	professionalName: string;
+	messages: Message[];
+};
+
+/**
+ * Resolve student → professional. Base das operações de chat do aluno: o
+ * studentId vem SEMPRE da rota tokenizada, e o professionalId é derivado dele
+ * no servidor (nunca do cliente) — o aluno não consegue endereçar outro
+ * profissional. Null se o aluno não existe ou foi soft-deletado.
+ */
+async function resolveAlunoPro(
+	studentId: string
+): Promise<{ studentId: string; professionalId: string; professionalName: string } | null> {
+	if (!isUuid(studentId)) return null;
+	const [row] = await db
+		.select({
+			id: students.id,
+			professionalId: students.professionalId,
+			professionalName: professionals.name
+		})
+		.from(students)
+		.innerJoin(professionals, eq(professionals.id, students.professionalId))
+		.where(and(eq(students.id, studentId), isNull(students.deletedAt)))
+		.limit(1);
+	if (!row) return null;
+	return {
+		studentId: row.id,
+		professionalId: row.professionalId,
+		professionalName: row.professionalName
+	};
+}
+
+/**
+ * Carrega a conversa do aluno (thread 1:1 com o profissional dele) pro app
+ * /a/[id]. NÃO cria a conversa — abrir a aba não deve poluir a inbox do
+ * profissional; a conversa nasce no primeiro envio (postAlunoMessage). Se
+ * ainda não existe, devolve lista vazia. Abrir marca como lidas as mensagens
+ * do profissional.
+ */
+export async function getAlunoThread(studentId: string): Promise<AlunoThread | null> {
+	const ctx = await resolveAlunoPro(studentId);
+	if (!ctx) return null;
+
+	const [conv] = await db
+		.select({ id: conversations.id })
+		.from(conversations)
+		.where(
+			and(
+				eq(conversations.professionalId, ctx.professionalId),
+				eq(conversations.studentId, ctx.studentId)
+			)
+		)
+		.limit(1);
+
+	if (!conv) return { professionalName: ctx.professionalName, messages: [] };
+
+	await db
+		.update(messages)
+		.set({ readAt: new Date() })
+		.where(
+			and(
+				eq(messages.conversationId, conv.id),
+				eq(messages.fromRole, 'professional'),
+				isNull(messages.readAt)
+			)
+		);
+
+	const msgs = await db
+		.select()
+		.from(messages)
+		.where(eq(messages.conversationId, conv.id))
+		.orderBy(asc(messages.createdAt));
+
+	return { professionalName: ctx.professionalName, messages: msgs };
+}
+
+/**
+ * Nº de mensagens do PROFISSIONAL ainda não lidas pelo aluno — alimenta o
+ * badge na tab bar do app do aluno. 0 se não há conversa.
+ */
+export async function getAlunoUnreadCount(studentId: string): Promise<number> {
+	if (!isUuid(studentId)) return 0;
+	const [row] = await db
+		.select({ n: count() })
+		.from(messages)
+		.innerJoin(conversations, eq(conversations.id, messages.conversationId))
+		.where(
+			and(
+				eq(conversations.studentId, studentId),
+				eq(messages.fromRole, 'professional'),
+				isNull(messages.readAt)
+			)
+		);
+	return row?.n ?? 0;
+}
+
+/**
+ * Envia mensagem do ALUNO. O cliente NÃO informa conversationId: o servidor
+ * resolve (ou cria) a thread 1:1 a partir do studentId já validado pelo token
+ * — não há como endereçar conversa de outro aluno. A conversa nasce aqui, no
+ * primeiro envio.
+ */
+export async function postAlunoMessage(studentId: string, body: string): Promise<Message> {
+	const ctx = await resolveAlunoPro(studentId);
+	if (!ctx) throw new Error('Aluno não encontrado.');
+
+	await db
+		.insert(conversations)
+		.values({ professionalId: ctx.professionalId, studentId: ctx.studentId })
+		.onConflictDoNothing({
+			target: [conversations.professionalId, conversations.studentId]
+		});
+
+	const [conv] = await db
+		.select({ id: conversations.id })
+		.from(conversations)
+		.where(
+			and(
+				eq(conversations.professionalId, ctx.professionalId),
+				eq(conversations.studentId, ctx.studentId)
+			)
+		)
+		.limit(1);
+	if (!conv) throw new Error('Falha ao abrir conversa');
+
+	const [m] = await db
+		.insert(messages)
+		.values({ conversationId: conv.id, body, fromRole: 'student' })
+		.returning();
+	if (!m) throw new Error('Falha ao inserir mensagem');
+	await db
+		.update(conversations)
+		.set({ lastMessageAt: new Date() })
+		.where(eq(conversations.id, conv.id));
+	return m;
+}
+
 /* ────────── APPOINTMENTS ────────── */
 
 export type AppointmentRow = Appointment & { studentName: string | null };

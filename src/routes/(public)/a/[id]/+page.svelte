@@ -340,9 +340,14 @@
 
 	<!-- Bottom tab bar -->
 	<nav class="tab-bar">
-		{#each [{ id: 'hoje', icon: '◉', label: 'Hoje', href: `/a/${student.id}${tq}` }, { id: 'plano', icon: '▤', label: 'Plano', href: `/a/${student.id}${tq}#plano` }, { id: 'historico', icon: '◔', label: 'Histórico', href: `/a/${student.id}/historico${tq}` }] as t (t.id)}
+		{#each [{ id: 'hoje', icon: '◉', label: 'Hoje', href: `/a/${student.id}${tq}` }, { id: 'plano', icon: '▤', label: 'Plano', href: `/a/${student.id}${tq}#plano` }, { id: 'mensagens', icon: '✉', label: 'Mensagens', href: `/a/${student.id}/mensagens${tq}` }, { id: 'historico', icon: '◔', label: 'Histórico', href: `/a/${student.id}/historico${tq}` }] as t (t.id)}
 			<a href={t.href} class="tab-link" class:on={t.id === 'hoje'}>
-				<span style="font-size:20px">{t.icon}</span>
+				<span style="position:relative;font-size:20px">
+					{t.icon}
+					{#if t.id === 'mensagens' && (data.unreadMessages ?? 0) > 0}
+						<span class="tab-badge">{data.unreadMessages}</span>
+					{/if}
+				</span>
 				<span style="font:500 10px var(--font-sans)">{t.label}</span>
 			</a>
 		{/each}
@@ -605,7 +610,7 @@
 		-webkit-backdrop-filter: blur(20px);
 		border-top: 1px solid var(--ink-line);
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(4, 1fr);
 		padding: 10px 0 max(env(safe-area-inset-bottom, 12px), 12px);
 		z-index: 50;
 	}
@@ -620,6 +625,23 @@
 	}
 	.tab-link.on {
 		color: var(--accent);
+	}
+	.tab-badge {
+		position: absolute;
+		top: -6px;
+		right: -10px;
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		box-sizing: border-box;
+		border-radius: var(--r-pill);
+		background: var(--accent);
+		color: #0a0a0a;
+		font: 600 10px var(--font-mono);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		line-height: 1;
 	}
 
 	/* Onboarding overlay */
