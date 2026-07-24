@@ -253,7 +253,10 @@
 						<li>Onboarding dedicado</li>
 						<li>Contrato e faturamento</li>
 					</ul>
-					<a class="btn btn-block" href="mailto:preceptorfisic@ospreceptores.com?subject=Plano%20Institucional%20PreceptorFISIC">
+					<a
+						class="btn btn-block"
+						href="https://wa.me/553591481514?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20plano%20Institucional%20do%20PreceptorFISIC."
+					>
 						Falar com o time
 					</a>
 				</article>
@@ -287,7 +290,11 @@
 		<p>O primeiro plano sai em menos de um minuto, com as restrições clínicas já apontadas.</p>
 		<div class="fim-acoes">
 			<a class="btn btn-lg" href="/login?mode=signup">Começar agora</a>
-			<a class="btn btn-ghost btn-lg" href="mailto:preceptorfisic@ospreceptores.com?subject=D%C3%BAvidas%20sobre%20o%20PreceptorFISIC">
+			<!-- Mesmo WhatsApp da landing page, com mensagem já preenchida. -->
+			<a
+				class="btn btn-ghost btn-lg"
+				href="https://wa.me/553591481514?text=Ol%C3%A1%21%20Tenho%20uma%20d%C3%BAvida%20sobre%20o%20PreceptorFISIC."
+			>
 				Tirar uma dúvida
 			</a>
 		</div>
