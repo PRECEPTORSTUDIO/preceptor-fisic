@@ -94,6 +94,14 @@
 					Para revisar ou corrigir depois, abra <span class="path">Configurações</span> no menu.
 					Ali ficam a conta, o e-mail, o registro e a especialidade que o aluno enxerga.
 				</p>
+
+				<h3>Tema claro e escuro</h3>
+				<p>
+					A plataforma abre no tema do seu aparelho e você troca quando quiser pelo botão de sol e
+					lua, no menu lateral do computador ou no topo do celular. A escolha fica guardada e vale
+					para os próximos acessos. O aplicativo do aluno tem o mesmo botão, e a escolha dele é
+					independente da sua.
+				</p>
 				<div class="callout cuidado">
 					<span class="ic">!</span>
 					<p>
@@ -335,13 +343,34 @@
 				<h2>Assinatura e acesso</h2>
 				<p>
 					O acesso à plataforma depende de assinatura ativa. Os planos se diferenciam pelo limite
-					de alunos e de gerações por mês. A cobrança é feita pelos links de pagamento, e o acesso
-					é liberado após a confirmação do pagamento.
+					de alunos ativos e pelo número de treinos gerados por mês:
+				</p>
+				<ul class="plain">
+					<li>
+						<strong>Essencial</strong>, até 60 alunos ativos e 20 treinos gerados por mês
+					</li>
+					<li><strong>Pro</strong>, até 150 alunos ativos e 50 treinos gerados por mês</li>
+					<li>
+						<strong>Institucional</strong>, para equipes, com múltiplos profissionais e 100 treinos
+						gerados por mês
+					</li>
+				</ul>
+				<p>
+					Cada plano tem cobrança mensal ou anual. No ciclo anual você paga dez meses e usa doze.
+					A cobrança é feita por link de pagamento e o acesso é liberado assim que o pagamento é
+					confirmado, sem espera manual.
 				</p>
 				<p>
 					Se o pagamento ficar pendente, o acesso é interrompido até a regularização. Os dados dos
 					seus alunos continuam salvos e voltam assim que a assinatura for retomada.
 				</p>
+				<div class="callout dica">
+					<span class="ic">›</span>
+					<p>
+						<span class="lbl">Onde acompanhar</span>O plano contratado, as faturas e a troca de
+						plano ficam em <span class="path">Configurações</span>, na área de plano e cobrança.
+					</p>
+				</div>
 				<div class="callout dica">
 					<span class="ic">›</span>
 					<p>
@@ -371,9 +400,14 @@
 				<div class="eyebrow">Ajuda</div>
 				<h2>Suporte</h2>
 				<p>
-					Para dúvidas de uso, problema com um plano ou pedido de ajuda, fale com o time pelo canal
-					de atendimento da plataforma. Ao relatar um problema, informe o aluno e o plano
-					envolvidos, que a resolução fica mais rápida.
+					O <span class="path">Feedback</span>, no menu, é o canal direto com quem constrói a
+					plataforma. Escolha a categoria que descreve o caso, bug, sugestão, dúvida, elogio ou
+					outro, e escreva o que aconteceu. O campo <strong>Onde aconteceu</strong> é opcional,
+					mas preencher com a tela ajuda bastante, algo como "tela de gerar plano" já basta.
+				</p>
+				<p>
+					Ao relatar um problema, diga qual aluno e qual plano estavam envolvidos e o que você
+					esperava que acontecesse. Isso encurta bastante o caminho até a correção.
 				</p>
 			</section>
 
