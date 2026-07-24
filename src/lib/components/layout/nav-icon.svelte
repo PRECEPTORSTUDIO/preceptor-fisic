@@ -1,5 +1,5 @@
 <script lang="ts">
-	type IconName = 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout' | 'feedback';
+	type IconName = 'home' | 'alunos' | 'planos' | 'exer' | 'msgs' | 'agenda' | 'aluno' | 'crm' | 'config' | 'logout' | 'feedback' | 'guia';
 	type Props = { name: IconName; size?: number };
 	let { name, size = 18 }: Props = $props();
 </script>
@@ -43,5 +43,9 @@
 		<!-- Balão de conversa com coração (feedback) -->
 		<path d="M4 5h16v11H9l-5 4z" />
 		<path d="M12 8.5c-1-1.2-3-.6-3 1 0 1.3 1.6 2.2 3 3.2 1.4-1 3-1.9 3-3.2 0-1.6-2-2.2-3-1z" />
+	{:else if name === 'guia'}
+		<!-- Livro aberto (guia de uso) -->
+		<path d="M12 6c-1.5-1-3.5-1.5-5.5-1.5C5 4.5 4 4.7 4 4.7v13S5 17.5 6.5 17.5c2 0 4 .5 5.5 1.5" />
+		<path d="M12 6c1.5-1 3.5-1.5 5.5-1.5C19 4.5 20 4.7 20 4.7v13S19 17.5 17.5 17.5c-2 0-4 .5-5.5 1.5z" />
 	{/if}
 </svg>
