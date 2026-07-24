@@ -2,13 +2,12 @@ import { error } from '@sveltejs/kit';
 import { eq, desc, and, isNull, count } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { trainingSessions, students } from '$lib/server/db/schema';
-import { verifyStudentToken } from '$lib/server/aluno-token';
-import { dev } from '$app/environment';
+import { verifyStudentAccess, alunoDevBypass } from '$lib/server/aluno-token';
 import type { PageServerLoad } from './$types';
 
 export const load = (async ({ params, url }) => {
 	const token = url.searchParams.get('t');
-	if (!verifyStudentToken(params.id, token) && !dev) {
+	if (!(await verifyStudentAccess(params.id, token)) && !alunoDevBypass()) {
 		error(403, 'link inválido.');
 	}
 

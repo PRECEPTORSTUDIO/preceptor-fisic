@@ -47,6 +47,7 @@
 
 	let showLinkModal = $state(false);
 	let resending = $state(false);
+	let revoking = $state(false);
 
 	// Rótulo do card de plano pelo status real — plano gerando ou com falha
 	// não pode aparecer como "Encerrado".
@@ -762,6 +763,31 @@
 				{/if}
 			</div>
 
+			<!-- Revogação: incrementa link_token_version no servidor — o link
+			     antigo passa a responder 403 na hora; invalidate() recarrega o
+			     load e o input acima já mostra a URL nova. -->
+			<form
+				method="POST"
+				action="?/revokeLink"
+				style="display:contents"
+				use:enhance={() => {
+					revoking = true;
+					return async ({ result, update }) => {
+						revoking = false;
+						if (result.type === 'success') {
+							toast.success('Link anterior revogado — copie e reenvie o novo link.');
+						} else if (result.type === 'failure') {
+							toast.error(String((result.data as { error?: string })?.error ?? 'Falha ao revogar.'));
+						}
+						await update({ reset: false });
+					};
+				}}
+			>
+				<button type="submit" class="link-revoke" disabled={revoking}>
+					{revoking ? 'Revogando…' : '⊘ Revogar este link (gera um novo)'}
+				</button>
+			</form>
+
 			<button type="button" class="link-close" onclick={() => (showLinkModal = false)}>
 				Fechar
 			</button>
@@ -914,6 +940,25 @@
 	}
 	.link-action.whatsapp:hover {
 		background: rgba(37, 211, 102, 0.18);
+	}
+	.link-revoke {
+		width: 100%;
+		margin-top: 14px;
+		padding: 10px 12px;
+		background: transparent;
+		border: 1px dashed var(--danger);
+		border-radius: var(--r-2);
+		color: var(--danger);
+		font: 500 12.5px var(--font-sans);
+		cursor: pointer;
+		transition: background 140ms var(--ease);
+	}
+	.link-revoke:hover {
+		background: var(--danger-dim);
+	}
+	.link-revoke:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.link-close {
 		display: block;

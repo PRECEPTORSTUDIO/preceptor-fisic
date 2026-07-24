@@ -1,11 +1,18 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { env } from '$env/dynamic/private';
+import { building } from '$app/environment';
 import * as schema from './schema';
 
-if (!env.DATABASE_URL) {
+// Durante o BUILD (fase analyse do SvelteKit importa todos os chunks do
+// servidor) não há env de runtime — sem este guard, qualquer deploy em
+// ambiente sem DATABASE_URL (ex: Preview) quebra no npm run build. O
+// postgres() só conecta na primeira query, então o placeholder nunca é
+// usado de verdade; em runtime o throw continua valendo.
+if (!building && !env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is required');
 }
+const DB_URL = env.DATABASE_URL ?? 'postgresql://building:building@localhost:5432/building';
 
 // Pool por instância. Usa o pooler de TRANSAÇÃO do Supabase (pgBouncer,
 // porta 6543, prepare:false), que multiplexa milhares de conexões de
@@ -17,7 +24,7 @@ if (!env.DATABASE_URL) {
 // Override por DB_POOL_MAX se precisar.
 const POOL_MAX = Number(env.DB_POOL_MAX ?? '') || 10;
 
-const client = postgres(env.DATABASE_URL, {
+const client = postgres(DB_URL, {
 	prepare: false,
 	max: POOL_MAX,
 	idle_timeout: 20,

@@ -361,14 +361,16 @@
 					confirmado, sem espera manual.
 				</p>
 				<p>
-					Se o pagamento ficar pendente, o acesso é interrompido até a regularização. Os dados dos
-					seus alunos continuam salvos e voltam assim que a assinatura for retomada.
+					Com a assinatura em dia, tudo funciona normalmente. Se o pagamento ficar pendente ou a
+					assinatura for cancelada, a geração de novos planos é bloqueada até a regularização. O
+					restante continua acessível: você entra na plataforma, consulta os alunos, revisa os
+					planos já publicados e acompanha quem está treinando. Nada é apagado.
 				</p>
 				<div class="callout dica">
 					<span class="ic">›</span>
 					<p>
-						<span class="lbl">Onde acompanhar</span>O plano contratado, as faturas e a troca de
-						plano ficam em <span class="path">Configurações</span>, na área de plano e cobrança.
+						<span class="lbl">Onde acompanhar</span>O <span class="path">Assinatura</span>, no
+						menu, mostra o plano atual, a situação do pagamento e a troca de plano.
 					</p>
 				</div>
 				<div class="callout dica">

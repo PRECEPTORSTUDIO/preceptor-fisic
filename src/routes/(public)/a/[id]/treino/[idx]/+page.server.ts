@@ -3,13 +3,12 @@ import { inArray } from 'drizzle-orm';
 import { getAlunoAppData, logTrainingSession, matchCatalogByName } from '$lib/server/queries';
 import { db } from '$lib/server/db';
 import { exerciseCatalog } from '$lib/server/db/schema';
-import { verifyStudentToken } from '$lib/server/aluno-token';
-import { dev } from '$app/environment';
+import { verifyStudentAccess, alunoDevBypass } from '$lib/server/aluno-token';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load = (async ({ params, url }) => {
 	const token = url.searchParams.get('t');
-	if (!verifyStudentToken(params.id, token) && !dev) {
+	if (!(await verifyStudentAccess(params.id, token)) && !alunoDevBypass()) {
 		error(403, 'link inválido ou expirado.');
 	}
 
@@ -77,7 +76,7 @@ export const actions: Actions = {
 		// o load do app do aluno responde 403 logo após "concluir treino".
 		const fd = await request.formData();
 		const tokenFromForm = String(fd.get('_t') ?? '').trim() || null;
-		if (!verifyStudentToken(params.id!, tokenFromForm) && !dev) {
+		if (!(await verifyStudentAccess(params.id!, tokenFromForm)) && !alunoDevBypass()) {
 			return fail(403, { error: 'sessão expirou — abra o link de novo' });
 		}
 

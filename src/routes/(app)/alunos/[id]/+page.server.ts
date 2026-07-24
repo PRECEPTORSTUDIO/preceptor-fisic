@@ -9,11 +9,11 @@ import {
 	setCardiovascularRisk
 } from '$lib/server/queries';
 import { db } from '$lib/server/db';
-import { trainingPlans } from '$lib/server/db/schema';
+import { trainingPlans, students } from '$lib/server/db/schema';
 import { signStudentToken } from '$lib/server/aluno-token';
 import { sendStudentMagicLink } from '$lib/server/email';
 import { checkRateLimit } from '$lib/server/rate-limit';
-import { audit } from '$lib/server/audit';
+import { audit, clientFingerprint } from '$lib/server/audit';
 import type { Actions, PageServerLoad } from './$types';
 
 // Base pública dos links do aluno — PUBLIC_APP_URL evita copiar/enviar link
@@ -47,7 +47,7 @@ export const load = (async ({ params, parent, url }) => {
 	}));
 
 	const base = appBaseUrl(url.origin);
-	const token = signStudentToken(params.id);
+	const token = signStudentToken(params.id, detail.student.linkTokenVersion);
 	const alunoUrl = `${base}/a/${params.id}?t=${token}`;
 	const fillUrl = `${base}/a/${params.id}/completar?t=${token}`;
 
@@ -64,6 +64,33 @@ export const load = (async ({ params, parent, url }) => {
 const RISK_LEVELS = ['baixo', 'moderado', 'alto', 'muito_alto'] as const;
 
 export const actions: Actions = {
+	// Revoga o link atual do aluno (incrementa link_token_version): o link
+	// antigo passa a responder 403 e o load seguinte já mostra o novo.
+	// Uso: link vazou (print, encaminhamento) — não afeta os demais alunos.
+	revokeLink: async ({ params, locals, request, getClientAddress }) => {
+		if (!locals.user) return fail(401, { error: 'não autenticado' });
+		const professional = await getProfessionalByAuthId(locals.user.id);
+		if (!professional) return fail(401, { error: 'professional não encontrado' });
+
+		const detail = await getStudentDetail(params.id!, professional.id);
+		if (!detail) return fail(404, { error: 'aluno não encontrado' });
+
+		await db
+			.update(students)
+			.set({ linkTokenVersion: detail.student.linkTokenVersion + 1, updatedAt: new Date() })
+			.where(eq(students.id, params.id!));
+
+		await audit({
+			action: 'student.link_revoke',
+			professionalId: professional.id,
+			entityType: 'student',
+			entityId: params.id!,
+			...clientFingerprint(request, getClientAddress)
+		});
+
+		return { linkRevoked: true };
+	},
+
 	// Confirma (ou sobrescreve) o risco CV sugerido pela estratificação
 	// automática. A decisão final é sempre humana — só grava o que o
 	// profissional escolheu no card.
@@ -119,7 +146,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const token = signStudentToken(params.id!);
+		const token = signStudentToken(params.id!, detail.student.linkTokenVersion);
 		const magicLinkUrl = `${appBaseUrl(url.origin)}/a/${params.id}?t=${token}`;
 		const result = await sendStudentMagicLink({
 			to: detail.student.email,

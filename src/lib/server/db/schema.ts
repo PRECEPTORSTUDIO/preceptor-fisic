@@ -154,6 +154,9 @@ export const professionals = pgTable(
 		subscriptionStatus: subscriptionStatusEnum('subscription_status').default('trial').notNull(),
 		subscriptionPlan: text('subscription_plan'),
 		subscriptionExpiresAt: timestamp('subscription_expires_at', { withTimezone: true }),
+		/** Customer no Asaas (cus_...) — criado na 1ª assinatura de dentro do app.
+		 *  Permite match determinístico no webhook (não depende do email digitado). */
+		asaasCustomerId: text('asaas_customer_id').unique(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 	},
@@ -183,6 +186,11 @@ export const students = pgTable(
 		 * auto-preenchimento e ainda não preencheu os próprios dados.
 		 */
 		profileCompletedAt: timestamp('profile_completed_at', { withTimezone: true }),
+		/**
+		 * Versão do magic-link do aluno (ver aluno-token.ts). Incrementar
+		 * revoga o link atual daquele aluno sem afetar os demais.
+		 */
+		linkTokenVersion: integer('link_token_version').default(1).notNull(),
 		deletedAt: timestamp('deleted_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()

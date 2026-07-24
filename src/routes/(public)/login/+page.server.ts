@@ -150,6 +150,13 @@ export const actions: Actions = {
 			}
 		}
 
-		redirect(303, '/dashboard');
+		// Honra ?next= também no signup (funil da LP: assinar → cadastro →
+		// checkout em /assinatura). Mesma validação de path interno do login.
+		const nextRaw = String(data.get('next') ?? '');
+		const dest =
+			nextRaw.startsWith('/') && !nextRaw.startsWith('//') && !nextRaw.startsWith('/\\')
+				? nextRaw
+				: '/dashboard';
+		redirect(303, dest);
 	}
 };

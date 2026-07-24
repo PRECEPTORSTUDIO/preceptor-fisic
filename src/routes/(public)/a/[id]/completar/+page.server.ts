@@ -2,13 +2,12 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getAlunoSelfFillData, completeStudentSelfFillTx } from '$lib/server/queries';
 import { parseDecimalBR, clamp } from '$lib/server/form-utils';
-import { verifyStudentToken } from '$lib/server/aluno-token';
-import { dev } from '$app/environment';
+import { verifyStudentAccess, alunoDevBypass } from '$lib/server/aluno-token';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load = (async ({ params, url }) => {
 	const token = url.searchParams.get('t');
-	if (!verifyStudentToken(params.id, token) && !dev) {
+	if (!(await verifyStudentAccess(params.id, token)) && !alunoDevBypass()) {
 		error(403, 'link inválido ou expirado — peça pro seu treinador um novo link.');
 	}
 
@@ -56,7 +55,7 @@ function parseList(s: string): string[] {
 export const actions: Actions = {
 	default: async ({ params, request, url }) => {
 		const token = url.searchParams.get('t');
-		if (!verifyStudentToken(params.id, token) && !dev) {
+		if (!(await verifyStudentAccess(params.id, token)) && !alunoDevBypass()) {
 			return fail(403, { error: 'link inválido ou expirado.' });
 		}
 

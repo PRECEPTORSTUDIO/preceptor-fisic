@@ -86,7 +86,11 @@ export const actions: Actions = {
 		if (studentId) {
 			try {
 				const [student] = await db
-					.select({ name: students.name, email: students.email })
+					.select({
+						name: students.name,
+						email: students.email,
+						linkTokenVersion: students.linkTokenVersion
+					})
 					.from(students)
 					.where(eq(students.id, studentId))
 					.limit(1);
@@ -99,7 +103,8 @@ export const actions: Actions = {
 						durationMinutes: duration,
 						type: type.data,
 						label,
-						studentId
+						studentId,
+						linkTokenVersion: student.linkTokenVersion
 					}).catch((err) =>
 						logger.error({ err: String(err).slice(0, 200) }, 'appointment.notify.send_failed')
 					);

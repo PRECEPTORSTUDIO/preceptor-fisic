@@ -8,6 +8,10 @@ import {
 import { db } from '$lib/server/db';
 import { trainingPreferences } from '$lib/server/db/schema';
 import { createPlanPlaceholder, generateTrainingPlanInBackground } from '$lib/server/ai/generator';
+import {
+	hasActiveSubscription,
+	SUBSCRIPTION_BLOCKED_MESSAGE
+} from '$lib/server/subscription';
 import type { Actions, PageServerLoad } from './$types';
 
 // Vercel: estende o limite da função pra 300s (máx do plano Pro) — a geração
@@ -38,14 +42,19 @@ const EQUIPMENT_VALUES = [
 	'bench'
 ];
 
-export const load = (async ({ params, parent }) => {
+export const load = (async ({ params, parent, locals }) => {
 	const { professional } = await parent();
 	if (!professional) error(401, 'não autenticado');
 
 	const detail = await getStudentDetail(params.id, professional.id);
 	if (!detail) error(404, 'aluno não encontrado');
 
-	return { detail };
+	// O parent() só expõe campos de perfil — o status de assinatura vem do
+	// registro completo. Flag pra UI desabilitar o gerar antes do POST.
+	const full = locals.user ? await getProfessionalByAuthId(locals.user.id) : null;
+	const subscriptionBlocked = full ? !hasActiveSubscription(full) : false;
+
+	return { detail, subscriptionBlocked };
 }) satisfies PageServerLoad;
 
 export const actions: Actions = {
@@ -60,6 +69,12 @@ export const actions: Actions = {
 		// (ou deletado) — getStudentDetail já filtra os dois casos.
 		const detail = await getStudentDetail(params.id!, professional.id);
 		if (!detail) return fail(404, { error: 'aluno não encontrado' });
+
+		// Gate de assinatura ANTES de qualquer custo: sem status ativo/trial,
+		// nada de chamada à IA (o botão some na UI, mas POST direto cai aqui).
+		if (!hasActiveSubscription(professional)) {
+			return fail(402, { error: SUBSCRIPTION_BLOCKED_MESSAGE, subscriptionBlocked: true });
+		}
 
 		// Rate limit check ANTES de criar placeholder ou chamar IA
 		const recent = await countPlansGeneratedRecent(professional.id, RATE_LIMIT_WINDOW_MIN);

@@ -115,10 +115,16 @@
 	.m-tab__icon {
 		color: var(--ink-2);
 		display: flex;
-		transition: color 140ms var(--ease);
+		transition:
+			color 140ms var(--ease),
+			transform 200ms var(--ease-spring);
+	}
+	.m-tab:active .m-tab__icon {
+		transform: scale(0.88);
 	}
 	.m-tab__icon.on {
 		color: var(--accent);
+		animation: pf-pop 320ms var(--ease-spring);
 	}
 	.m-tab__label {
 		font-size: 10px;
@@ -133,5 +139,6 @@
 		background: var(--accent);
 		border-radius: 0 0 2px 2px;
 		box-shadow: 0 0 8px var(--accent-glow);
+		animation: pf-scale-in 240ms var(--ease-spring);
 	}
 </style>

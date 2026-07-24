@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { verifyStudentToken } from '$lib/server/aluno-token';
-import { dev } from '$app/environment';
+import { verifyStudentAccess, alunoDevBypass } from '$lib/server/aluno-token';
 import type { RequestHandler } from './$types';
 
 /**
@@ -11,9 +10,9 @@ import type { RequestHandler } from './$types';
  * /login sem credenciais. Aqui start_url/scope apontam pro link tokenizado,
  * então o ícone instalado abre direto no treino.
  */
-export const GET: RequestHandler = ({ params, url }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const token = url.searchParams.get('t');
-	if (!verifyStudentToken(params.id, token) && !dev) {
+	if (!(await verifyStudentAccess(params.id, token)) && !alunoDevBypass()) {
 		error(403, 'link inválido.');
 	}
 

@@ -15,6 +15,42 @@ const config = {
 		adapter: adapter({ regions: ['gru1'], runtime: 'nodejs22.x', maxDuration: 300 }),
 		alias: {
 			$lib: './src/lib'
+		},
+		// CSP com nonce por request (mode auto): scripts inline só executam com
+		// o nonce que o Kit injeta — substitui o script-src 'unsafe-inline' que
+		// vivia no vercel.json e anulava a proteção anti-XSS. Os scripts do
+		// app.html levam nonce="%sveltekit.nonce%". style-src segue com
+		// unsafe-inline: Svelte usa style attrs/transições inline à exaustão.
+		csp: {
+			mode: 'auto',
+			directives: {
+				'default-src': ['self'],
+				'script-src': [
+					'self',
+					'https://plausible.io',
+					'https://*.sentry.io',
+					'https://*.ingest.sentry.io',
+					'https://va.vercel-scripts.com'
+				],
+				'style-src': ['self', 'unsafe-inline'],
+				'img-src': ['self', 'data:', 'blob:', 'https:'],
+				'font-src': ['self', 'data:'],
+				'connect-src': [
+					'self',
+					'https://*.supabase.co',
+					'wss://*.supabase.co',
+					'https://plausible.io',
+					'https://*.sentry.io',
+					'https://*.ingest.sentry.io',
+					'https://va.vercel-scripts.com',
+					'https://vitals.vercel-insights.com'
+				],
+				'media-src': ['self', 'blob:'],
+				'frame-ancestors': ['self'],
+				'base-uri': ['self'],
+				'form-action': ['self'],
+				'object-src': ['none']
+			}
 		}
 	},
 	compilerOptions: {

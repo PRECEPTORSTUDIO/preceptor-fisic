@@ -21,6 +21,7 @@ export type AuditAction =
 	| 'student.delete'
 	| 'student.restore'
 	| 'student.magic_link_resent'
+	| 'student.link_revoke'
 	| 'plan.create'
 	| 'plan.publish'
 	| 'plan.archive'

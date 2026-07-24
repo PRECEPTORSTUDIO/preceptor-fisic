@@ -190,19 +190,23 @@
 			name: 'Essencial',
 			desc: 'Para o profissional em crescimento.',
 			items: ['Até 60 alunos ativos', 'Até 20 treinos gerados por IA/mês', 'Histórico completo de planos', 'Suporte por e-mail'],
+			/* Cadastro grátis primeiro; a assinatura é feita em /assinatura dentro
+			   do app (customer Asaas criado com o email da conta → match
+			   determinístico no webhook). Links diretos do Asaas ficam pra venda
+			   assistida (WhatsApp). */
 			cta: 'Começar agora',
 			featured: false,
 			mensal: {
 				price: 'R$ 69,90',
 				period: '/mês',
-				href: 'https://www.asaas.com/c/5c8m1fhyd6c3tsaq'
+				href: '/login?mode=signup&next=' + encodeURIComponent('/assinatura?plan=essencial_mensal')
 			},
 			anual: {
 				price: 'R$ 699,00',
 				period: '/ano',
 				was: 'R$ 838,80',
 				equiv: 'equivale a R$ 58,25/mês',
-				href: 'https://www.asaas.com/c/n2xcnopwqy3n305n'
+				href: '/login?mode=signup&next=' + encodeURIComponent('/assinatura?plan=essencial_anual')
 			}
 		},
 		{
@@ -214,14 +218,14 @@
 			mensal: {
 				price: 'R$ 149,90',
 				period: '/mês',
-				href: 'https://www.asaas.com/c/qihvgcw48aajit37'
+				href: '/login?mode=signup&next=' + encodeURIComponent('/assinatura?plan=pro_mensal')
 			},
 			anual: {
 				price: 'R$ 1.498,80',
 				period: '/ano',
 				was: 'R$ 1.798,80',
 				equiv: 'equivale a R$ 124,90/mês',
-				href: 'https://www.asaas.com/c/9208gp2b2h8mduc7'
+				href: '/login?mode=signup&next=' + encodeURIComponent('/assinatura?plan=pro_anual')
 			}
 		},
 		{

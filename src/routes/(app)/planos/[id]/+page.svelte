@@ -222,13 +222,16 @@
 	// Índice da restrição sendo liberada (override clínico #C02).
 	let resolvingIdx = $state<number | null>(null);
 
+	type PartialEx = { name?: string; reps?: string; sets?: number; load_guidance?: string };
 	type PartialPlan = {
 		summary?: string;
 		weekly_sessions?: Array<{
 			label?: string;
 			focus?: string;
 			duration_minutes?: number;
-			main?: Array<{ name?: string; reps?: string; sets?: number; load_guidance?: string }>;
+			warmup?: PartialEx[];
+			main?: PartialEx[];
+			cooldown?: PartialEx[];
 		}>;
 		restrictions?: Array<{ level?: string; title?: string; description?: string }>;
 		monitoring_parameters?: Array<{ parameter?: string; frequency?: string }>;
@@ -249,16 +252,7 @@
 	let livePhase = $state(plan.status === 'pending' ? 'enfileirado' : 'iniciando…');
 	let liveProgress = $state(5);
 	let livePartial = $state<PartialPlan | null>(null);
-	let liveStreamText = $state<string>('');
-	let streamScrollEl: HTMLPreElement | undefined = $state();
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-	// Auto-scroll do bloco "Gemini escrevendo" pro fim quando texto cresce
-	$effect(() => {
-		if (liveStreamText && streamScrollEl) {
-			streamScrollEl.scrollTop = streamScrollEl.scrollHeight;
-		}
-	});
 
 	$effect(() => {
 		if (!isGenerating) {
@@ -273,9 +267,6 @@
 				livePhase = s.phase ?? livePhase;
 				liveProgress = s.progress;
 				livePartial = s.partial;
-				// ?? '' (não if): o fallback Pro LIMPA streamText no server — a UI
-				// precisa refletir o clear, senão mostra restos do stream do Flash.
-				liveStreamText = s.streamText ?? '';
 				if (s.generated || s.failed) {
 					if (pollInterval) clearInterval(pollInterval);
 					await invalidateAll();
@@ -345,20 +336,7 @@
 				{livePhase}
 			</div>
 
-			<!-- Gemini escrevendo — texto bruto chegando token por token,
-				 estilo terminal/log. Cursor piscando no fim. -->
-			{#if liveStreamText}
-				<div class="gen-stream-block">
-					<div class="gen-stream-header">
-						<span class="gen-stream-dot"></span>
-						<span>PreceptorFISIC · gerando</span>
-						<span class="gen-stream-meta">{liveStreamText.length.toLocaleString('pt-BR')} chars</span>
-					</div>
-					<pre class="gen-stream-text" bind:this={streamScrollEl}>{liveStreamText}<span class="gen-stream-cursor">▋</span></pre>
-				</div>
-			{/if}
-
-			<!-- Plano materializando ao vivo (estruturado) -->
+			<!-- Plano materializando ao vivo — no mesmo formato do plano final -->
 			{#if livePartial}
 				<div class="gen-live">
 					{#if livePartial.summary}
@@ -418,25 +396,35 @@
 													{s.focus}
 												</div>
 											{/if}
-											{#if s.main && s.main.length > 0}
-												<div style="display:flex;flex-direction:column;gap:4px">
-													{#each s.main as ex, ei (ei)}
-														{#if ex.name}
-															<div class="gen-ex">
-																<span style="color:var(--accent)">·</span>
-																<span style="flex:1;font:400 13px var(--font-sans);color:var(--ink-1)"
-																	>{ex.name}</span
-																>
-																{#if ex.sets && ex.reps}
-																	<span class="num" style="font:var(--label-mono);color:var(--ink-3)">
-																		{ex.sets}×{ex.reps}
-																	</span>
+											{#each [{ label: 'Aquecimento', items: s.warmup }, { label: 'Principal', items: s.main }, { label: 'Volta à calma', items: s.cooldown }] as bloco (bloco.label)}
+												{#if bloco.items && bloco.items.length > 0}
+													<div style="margin-top:8px">
+														<div
+															style="font:var(--label-mono);color:var(--ink-3);text-transform:uppercase;margin-bottom:4px"
+														>
+															{bloco.label}
+														</div>
+														<div style="display:flex;flex-direction:column;gap:4px">
+															{#each bloco.items as ex, ei (ei)}
+																{#if ex.name}
+																	<div class="gen-ex">
+																		<span style="color:var(--accent)">·</span>
+																		<span
+																			style="flex:1;font:400 13px var(--font-sans);color:var(--ink-1)"
+																			>{ex.name}</span
+																		>
+																		{#if ex.sets && ex.reps}
+																			<span class="num" style="font:var(--label-mono);color:var(--ink-3)">
+																				{ex.sets}×{ex.reps}
+																			</span>
+																		{/if}
+																	</div>
 																{/if}
-															</div>
-														{/if}
-													{/each}
-												</div>
-											{/if}
+															{/each}
+														</div>
+													</div>
+												{/if}
+											{/each}
 										</div>
 									{/if}
 								{/each}
@@ -593,74 +581,6 @@
 			padding: 18px 20px;
 		}
 
-		/* "Gemini escrevendo" — bloco terminal/log com texto chegando ao vivo */
-		.gen-stream-block {
-			margin-top: 24px;
-			/* Token, não valor fixo: o texto interno é var(--ink-1), que no tema
-			   claro vira #52525b — sobre o #0a0a0d cravado dava ~2.6:1, reprovado
-			   no WCAG AA. --bg-1 é #0a0a0a no escuro (mesma aparência de antes)
-			   e #fafafa no claro. */
-			background: var(--bg-1);
-			border: 1px solid var(--ink-line);
-			border-radius: var(--r-2);
-			overflow: hidden;
-			animation: gen-fade 240ms var(--ease) backwards;
-		}
-		.gen-stream-header {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-			padding: 10px 14px;
-			background: rgba(167, 139, 250, 0.06);
-			border-bottom: 1px solid var(--ink-line);
-			font: 500 11px var(--font-mono);
-			color: var(--ink-2);
-			text-transform: uppercase;
-			letter-spacing: 0.08em;
-		}
-		.gen-stream-dot {
-			width: 6px;
-			height: 6px;
-			border-radius: 50%;
-			background: var(--accent);
-			box-shadow: 0 0 8px var(--accent);
-			animation: gen-pulse 1.4s ease-in-out infinite;
-		}
-		.gen-stream-meta {
-			margin-left: auto;
-			color: var(--ink-3);
-			font-variant-numeric: tabular-nums;
-		}
-		.gen-stream-text {
-			margin: 0;
-			padding: 14px 18px;
-			max-height: 260px;
-			overflow-y: auto;
-			overflow-x: hidden;
-			font: 400 12.5px/1.55 var(--font-mono);
-			color: var(--ink-1);
-			white-space: pre-wrap;
-			word-break: break-word;
-			background: transparent;
-		}
-		.gen-stream-text::-webkit-scrollbar {
-			width: 6px;
-		}
-		.gen-stream-text::-webkit-scrollbar-thumb {
-			background: var(--ink-line-2);
-			border-radius: 3px;
-		}
-		.gen-stream-cursor {
-			display: inline-block;
-			color: var(--accent);
-			animation: gen-cursor-blink 1s steps(2, start) infinite;
-			margin-left: 1px;
-		}
-		@keyframes gen-cursor-blink {
-			to {
-				opacity: 0;
-			}
-		}
 		.gen-fade {
 			animation: gen-in 240ms var(--ease) backwards;
 		}

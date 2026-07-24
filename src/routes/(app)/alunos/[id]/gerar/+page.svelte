@@ -293,7 +293,16 @@
 					</div>
 				</div>
 
-				<Button type="submit" style="width:100%;justify-content:center">⚡ Gerar plano personalizado</Button>
+				{#if data.subscriptionBlocked}
+					<div
+						class="card"
+						style="padding:14px 18px;margin-bottom:14px;background:var(--warn-dim);border:1px solid var(--warn);font:var(--body-sm);color:var(--ink-1)"
+					>
+						⚠ Sua assinatura não está ativa — a geração de planos fica bloqueada.
+						<a href="/assinatura" style="color:var(--accent-2)">Renovar assinatura →</a>
+					</div>
+				{/if}
+				<Button type="submit" disabled={data.subscriptionBlocked} style="width:100%;justify-content:center">⚡ Gerar plano personalizado</Button>
 
 				<div style="margin-top:14px;text-align:center;font:var(--label-mono);color:var(--ink-3)">
 					PreceptorFISIC · RAG 49 fontes · Preferência ACSM ★

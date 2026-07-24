@@ -1,14 +1,19 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { asaasWebhookEvents, professionals } from '$lib/server/db/schema';
 import {
+	getAsaasCustomer,
 	getAsaasCustomerEmail,
+	isEbookPayment,
 	planFromPayment,
 	type AsaasPaymentPayload
 } from '$lib/server/asaas';
+import { sendEbookPurchaseAlert } from '$lib/server/email';
+import { syncLeadStageFromProfessional, upsertEbookBuyerLead } from '$lib/server/queries';
 import { logger } from '$lib/server/logger';
 
 /**
@@ -36,7 +41,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		logger.error('asaas-webhook: ASAAS_WEBHOOK_TOKEN não configurado');
 		return json({ error: 'not configured' }, { status: 503 });
 	}
-	if (request.headers.get('asaas-access-token') !== env.ASAAS_WEBHOOK_TOKEN) {
+	const gotToken = Buffer.from(request.headers.get('asaas-access-token') ?? '');
+	const wantToken = Buffer.from(env.ASAAS_WEBHOOK_TOKEN);
+	if (gotToken.length !== wantToken.length || !timingSafeEqual(gotToken, wantToken)) {
 		return json({ error: 'unauthorized' }, { status: 401 });
 	}
 
@@ -103,19 +110,68 @@ async function applyEvent(body: {
 	if (!relevant) return {}; // evento só arquivado, sem regra de negócio
 	if (!payment?.customer) return { skipped: 'sem customer no payload' };
 
+	// EBOOK (cobrança avulsa): entrega é manual via Drive — avisa o responsável
+	// por email com os dados do comprador e arquiva. Não mexe em assinatura.
+	if (ACTIVATE.has(event) && isEbookPayment(payment)) {
+		const buyer = await getAsaasCustomer(payment.customer);
+		await sendEbookPurchaseAlert({
+			buyerName: buyer.name,
+			buyerEmail: buyer.email,
+			paymentId: payment.id ?? '(sem id)',
+			value: typeof payment.value === 'number' ? payment.value : null
+		});
+		// Comprador entra no CRM — é de lá que o time pega o email pra
+		// compartilhar o ebook no Drive (entrega manual).
+		if (buyer.email) {
+			await upsertEbookBuyerLead({
+				name: buyer.name,
+				email: buyer.email,
+				paymentId: payment.id ?? '(sem id)'
+			});
+		}
+		return { skipped: `ebook vendido — alerta + lead no CRM (${buyer.email ?? 'sem email'})` };
+	}
+
 	const plan = planFromPayment(payment);
-	// Cobrança que não é de plano (ex: ebook): arquiva sem mexer em assinatura.
+	// Cobrança que não é de plano nem ebook: arquiva sem mexer em assinatura.
 	if (!plan && ACTIVATE.has(event)) return { skipped: 'pagamento não mapeado a plano' };
 
-	const email = await getAsaasCustomerEmail(payment.customer);
-	if (!email) return { skipped: 'customer sem email no Asaas' };
-
-	const [prof] = await db
+	// Match em 3 níveis, do determinístico pro heurístico:
+	// 1. asaas_customer_id salvo na assinatura feita de dentro do app
+	// 2. externalReference da cobrança (= professional.id, herdado da subscription)
+	// 3. email do customer no Asaas × email da conta (links estáticos/fallback)
+	let prof: { id: string; status: string } | undefined;
+	[prof] = await db
 		.select({ id: professionals.id, status: professionals.subscriptionStatus })
 		.from(professionals)
-		.where(sql`lower(${professionals.email}) = ${email}`)
+		.where(eq(professionals.asaasCustomerId, payment.customer))
 		.limit(1);
-	if (!prof) return { skipped: `sem professional com email ${email}` };
+
+	if (!prof && typeof payment.externalReference === 'string' && payment.externalReference) {
+		[prof] = await db
+			.select({ id: professionals.id, status: professionals.subscriptionStatus })
+			.from(professionals)
+			.where(sql`${professionals.id}::text = ${payment.externalReference}`)
+			.limit(1);
+	}
+
+	if (!prof) {
+		const email = await getAsaasCustomerEmail(payment.customer);
+		if (!email) return { skipped: 'customer sem email no Asaas' };
+		[prof] = await db
+			.select({ id: professionals.id, status: professionals.subscriptionStatus })
+			.from(professionals)
+			.where(sql`lower(${professionals.email}) = ${email}`)
+			.limit(1);
+		if (!prof) return { skipped: `sem professional com email ${email}` };
+		// Pagou por link estático mas o email casou: cola o customer id na conta
+		// pra TODOS os eventos futuros caírem no match determinístico.
+		await db
+			.update(professionals)
+			.set({ asaasCustomerId: payment.customer, updatedAt: sql`now()` })
+			.where(eq(professionals.id, prof.id))
+			.catch(() => {}); // unique violation (customer já de outra conta): segue com o match por email
+	}
 
 	if (ACTIVATE.has(event) && plan) {
 		const expires = new Date();
@@ -144,6 +200,12 @@ async function applyEvent(body: {
 			.set({ subscriptionStatus: 'cancelled', updatedAt: sql`now()` })
 			.where(eq(professionals.id, prof.id));
 	}
+
+	// Espelha a mudança de assinatura no funil do CRM (pagante/cancelado/...).
+	// Best-effort: falha aqui não pode derrubar o processamento do pagamento.
+	await syncLeadStageFromProfessional(prof.id).catch((e) =>
+		logger.warn({ err: String(e).slice(0, 200) }, 'asaas-webhook.lead-sync.failed')
+	);
 
 	return { professionalId: prof.id };
 }
